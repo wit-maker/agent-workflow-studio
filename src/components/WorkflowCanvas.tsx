@@ -19,16 +19,16 @@ export function WorkflowCanvas({
   const invalidConnections = connectionValidation.filter((result) => !result.valid)
 
   return (
-    <main className="canvas-panel" aria-label="Workflow canvas">
+    <main className="canvas-panel" aria-label="ワークフローキャンバス">
       <div className="canvas-toolbar">
-        <span>Canvas</span>
-        <button type="button">Fit</button>
-        <button type="button">Validate</button>
-        <button type="button">Mock APIs only</button>
+        <span>キャンバス</span>
+        <button type="button">全体表示</button>
+        <button type="button">検証</button>
+        <button type="button">モック実行のみ</button>
         <strong className={invalidConnections.length === 0 ? 'valid-count' : 'invalid-count'}>
           {invalidConnections.length === 0
-            ? `${connectionValidation.length} valid connections`
-            : `${invalidConnections.length} invalid connections`}
+            ? `有効な接続 ${connectionValidation.length} 件`
+            : `無効な接続 ${invalidConnections.length} 件`}
         </strong>
       </div>
       <div className="canvas-scroll">
@@ -50,11 +50,11 @@ export function WorkflowCanvas({
               onSelect={onSelectNode}
             />
           ))}
-          <section className="connection-validation-card" aria-label="Connection validation">
-            <h3>Connection Validation</h3>
+          <section className="connection-validation-card" aria-label="接続検証">
+            <h3>接続検証</h3>
             {connectionValidation.slice(0, 5).map((result) => (
               <p key={result.connectionId} className={result.valid ? 'success-text' : 'error-text'}>
-                {result.sourceLabel} to {result.targetLabel}: {result.valid ? 'valid' : result.reason}
+                {result.sourceLabel} → {result.targetLabel}: {result.valid ? '有効' : result.reason}
               </p>
             ))}
           </section>

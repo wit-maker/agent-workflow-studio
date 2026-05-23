@@ -1,23 +1,19 @@
 # Agent Workflow Studio
 
-Agent Workflow Studio is a new local-first React application for designing,
-running, observing, and reusing AI work as typed workflow nodes. It is a
-separate product and repository from the existing `ai-workflow-lab` project.
-The attached AI Workflow Lab documents are kept as source specifications, not
-as an instruction to modify the old project.
+Agent Workflow Studio は、AI作業を型付きワークフローノードとして設計・実行・観測・再利用するための
+ローカルファーストな React アプリです。既存の `ai-workflow-lab` とは別リポジトリ・別製品として扱い、
+添付された AI Workflow Lab の文書は参照仕様として保持します。
 
-## Source Specifications
+## 参照仕様
 
-The original specification files are preserved without summarizing or rewriting
-their contents:
+原文仕様は要約や改変をせず、そのまま `docs/source-specs/` に保存しています。
 
 - `docs/source-specs/AI_Workflow_Lab_最終仕様書_v1.0.md`
 - `docs/source-specs/AI_Workflow_Lab_画面設計_詳細設計以降_v1.0.md`
 
-The current implementation-to-screen-spec mapping is tracked in
-`docs/implementation/SCREEN_SPEC_ALIGNMENT.md`.
+現在実装と画面設計の対応は `docs/implementation/SCREEN_SPEC_ALIGNMENT.md` で管理しています。
 
-## Getting Started
+## 開始手順
 
 ```bash
 npm install
@@ -26,48 +22,39 @@ npm run build
 npm run lint
 ```
 
-## Current Phase
+## 現在フェーズ
 
-The app is in the Phase 2 foundation stage: reducer-based workflow state,
-Inspector editing, JSON import/export, connection validation, form-based
-connection editing, localStorage template mocks, and local workflow snapshot
-history are in place.
+現在は Phase 2.5 の日本語化専用フェーズまで完了しています。`useReducer` ベースの状態管理、
+Inspector 編集、JSON import/export、接続検証、選択式の接続編集、localStorage によるテンプレート保存、
+ワークフロー履歴保存に加え、ユーザー向け UI と主要ドキュメントを日本語優先に整えています。
 
-## Bootstrap MVP Scope
+## 現在のMVP範囲
 
-The current MVP includes:
+- React + TypeScript + Vite によるアプリ基盤
+- TopBar、左パレット、メインキャンバス、右インスペクター、下部モニター、成果物ステージ
+- 12個のMVPノード表示
+- 最小限のドメイン型、サンプルワークフロー、接続ルール、ボトルネック算出、ローカルモック実行
+- トークン、コスト、レイテンシ、成功率、ログ、成果物、接続検証の表示
+- 選択式の接続作成・削除
+- localStorage によるテンプレート保存とワークフロー履歴保存
 
-- React + TypeScript + Vite app shell.
-- Top bar, left parts palette, main workflow canvas, right inspector, bottom
-  metrics/log monitor, and stage preview.
-- Twelve visible MVP nodes: Manual Trigger, Text Input, File Input, Normalize,
-  Route, AI Execute, External Connector, Check, Aggregate, Output, Run Log, and
-  Template Save.
-- Minimal domain model, sample workflow, typed connection rules, bottleneck
-  calculation, and local mock run simulation.
-- Tokens, cost, latency, success rate, bottleneck, logs, and mock artifact
-  display.
-- Form-based connection editing, local template mocks, and local workflow
-  snapshot history.
+## 外部APIの扱い
 
-## External API Status
+実際の外部API接続はまだ行っていません。Codex、Hermes、Grok/X、Claude、Gemini、GitHub などは、
+将来的な接続先やロールの概念としてのみ表現しています。`Run` ボタンはローカルモックシミュレーターを実行します。
 
-No real external API is connected. Codex, Hermes, Grok/X, Claude, Gemini,
-GitHub, and other services are represented as future connector or role concepts
-only. The Run button executes a local mock simulator.
+## MVP外
 
-## MVP Exclusions
+- 実API呼び出し
+- Credential 保存
+- Tauri、SQLite、React Flow、本番DB
+- 本格的なドラッグ接続ライブラリ
+- 本番向けセキュリティゲートや公開フロー
 
-- No real external API calls.
-- No Credential storage.
-- No Tauri, SQLite, React Flow, or production database.
-- No drag-and-drop connection library yet.
-- No production security gate or publish flow yet.
+## 次の実装順候補
 
-## Implementation Order
-
-1. Add execution graph details, error routes, and retry routes.
-2. Add explicit port objects with required/optional metadata.
-3. Improve evaluation and review flows.
-4. Add richer template metadata and reuse workflows.
-5. Evaluate Tauri 2 and durable local storage after the UI model is stable.
+1. Phase 3 として実行グラフ、エラールート、リトライ経路を追加する
+2. required / optional を持つ明示的なポートオブジェクトへ進める
+3. 評価フローとレビュー導線を強化する
+4. テンプレートのメタデータと再利用導線を広げる
+5. UIモデルが安定した後に Tauri 2 と永続ローカル保存を再評価する

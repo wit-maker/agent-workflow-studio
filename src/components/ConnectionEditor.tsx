@@ -1,5 +1,10 @@
 import { useMemo, useState } from 'react'
 import {
+  connectionKindLabels,
+  connectionStatusLabels,
+  formatDataTypeLabel,
+} from '../domain/displayLabels'
+import {
   connectionKinds,
   type ConnectionKind,
   type Workflow,
@@ -65,14 +70,14 @@ export function ConnectionEditor({
   }
 
   return (
-    <section className="connection-editor" aria-label="Connection editor">
+    <section className="connection-editor" aria-label="接続エディター">
       <div className="panel-heading compact">
-        <span className="eyebrow">Connections</span>
-        <h3>Connection Editor</h3>
+        <span className="eyebrow">接続</span>
+        <h3>接続エディター</h3>
       </div>
       <div className="connection-form-grid">
         <label className="field-label">
-          Source node
+          接続元ノード
           <select value={sourceNodeId} onChange={(event) => selectSource(event.target.value)}>
             {workflow.nodes.map((node) => (
               <option key={node.id} value={node.id}>
@@ -82,20 +87,20 @@ export function ConnectionEditor({
           </select>
         </label>
         <label className="field-label">
-          Source output
+          接続元出力
           <select
             value={sourcePort}
             onChange={(event) => setSourcePort(event.target.value as WorkflowDataType)}
           >
             {(sourceNode?.outputTypes ?? []).map((type) => (
               <option key={type} value={type}>
-                {type}
+                {formatDataTypeLabel(type)}
               </option>
             ))}
           </select>
         </label>
         <label className="field-label">
-          Target node
+          接続先ノード
           <select value={targetNodeId} onChange={(event) => selectTarget(event.target.value)}>
             {workflow.nodes.map((node) => (
               <option key={node.id} value={node.id}>
@@ -105,24 +110,24 @@ export function ConnectionEditor({
           </select>
         </label>
         <label className="field-label">
-          Target input
+          接続先入力
           <select
             value={targetPort}
             onChange={(event) => setTargetPort(event.target.value as WorkflowDataType)}
           >
             {(targetNode?.inputTypes ?? []).map((type) => (
               <option key={type} value={type}>
-                {type}
+                {formatDataTypeLabel(type)}
               </option>
             ))}
           </select>
         </label>
         <label className="field-label">
-          Kind
+          接続種別
           <select value={kind} onChange={(event) => setKind(event.target.value as ConnectionKind)}>
             {connectionKinds.map((item) => (
               <option key={item} value={item}>
-                {item}
+                {connectionKindLabels[item]}
               </option>
             ))}
           </select>
@@ -141,12 +146,12 @@ export function ConnectionEditor({
             })
           }
         >
-          Create Connection
+          接続を作成
         </button>
       </div>
       {draftValidation ? (
         <p className={draftValidation.valid ? 'success-text' : 'error-text'}>
-          Draft: {draftValidation.valid ? 'valid' : draftValidation.reason}
+          入力中の接続: {draftValidation.valid ? '有効' : draftValidation.reason}
         </p>
       ) : null}
       <div className="connection-list">
@@ -160,18 +165,20 @@ export function ConnectionEditor({
             <div key={connection.id} className="connection-row">
               <div>
                 <strong>
-                  {source?.title ?? connection.sourceNodeId} to{' '}
+                  {source?.title ?? connection.sourceNodeId} →{' '}
                   {target?.title ?? connection.targetNodeId}
                 </strong>
                 <span>
-                  {connection.kind} / {connection.carries.join(', ')} / {connection.status}
+                  {connectionKindLabels[connection.kind]} /{' '}
+                  {connection.carries.map(formatDataTypeLabel).join(', ')} /{' '}
+                  {connectionStatusLabels[connection.status]}
                 </span>
                 <span className={validation?.valid ? 'success-text' : 'error-text'}>
-                  {validation?.valid ? 'valid' : validation?.reason}
+                  {validation?.valid ? '有効' : validation?.reason}
                 </span>
               </div>
               <button type="button" className="icon-button" onClick={() => onDeleteConnection(connection.id)}>
-                Delete
+                削除
               </button>
             </div>
           )

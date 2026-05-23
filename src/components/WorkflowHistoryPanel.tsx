@@ -14,15 +14,15 @@ export function WorkflowHistoryPanel({
   onDeleteSnapshot,
 }: WorkflowHistoryPanelProps) {
   return (
-    <section className="library-panel" aria-label="Workflow history">
+    <section className="library-panel" aria-label="ワークフロー履歴">
       <div className="library-heading">
-        <h3>Local History</h3>
+        <h3>ワークフロー履歴</h3>
         <button type="button" className="primary-button" onClick={onSaveSnapshot}>
-          Save Snapshot
+          スナップショット保存
         </button>
       </div>
       {snapshots.length === 0 ? (
-        <p className="muted">No local snapshots saved yet.</p>
+        <p className="muted">ローカル保存された履歴はまだありません。</p>
       ) : (
         snapshots.map((snapshot) => (
           <div key={snapshot.id} className="library-row">
@@ -31,10 +31,10 @@ export function WorkflowHistoryPanel({
               <span>{new Date(snapshot.createdAt).toLocaleString()}</span>
             </div>
             <button type="button" className="icon-button" onClick={() => onLoadSnapshot(snapshot.id)}>
-              Load
+              読込
             </button>
             <button type="button" className="icon-button" onClick={() => onDeleteSnapshot(snapshot.id)}>
-              Delete
+              削除
             </button>
           </div>
         ))

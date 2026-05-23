@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { agentRoleLabels, type WorkflowNode } from '../domain/workflow'
+import { agentRoleLabels, formatDataTypeLabel } from '../domain/displayLabels'
+import type { WorkflowNode } from '../domain/workflow'
 
 type PartsPaletteProps = {
   parts: WorkflowNode[]
@@ -9,36 +10,36 @@ type PartsPaletteProps = {
 
 export function PartsPalette({ parts, selectedNodeId, onSelectNode }: PartsPaletteProps) {
   const [query, setQuery] = useState('')
-  const [category, setCategory] = useState('All')
+  const [category, setCategory] = useState('すべて')
 
   const categories = useMemo(
-    () => ['All', ...Array.from(new Set(parts.map((part) => part.category)))],
+    () => ['すべて', ...Array.from(new Set(parts.map((part) => part.category)))],
     [parts],
   )
 
   const filteredParts = parts.filter((part) => {
     const text = `${part.title} ${part.category} ${part.description}`.toLowerCase()
     return (
-      (category === 'All' || part.category === category) &&
+      (category === 'すべて' || part.category === category) &&
       text.includes(query.trim().toLowerCase())
     )
   })
 
   return (
-    <aside className="parts-palette" aria-label="MVP parts palette">
+    <aside className="parts-palette" aria-label="MVP部品パレット">
       <div className="panel-heading">
-        <span className="eyebrow">Parts</span>
-        <h2>MVP Palette</h2>
+        <span className="eyebrow">部品</span>
+        <h2>MVPパレット</h2>
       </div>
       <input
         className="search-input"
         type="search"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="Search parts"
-        aria-label="Search parts"
+        placeholder="部品を検索"
+        aria-label="部品を検索"
       />
-      <div className="segmented-control" aria-label="Part categories">
+      <div className="segmented-control" aria-label="部品カテゴリ">
         {categories.slice(0, 6).map((item) => (
           <button
             key={item}
@@ -60,10 +61,11 @@ export function PartsPalette({ parts, selectedNodeId, onSelectNode }: PartsPalet
           >
             <span className="part-title">{part.title}</span>
             <span className="part-meta">
-              {part.category} / {part.agentRole ? agentRoleLabels[part.agentRole] : 'Unassigned'}
+              {part.category} / {part.agentRole ? agentRoleLabels[part.agentRole] : '未割当'}
             </span>
             <span className="port-row">
-              {part.inputTypes.join(', ') || 'Start'} to {part.outputTypes.join(', ')}
+              {part.inputTypes.map(formatDataTypeLabel).join(', ') || '開始'} から{' '}
+              {part.outputTypes.map(formatDataTypeLabel).join(', ')}
             </span>
           </button>
         ))}

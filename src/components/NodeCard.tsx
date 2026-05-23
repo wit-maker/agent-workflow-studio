@@ -1,4 +1,5 @@
-import { agentRoleLabels, statusLabels, type WorkflowNode } from '../domain/workflow'
+import { agentRoleLabels, formatDataTypeLabel, statusLabels } from '../domain/displayLabels'
+import type { WorkflowNode } from '../domain/workflow'
 
 type NodeCardProps = {
   node: WorkflowNode
@@ -20,14 +21,14 @@ export function NodeCard({ node, isSelected, onSelect }: NodeCardProps) {
       </span>
       <strong>{node.title}</strong>
       <span className="node-agent">
-        {node.agentRole ? agentRoleLabels[node.agentRole] : 'Unassigned'}
+        {node.agentRole ? agentRoleLabels[node.agentRole] : '未割当'}
       </span>
       <span className="node-ports">
-        <span>{node.inputTypes.join(', ') || 'Start'}</span>
-        <span>{node.outputTypes.join(', ')}</span>
+        <span>{node.inputTypes.map(formatDataTypeLabel).join(', ') || '開始'}</span>
+        <span>{node.outputTypes.map(formatDataTypeLabel).join(', ')}</span>
       </span>
       <span className="node-metrics">
-        {node.metrics?.estimatedTokens ?? 0} tok / {node.metrics?.estimatedLatencyMs ?? 0} ms
+        {node.metrics?.estimatedTokens ?? 0} トークン / {node.metrics?.estimatedLatencyMs ?? 0} ms
       </span>
     </button>
   )
