@@ -9,9 +9,17 @@ import {
   connectionKinds,
   type ConnectionKind,
   type Workflow,
+  type WorkflowPort,
 } from '../domain/workflow'
 import type { ConnectionValidationResult } from '../state/workflowSelectors'
 import { validateConnectionDraft } from '../state/workflowSelectors'
+
+function formatPortDisplay(port: WorkflowPort | undefined, fallback: string | undefined): string {
+  if (port) {
+    return `${port.label}（${formatDataTypeLabel(port.dataType)}）`
+  }
+  return fallback ? formatDataTypeLabel(fallback) : '未指定'
+}
 
 type ConnectionEditorProps = {
   workflow: Workflow
@@ -198,25 +206,21 @@ export function ConnectionEditor({
                 </span>
                 {(connection.sourcePortId ?? connection.sourcePort) && (
                   <span className="port-meta">
-                    出力: {formatDataTypeLabel(
-                      (() => {
-                        const port = connection.sourcePortId && source
-                          ? findPort(getOutputPorts(source), connection.sourcePortId)
-                          : undefined
-                        return port ? port.dataType : (connection.sourcePort ?? '')
-                      })()
+                    出力: {formatPortDisplay(
+                      connection.sourcePortId && source
+                        ? findPort(getOutputPorts(source), connection.sourcePortId)
+                        : undefined,
+                      connection.sourcePort,
                     )}
                   </span>
                 )}
                 {(connection.targetPortId ?? connection.targetPort) && (
                   <span className="port-meta">
-                    入力: {formatDataTypeLabel(
-                      (() => {
-                        const port = connection.targetPortId && target
-                          ? findPort(getInputPorts(target), connection.targetPortId)
-                          : undefined
-                        return port ? port.dataType : (connection.targetPort ?? '')
-                      })()
+                    入力: {formatPortDisplay(
+                      connection.targetPortId && target
+                        ? findPort(getInputPorts(target), connection.targetPortId)
+                        : undefined,
+                      connection.targetPort,
                     )}
                   </span>
                 )}
