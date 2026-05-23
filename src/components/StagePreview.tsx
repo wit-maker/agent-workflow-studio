@@ -1,5 +1,10 @@
 import { useState } from 'react'
-import { checkOutcomeLabels } from '../domain/displayLabels'
+import {
+  checkOutcomeLabels,
+  evaluationStatusLabels,
+  reviewDecisionLabels,
+} from '../domain/displayLabels'
+import type { EvaluationResult, HumanReviewState } from '../domain/evaluation'
 import type { Workflow, WorkflowArtifact, WorkflowNode } from '../domain/workflow'
 
 type StagePreviewProps = {
@@ -7,6 +12,10 @@ type StagePreviewProps = {
   checkOutcome: string
   workflow: Workflow
   selectedNode: WorkflowNode | undefined
+  evaluation?: EvaluationResult
+  humanReview?: HumanReviewState
+  artifactVersionCount: number
+  rebuildRequestCount: number
 }
 
 export function StagePreview({
@@ -14,6 +23,10 @@ export function StagePreview({
   checkOutcome,
   workflow,
   selectedNode,
+  evaluation,
+  humanReview,
+  artifactVersionCount,
+  rebuildRequestCount,
 }: StagePreviewProps) {
   const [activeTab, setActiveTab] = useState<'Preview' | 'Markdown' | 'JSON'>('Preview')
   const tabLabels = {
@@ -46,6 +59,38 @@ export function StagePreview({
         <span className="eyebrow">成果物</span>
         <h2>{artifact.title}</h2>
       </div>
+
+      <div className="stage-meta-row">
+        <div className={`review-badge review-${checkOutcome.toLowerCase()}`}>
+          判定: {checkOutcomeLabels[checkOutcome as keyof typeof checkOutcomeLabels] ?? checkOutcome}
+        </div>
+
+        {evaluation && (
+          <div className={`eval-badge-sm eval-${evaluation.status}`}>
+            評価: {evaluationStatusLabels[evaluation.status]}
+            {' '}({evaluation.totalScore}/{evaluation.maxScore}点)
+          </div>
+        )}
+
+        {humanReview && humanReview.decision !== 'pending' && (
+          <div className={`review-badge review-${humanReview.decision}`}>
+            HR: {reviewDecisionLabels[humanReview.decision]}
+          </div>
+        )}
+
+        {artifactVersionCount > 0 && (
+          <div className="version-badge-sm">
+            v{artifactVersionCount + 1} (再作成{artifactVersionCount}件)
+          </div>
+        )}
+
+        {rebuildRequestCount > 0 && (
+          <div className="rebuild-count-badge muted">
+            再作成依頼 {rebuildRequestCount} 件
+          </div>
+        )}
+      </div>
+
       <div className="stage-tabs" aria-label="成果物表示">
         {(['Preview', 'Markdown', 'JSON'] as const).map((tab) => (
           <button
@@ -65,9 +110,6 @@ export function StagePreview({
             ? artifact.content
             : jsonView}
       </pre>
-      <div className={`review-badge review-${checkOutcome.toLowerCase()}`}>
-        判定: {checkOutcomeLabels[checkOutcome as keyof typeof checkOutcomeLabels] ?? checkOutcome}
-      </div>
     </section>
   )
 }

@@ -8,6 +8,8 @@ import type {
   WorkflowRunLog,
   WorkflowStatus,
 } from './workflow'
+import type { EvaluationStatus, ReviewDecision, RebuildRequest } from './evaluation'
+import type { ExecutionRouteKind, ExecutionStepStatus } from './executionGraph'
 
 export const workflowStatusLabels: Record<WorkflowStatus, string> = {
   draft: '下書き',
@@ -137,3 +139,53 @@ export const logLevelLabels: Record<WorkflowRunLog['level'], string> = {
 export function formatDataTypeLabel(type: string): string {
   return dataTypeLabels[type as WorkflowDataType] ?? type
 }
+
+export const evaluationStatusLabels: Record<EvaluationStatus, string> = {
+  not_evaluated: '未評価',
+  evaluating: '評価中',
+  passed: '合格',
+  needs_review: '要確認',
+  failed: '不合格',
+}
+
+export const reviewDecisionLabels: Record<ReviewDecision, string> = {
+  pending: '未判断',
+  approved: '承認',
+  rejected: '却下',
+  revise_requested: '修正依頼',
+  skipped: 'スキップ',
+}
+
+export const rebuildStatusLabels: Record<RebuildRequest['status'], string> = {
+  requested: '依頼済み',
+  running: '再作成中',
+  completed: '完了',
+  cancelled: 'キャンセル',
+}
+
+export const executionStepStatusLabels: Record<ExecutionStepStatus, string> = {
+  queued: '待機列',
+  running: '実行中',
+  success: '成功',
+  failed: '失敗',
+  review_required: '確認待ち',
+  skipped: 'スキップ',
+  retry_ready: '再試行可能',
+}
+
+export const routeKindLabels: Record<ExecutionRouteKind, string> = {
+  main: '通常経路',
+  error: 'エラー経路',
+  retry: '再試行経路',
+  review: '確認経路',
+  skip: 'スキップ経路',
+}
+
+export const artifactVersionLabels = {
+  version: 'バージョン',
+  createdAt: '作成日時',
+  evaluationStatus: '評価ステータス',
+  rebuiltFrom: '再作成元',
+  preview: '内容プレビュー',
+  viewThisVersion: 'この版を表示',
+} as const

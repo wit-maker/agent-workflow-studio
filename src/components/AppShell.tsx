@@ -1,5 +1,8 @@
 import { useMemo, useReducer, useRef, useState } from 'react'
 import { calculateBottleneck } from '../domain/connectionRules'
+import type { RebuildRequest, ReviewDecision } from '../domain/evaluation'
+import { runMockEvaluation } from '../domain/evaluationRules'
+import type { ExecutionGraph, ExecutionRoute, ExecutionStep } from '../domain/executionGraph'
 import { createSampleWorkflow } from '../domain/sampleWorkflow'
 import type {
   AgentRole,
@@ -65,7 +68,20 @@ export function AppShell() {
     listWorkflowSnapshots(),
   )
   const runTokenRef = useRef(0)
-  const { workflow, selectedNodeId, isRunning, checkOutcome, importError } = state
+  const lastRunIdRef = useRef('')
+  const {
+    workflow,
+    selectedNodeId,
+    isRunning,
+    checkOutcome,
+    importError,
+    evaluation,
+    humanReview,
+    rebuildRequests,
+    artifactVersions,
+    selectedArtifactVersionId,
+    executionGraph,
+  } = state
 
   const selectedNode = useMemo(
     () => selectSelectedNode(workflow, selectedNodeId),
@@ -73,10 +89,17 @@ export function AppShell() {
   )
   const connectionValidation = useMemo(() => validateConnections(workflow), [workflow])
 
+  const canEvaluate =
+    !isRunning &&
+    workflow.status !== 'running' &&
+    workflow.status !== 'draft' &&
+    workflow.logs.length > 0
+
   async function runMockWorkflow() {
     const runToken = runTokenRef.current + 1
     runTokenRef.current = runToken
     const runId = `run-${new Date().toISOString()}`
+    lastRunIdRef.current = runId
 
     dispatch({
       type: 'runWorkflowStart',
@@ -87,6 +110,10 @@ export function AppShell() {
     const outcomeSequence: Array<'PASS' | 'REVIEW' | 'FAIL'> = ['PASS', 'REVIEW', 'PASS']
     const outcome = outcomeSequence[new Date().getSeconds() % outcomeSequence.length]
     dispatch({ type: 'setCheckOutcome', outcome })
+
+    const graphSteps: ExecutionStep[] = []
+    const graphRoutes: ExecutionRoute[] = []
+    let reviewStepId: string | undefined
 
     for (const node of workflow.nodes) {
       if (runTokenRef.current !== runToken) {
@@ -99,11 +126,47 @@ export function AppShell() {
         log: makeLog(runId, `${node.title} を開始しました。`, node.id),
       })
 
+      const stepStartedAt = new Date().toISOString()
       await delay(220)
 
       const isCheckNode = node.type === 'check'
       const nextStatus =
         isCheckNode && outcome === 'REVIEW' ? 'review_required' : 'success'
+
+      const stepId = `step-${node.id}`
+      const stepStatus = nextStatus === 'review_required' ? 'review_required' : 'success'
+      const step: ExecutionStep = {
+        id: stepId,
+        runId,
+        nodeId: node.id,
+        nodeTitle: node.title,
+        status: stepStatus,
+        route: isCheckNode && outcome === 'REVIEW' ? 'review' : 'main',
+        startedAt: stepStartedAt,
+        finishedAt: new Date().toISOString(),
+        durationMs: 220,
+        message: isCheckNode ? `チェック結果: ${outcome}` : `${node.title} 完了`,
+      }
+      graphSteps.push(step)
+
+      if (stepStatus === 'review_required') {
+        reviewStepId = stepId
+        graphRoutes.push({
+          id: `route-review-${node.id}`,
+          kind: 'review',
+          fromNodeId: node.id,
+          reason: '確認待ちが発生しました',
+          createdAt: new Date().toISOString(),
+        })
+      } else {
+        graphRoutes.push({
+          id: `route-main-${node.id}`,
+          kind: 'main',
+          fromNodeId: node.id,
+          reason: '正常完了',
+          createdAt: new Date().toISOString(),
+        })
+      }
 
       dispatch({
         type: 'runNodeSuccess',
@@ -117,6 +180,15 @@ export function AppShell() {
         ),
       })
     }
+
+    const graph: ExecutionGraph = {
+      runId,
+      steps: graphSteps,
+      routes: graphRoutes,
+      reviewStepId,
+      retryCandidates: outcome === 'REVIEW' ? graphSteps.filter((s) => s.status === 'review_required').map((s) => s.id) : [],
+    }
+    dispatch({ type: 'setExecutionGraph', graph })
 
     if (runTokenRef.current !== runToken) {
       return
@@ -366,6 +438,121 @@ export function AppShell() {
     }
   }
 
+  function handleEvaluate() {
+    if (!canEvaluate) {
+      return
+    }
+    dispatch({ type: 'startEvaluation' })
+    const runId = lastRunIdRef.current || `run-eval-${Date.now()}`
+    const result = runMockEvaluation(workflow, workflow.artifact, runId, checkOutcome)
+    dispatch({ type: 'setEvaluationResult', result })
+    dispatch({
+      type: 'appendLog',
+      log: makeLog(
+        runId,
+        `評価完了: ${result.totalScore}/${result.maxScore}点 — ${result.summary}`,
+        undefined,
+        'info',
+      ),
+    })
+  }
+
+  function handleHumanReviewDecide(decision: ReviewDecision, note: string) {
+    dispatch({ type: 'setHumanReviewDecision', decision, note })
+    dispatch({
+      type: 'appendLog',
+      log: makeLog(
+        `review-${Date.now()}`,
+        `Human Review: ${decision}${note ? ` — ${note}` : ''}`,
+        undefined,
+        'approval',
+      ),
+    })
+  }
+
+  function handleRequestRebuild(reason: string, instruction: string) {
+    const request: RebuildRequest = {
+      id: `rebuild-${Date.now()}`,
+      reason,
+      instruction,
+      createdAt: new Date().toISOString(),
+      status: 'requested',
+    }
+    dispatch({ type: 'requestRebuild', request })
+    dispatch({
+      type: 'appendLog',
+      log: makeLog(
+        `rebuild-${Date.now()}`,
+        `再作成リクエストを作成しました: ${reason}`,
+        undefined,
+        'info',
+      ),
+    })
+  }
+
+  async function handleStartRebuild(requestId: string) {
+    const request = rebuildRequests.find((r) => r.id === requestId)
+    if (!request) {
+      return
+    }
+    dispatch({ type: 'startRebuild', requestId })
+    dispatch({
+      type: 'appendLog',
+      log: makeLog(`rebuild-${Date.now()}`, '再作成モックを実行中...', undefined, 'info'),
+    })
+
+    await delay(800)
+
+    const nextVersion = artifactVersions.length + 1
+    const mockContent = [
+      `# 再作成版 v${nextVersion}`,
+      '',
+      '元の成果物をもとに、次の修正指示を反映したモック成果物です。',
+      '',
+      `修正指示: ${request.instruction}`,
+      '',
+      '## 変更内容',
+      `- 修正依頼に基づき成果物を再構成しました。`,
+      `- バージョン: v${nextVersion}`,
+      `- 再作成日時: ${new Date().toLocaleString('ja-JP')}`,
+      '',
+      'この成果物はローカルモックで生成されています。実AIによる再作成ではありません。',
+    ].join('\n')
+
+    const artifactVersion = {
+      id: `av-${Date.now()}`,
+      version: nextVersion,
+      sourceRunId: lastRunIdRef.current || 'unknown',
+      content: mockContent,
+      createdAt: new Date().toISOString(),
+      evaluationId: evaluation?.id,
+      rebuildRequestId: requestId,
+    }
+
+    dispatch({ type: 'completeRebuild', requestId, artifactVersion })
+    dispatch({
+      type: 'appendLog',
+      log: makeLog(
+        `rebuild-${Date.now()}`,
+        `再作成完了: v${nextVersion} を成果物バージョン履歴に追加しました。`,
+        undefined,
+        'info',
+      ),
+    })
+  }
+
+  function handleCancelRebuild(requestId: string) {
+    dispatch({ type: 'cancelRebuild', requestId })
+    dispatch({
+      type: 'appendLog',
+      log: makeLog(`rebuild-${Date.now()}`, '再作成リクエストをキャンセルしました。', undefined, 'warn'),
+    })
+  }
+
+  function handleSelectArtifactVersion(versionId: string) {
+    dispatch({ type: 'selectArtifactVersion', versionId })
+  }
+
   return (
     <div className="app-shell">
       <TopBar
@@ -397,6 +584,10 @@ export function AppShell() {
             checkOutcome={checkOutcome}
             workflow={workflow}
             selectedNode={selectedNode}
+            evaluation={evaluation}
+            humanReview={humanReview}
+            artifactVersionCount={artifactVersions.length}
+            rebuildRequestCount={rebuildRequests.length}
           />
         </div>
         <Inspector
@@ -419,6 +610,19 @@ export function AppShell() {
         onSaveSnapshot={handleSaveSnapshot}
         onLoadSnapshot={handleLoadSnapshot}
         onDeleteSnapshot={handleDeleteSnapshot}
+        evaluation={evaluation}
+        humanReview={humanReview}
+        rebuildRequests={rebuildRequests}
+        artifactVersions={artifactVersions}
+        selectedArtifactVersionId={selectedArtifactVersionId}
+        canEvaluate={canEvaluate}
+        onEvaluate={handleEvaluate}
+        onHumanReviewDecide={handleHumanReviewDecide}
+        onRequestRebuild={handleRequestRebuild}
+        onStartRebuild={handleStartRebuild}
+        onCancelRebuild={handleCancelRebuild}
+        onSelectArtifactVersion={handleSelectArtifactVersion}
+        executionGraph={executionGraph}
       />
     </div>
   )

@@ -4,10 +4,17 @@ import {
   metricLabels,
   statusLabels,
 } from '../domain/displayLabels'
+import type { ArtifactVersion, EvaluationResult, HumanReviewState, RebuildRequest, ReviewDecision } from '../domain/evaluation'
+import type { ExecutionGraph } from '../domain/executionGraph'
 import type { Workflow } from '../domain/workflow'
 import type { SavedWorkflowTemplate } from '../storage/localTemplates'
 import type { SavedWorkflowSnapshot } from '../storage/localWorkflowHistory'
 import { selectActiveQueueNodes, selectBottleneckNode } from '../state/workflowSelectors'
+import { ArtifactVersionHistory } from './ArtifactVersionHistory'
+import { EvaluationPanel } from './EvaluationPanel'
+import { ExecutionGraphPanel } from './ExecutionGraphPanel'
+import { HumanReviewPanel } from './HumanReviewPanel'
+import { RebuildPanel } from './RebuildPanel'
 import { TemplateLibrary } from './TemplateLibrary'
 import { WorkflowHistoryPanel } from './WorkflowHistoryPanel'
 
@@ -21,7 +28,22 @@ type BottomMonitorProps = {
   onSaveSnapshot: () => void
   onLoadSnapshot: (id: string) => void
   onDeleteSnapshot: (id: string) => void
+  evaluation?: EvaluationResult
+  humanReview?: HumanReviewState
+  rebuildRequests: RebuildRequest[]
+  artifactVersions: ArtifactVersion[]
+  selectedArtifactVersionId?: string
+  canEvaluate: boolean
+  onEvaluate: () => void
+  onHumanReviewDecide: (decision: ReviewDecision, note: string) => void
+  onRequestRebuild: (reason: string, instruction: string) => void
+  onStartRebuild: (requestId: string) => void
+  onCancelRebuild: (requestId: string) => void
+  onSelectArtifactVersion: (versionId: string) => void
+  executionGraph: ExecutionGraph | null
 }
+
+type Tab = 'Logs' | 'Metrics' | 'Queue' | 'Output' | 'Graph' | 'Evaluation'
 
 export function BottomMonitor({
   workflow,
@@ -33,21 +55,36 @@ export function BottomMonitor({
   onSaveSnapshot,
   onLoadSnapshot,
   onDeleteSnapshot,
+  evaluation,
+  humanReview,
+  rebuildRequests,
+  artifactVersions,
+  selectedArtifactVersionId,
+  canEvaluate,
+  onEvaluate,
+  onHumanReviewDecide,
+  onRequestRebuild,
+  onStartRebuild,
+  onCancelRebuild,
+  onSelectArtifactVersion,
+  executionGraph,
 }: BottomMonitorProps) {
-  const [activeTab, setActiveTab] = useState<'Logs' | 'Metrics' | 'Queue' | 'Output'>('Logs')
-  const tabLabels = {
+  const [activeTab, setActiveTab] = useState<Tab>('Logs')
+  const tabLabels: Record<Tab, string> = {
     Logs: 'ログ',
     Metrics: 'メトリクス',
     Queue: 'キュー',
     Output: '出力',
-  } as const
+    Graph: '実行グラフ',
+    Evaluation: '評価',
+  }
   const bottleneck = selectBottleneckNode(workflow)
   const queueNodes = selectActiveQueueNodes(workflow)
 
   return (
     <footer className="bottom-monitor" aria-label="メトリクスとログ">
       <section className="monitor-tabs">
-        {(['Logs', 'Metrics', 'Queue', 'Output'] as const).map((tab) => (
+        {(['Logs', 'Metrics', 'Queue', 'Output', 'Graph', 'Evaluation'] as const).map((tab) => (
           <button
             key={tab}
             type="button"
@@ -55,6 +92,9 @@ export function BottomMonitor({
             onClick={() => setActiveTab(tab)}
           >
             {tabLabels[tab]}
+            {tab === 'Evaluation' && evaluation && (
+              <span className={`tab-badge tab-eval-${evaluation.status}`} />
+            )}
           </button>
         ))}
         <div className="timeline">
@@ -142,6 +182,37 @@ export function BottomMonitor({
                 onDeleteSnapshot={onDeleteSnapshot}
               />
             </div>
+          </div>
+        ) : null}
+        {activeTab === 'Graph' ? (
+          <div className="execution-graph-tab">
+            <ExecutionGraphPanel executionGraph={executionGraph} />
+          </div>
+        ) : null}
+        {activeTab === 'Evaluation' ? (
+          <div className="evaluation-tab">
+            <EvaluationPanel
+              evaluation={evaluation}
+              canEvaluate={canEvaluate}
+              onEvaluate={onEvaluate}
+            />
+            <HumanReviewPanel
+              humanReview={humanReview}
+              evaluation={evaluation}
+              onDecide={onHumanReviewDecide}
+              onRequestRebuild={onRequestRebuild}
+            />
+            <RebuildPanel
+              rebuildRequests={rebuildRequests}
+              onStartRebuild={onStartRebuild}
+              onCancelRebuild={onCancelRebuild}
+            />
+            <ArtifactVersionHistory
+              versions={artifactVersions}
+              selectedVersionId={selectedArtifactVersionId}
+              evaluation={evaluation}
+              onSelectVersion={onSelectArtifactVersion}
+            />
           </div>
         ) : null}
       </section>

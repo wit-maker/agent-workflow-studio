@@ -1,3 +1,5 @@
+import type { ArtifactVersion, EvaluationResult, HumanReviewState, RebuildRequest } from '../domain/evaluation'
+import type { ExecutionGraph } from '../domain/executionGraph'
 import type { Workflow } from '../domain/workflow'
 import type { WorkflowAction } from './workflowActions'
 
@@ -7,6 +9,12 @@ export type WorkflowState = {
   isRunning: boolean
   checkOutcome: 'PASS' | 'REVIEW' | 'FAIL'
   importError: string | null
+  evaluation?: EvaluationResult
+  humanReview?: HumanReviewState
+  rebuildRequests: RebuildRequest[]
+  artifactVersions: ArtifactVersion[]
+  selectedArtifactVersionId?: string
+  executionGraph: ExecutionGraph | null
 }
 
 function markNodeStatus(
@@ -48,6 +56,12 @@ export function createWorkflowState(workflow: Workflow): WorkflowState {
     isRunning: false,
     checkOutcome: 'PASS',
     importError: null,
+    evaluation: undefined,
+    humanReview: undefined,
+    rebuildRequests: [],
+    artifactVersions: [],
+    selectedArtifactVersionId: undefined,
+    executionGraph: null,
   }
 }
 
@@ -106,6 +120,9 @@ export function workflowReducer(
         ...state,
         isRunning: true,
         importError: null,
+        evaluation: undefined,
+        humanReview: undefined,
+        executionGraph: null,
         workflow: {
           ...state.workflow,
           status: 'running',
@@ -223,6 +240,120 @@ export function workflowReducer(
 
     case 'setImportError':
       return { ...state, importError: action.message }
+
+    case 'startEvaluation':
+      return {
+        ...state,
+        evaluation: state.evaluation
+          ? { ...state.evaluation, status: 'evaluating' }
+          : {
+              id: `eval-pending-${Date.now()}`,
+              runId: '',
+              status: 'evaluating',
+              totalScore: 0,
+              maxScore: 100,
+              criteria: [],
+              summary: '評価中...',
+              createdAt: new Date().toISOString(),
+            },
+      }
+
+    case 'setEvaluationResult':
+      return { ...state, evaluation: action.result }
+
+    case 'setHumanReviewDecision': {
+      const now = new Date().toISOString()
+      return {
+        ...state,
+        humanReview: {
+          decision: action.decision,
+          reviewer: 'human',
+          note: action.note,
+          decidedAt: now,
+        },
+      }
+    }
+
+    case 'updateHumanReview':
+      return { ...state, humanReview: action.review }
+
+    case 'requestRebuild':
+      return {
+        ...state,
+        rebuildRequests: [...state.rebuildRequests, action.request],
+      }
+
+    case 'startRebuild':
+      return {
+        ...state,
+        rebuildRequests: state.rebuildRequests.map((r) =>
+          r.id === action.requestId ? { ...r, status: 'running' } : r,
+        ),
+      }
+
+    case 'completeRebuild':
+      return {
+        ...state,
+        rebuildRequests: state.rebuildRequests.map((r) =>
+          r.id === action.requestId ? { ...r, status: 'completed' } : r,
+        ),
+        artifactVersions: [...state.artifactVersions, action.artifactVersion],
+        selectedArtifactVersionId: action.artifactVersion.id,
+        workflow: {
+          ...state.workflow,
+          artifact: {
+            ...state.workflow.artifact,
+            content: action.artifactVersion.content,
+            status: 'draft',
+          },
+        },
+      }
+
+    case 'cancelRebuild':
+      return {
+        ...state,
+        rebuildRequests: state.rebuildRequests.map((r) =>
+          r.id === action.requestId ? { ...r, status: 'cancelled' } : r,
+        ),
+      }
+
+    case 'addArtifactVersion':
+      return {
+        ...state,
+        artifactVersions: [...state.artifactVersions, action.version],
+        selectedArtifactVersionId: action.version.id,
+      }
+
+    case 'selectArtifactVersion': {
+      const version = state.artifactVersions.find((v) => v.id === action.versionId)
+      if (!version) {
+        return { ...state, selectedArtifactVersionId: action.versionId }
+      }
+      return {
+        ...state,
+        selectedArtifactVersionId: action.versionId,
+        workflow: {
+          ...state.workflow,
+          artifact: {
+            ...state.workflow.artifact,
+            content: version.content,
+          },
+        },
+      }
+    }
+
+    case 'clearEvaluation':
+      return {
+        ...state,
+        evaluation: undefined,
+        humanReview: undefined,
+      }
+
+    case 'setExecutionGraph':
+      return { ...state, executionGraph: action.graph }
+
+    case 'clearExecutionGraph':
+      return { ...state, executionGraph: null }
 
     default:
       return state
