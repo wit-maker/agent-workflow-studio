@@ -114,8 +114,18 @@ Phase 3 実行グラフ・エラールート・リトライ経路MVP。
 
 ## Phase 3 Verification
 
-- Model: GPT-5.4 medium assumed from current session context.
+- Model: Codex (実装) / Claude Sonnet 4.6 (引き継ぎ・QA)
 - Branch: `feature/execution-graph-error-retry`
-- `npm run build`: pending
-- `npm run lint`: pending
-- Browser QA: pending
+- `npm run build`: success
+- `npm run lint`: success
+- Browser QA: 実施済み
+  - 初期画面・12ノード表示: OK
+  - Runボタン動作・実行ログ追加: OK
+  - FAIL分岐: チェックノードが failed、エラー経路が作られ、再試行候補に「チェック」が表示される: OK
+  - 再試行ボタン: 押下後 success に切り替わり、判定 PASS へ更新: OK
+  - REVIEW分岐: チェックノードが review_required、確認待ちに「承認して続行 / 差し戻し / スキップ」が表示される: OK
+  - 承認して続行: 押下後ワークフローが続行し、判定 PASS へ更新: OK
+  - PASS直行: 全12ノードが順に complete、Bootstrap MVP 成果物が作られる: OK
+  - BottomMonitor「実行グラフ」タブ: Run ID・再試行候補・経路一覧が表示される: OK
+  - StagePreview executionGraph summary: 最終判定・確認待ち・失敗ノード・再試行候補が表示される: OK
+  - ログ文言: 日本語で全ノードのログが記録される: OK
