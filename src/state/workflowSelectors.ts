@@ -45,7 +45,7 @@ export function selectBottleneckNode(workflow: Workflow): WorkflowNode | undefin
 
 export function selectActiveQueueNodes(workflow: Workflow): WorkflowNode[] {
   return workflow.nodes.filter((node) =>
-    ['queued', 'running', 'failed', 'review_required'].includes(node.status),
+    ['queued', 'running', 'failed', 'review_required', 'retry_ready'].includes(node.status),
   )
 }
 

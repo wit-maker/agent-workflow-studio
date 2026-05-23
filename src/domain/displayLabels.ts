@@ -1,3 +1,4 @@
+import type { ExecutionRouteKind, ExecutionStepStatus } from './executionGraph'
 import type {
   AgentRole,
   ConnectionKind,
@@ -27,9 +28,28 @@ export const statusLabels: Record<WorkflowNodeStatus, string> = {
   running: '実行中',
   success: '成功',
   failed: '失敗',
+  retry_ready: '再試行可能',
   skipped: 'スキップ',
   review_required: '確認待ち',
   blocked: '停止中',
+}
+
+export const executionStepStatusLabels: Record<ExecutionStepStatus, string> = {
+  queued: '待機列',
+  running: '実行中',
+  success: '成功',
+  failed: '失敗',
+  review_required: '確認待ち',
+  skipped: 'スキップ',
+  retry_ready: '再試行可能',
+}
+
+export const routeKindLabels: Record<ExecutionRouteKind, string> = {
+  main: '通常経路',
+  error: 'エラー経路',
+  retry: '再試行経路',
+  review: '確認経路',
+  skip: 'スキップ経路',
 }
 
 export const agentRoleLabels: Record<AgentRole, string> = {

@@ -1,8 +1,11 @@
+import type { ExecutionGraph, ExecutionStep } from '../domain/executionGraph'
+import { createEmptyExecutionGraph } from '../domain/executionGraph'
 import type { Workflow } from '../domain/workflow'
 import type { WorkflowAction } from './workflowActions'
 
 export type WorkflowState = {
   workflow: Workflow
+  executionGraph: ExecutionGraph | null
   selectedNodeId: string
   isRunning: boolean
   checkOutcome: 'PASS' | 'REVIEW' | 'FAIL'
@@ -29,7 +32,8 @@ function markNodeStatus(
               ...(status === 'running' ? { startedAt: now } : {}),
               ...(status === 'success' ||
               status === 'review_required' ||
-              status === 'failed'
+              status === 'failed' ||
+              status === 'skipped'
                 ? { finishedAt: now }
                 : {}),
               ...(error ? { error } : {}),
@@ -41,9 +45,29 @@ function markNodeStatus(
   }
 }
 
+function updateExecutionStep(
+  graph: ExecutionGraph | null,
+  stepId: string,
+  updater: (step: ExecutionStep) => ExecutionStep,
+): ExecutionGraph | null {
+  if (!graph) {
+    return null
+  }
+
+  return {
+    ...graph,
+    steps: graph.steps.map((step) => (step.id === stepId ? updater(step) : step)),
+  }
+}
+
+function appendUnique(values: string[], nextValue: string): string[] {
+  return values.includes(nextValue) ? values : [...values, nextValue]
+}
+
 export function createWorkflowState(workflow: Workflow): WorkflowState {
   return {
     workflow,
+    executionGraph: null,
     selectedNodeId: workflow.nodes[0]?.id ?? '',
     isRunning: false,
     checkOutcome: 'PASS',
@@ -106,6 +130,7 @@ export function workflowReducer(
         ...state,
         isRunning: true,
         importError: null,
+        executionGraph: createEmptyExecutionGraph(action.runId),
         workflow: {
           ...state.workflow,
           status: 'running',
@@ -116,13 +141,19 @@ export function workflowReducer(
           })),
           logs: [action.log],
           artifact: {
-            title: 'Artifact in progress',
+            title: '実行準備中の成果物',
             format: 'Preview',
-            content: 'The local simulator is preparing the workflow artifact.',
+            content: 'ローカルシミュレーターが成果物を準備しています。',
             status: 'draft',
           },
           updatedAt: new Date().toISOString(),
         },
+      }
+
+    case 'clearExecutionGraph':
+      return {
+        ...state,
+        executionGraph: null,
       }
 
     case 'runNodeQueued':
@@ -142,6 +173,7 @@ export function workflowReducer(
               ? { ...connection, status: 'active' }
               : connection,
           ),
+          status: 'running',
         },
       }
 
@@ -157,6 +189,7 @@ export function workflowReducer(
               ? { ...connection, status: 'success' }
               : connection,
           ),
+          status: status === 'review_required' ? 'review_required' : state.workflow.status,
         },
       }
     }
@@ -170,6 +203,215 @@ export function workflowReducer(
           status: 'failed',
           logs: [...state.workflow.logs, action.log],
         },
+      }
+
+    case 'runNodeRetryReady':
+      return {
+        ...state,
+        workflow: markNodeStatus(state.workflow, action.nodeId, 'retry_ready'),
+      }
+
+    case 'runStepQueued':
+      return {
+        ...state,
+        executionGraph: state.executionGraph
+          ? {
+              ...state.executionGraph,
+              steps: [...state.executionGraph.steps, action.step],
+              activeStepId: action.step.id,
+            }
+          : {
+              ...createEmptyExecutionGraph(action.step.runId),
+              steps: [action.step],
+              activeStepId: action.step.id,
+            },
+      }
+
+    case 'runStepRunning': {
+      const updatedGraph = updateExecutionStep(state.executionGraph, action.stepId, (step) => ({
+        ...step,
+        status: 'running',
+        startedAt: action.startedAt ?? step.startedAt ?? new Date().toISOString(),
+        message: action.message ?? step.message,
+      }))
+      return {
+        ...state,
+        executionGraph: updatedGraph
+          ? {
+              ...updatedGraph,
+              activeStepId: action.stepId,
+            }
+          : state.executionGraph,
+      }
+    }
+
+    case 'runStepSuccess': {
+      const updatedGraph = updateExecutionStep(state.executionGraph, action.stepId, (step) => ({
+        ...step,
+        status: 'success',
+        finishedAt: action.finishedAt ?? new Date().toISOString(),
+        durationMs: action.durationMs ?? step.durationMs,
+        message: action.message ?? step.message,
+      }))
+      const updatedStep = updatedGraph?.steps.find((step) => step.id === action.stepId)
+
+      return {
+        ...state,
+        executionGraph: updatedGraph
+          ? {
+              ...updatedGraph,
+              activeStepId:
+                updatedGraph.activeStepId === action.stepId
+                  ? undefined
+                  : updatedGraph.activeStepId,
+              failedStepId:
+                updatedGraph.failedStepId === action.stepId
+                  ? undefined
+                  : updatedGraph.failedStepId,
+              reviewStepId:
+                updatedGraph.reviewStepId === action.stepId
+                  ? undefined
+                  : updatedGraph.reviewStepId,
+              retryCandidates: updatedGraph.retryCandidates.filter(
+                (candidate) =>
+                  candidate !== action.stepId &&
+                  candidate !== updatedStep?.retryOfStepId,
+              ),
+            }
+          : state.executionGraph,
+      }
+    }
+
+    case 'runStepFailed': {
+      const updatedGraph = updateExecutionStep(state.executionGraph, action.stepId, (step) => ({
+        ...step,
+        status: 'failed',
+        finishedAt: action.finishedAt ?? new Date().toISOString(),
+        durationMs: action.durationMs ?? step.durationMs,
+        message: action.message ?? step.message,
+        error: action.error ?? step.error,
+      }))
+      return {
+        ...state,
+        executionGraph: updatedGraph
+          ? {
+              ...updatedGraph,
+              activeStepId: undefined,
+              failedStepId: action.stepId,
+            }
+          : state.executionGraph,
+      }
+    }
+
+    case 'runStepReviewRequired': {
+      const updatedGraph = updateExecutionStep(state.executionGraph, action.stepId, (step) => ({
+        ...step,
+        status: 'review_required',
+        finishedAt: action.finishedAt ?? new Date().toISOString(),
+        durationMs: action.durationMs ?? step.durationMs,
+        message: action.message ?? step.message,
+      }))
+      return {
+        ...state,
+        executionGraph: updatedGraph
+          ? {
+              ...updatedGraph,
+              activeStepId: undefined,
+              reviewStepId: action.stepId,
+            }
+          : state.executionGraph,
+      }
+    }
+
+    case 'addExecutionRoute':
+      return state.executionGraph
+        ? {
+            ...state,
+            executionGraph: {
+              ...state.executionGraph,
+              routes: [...state.executionGraph.routes, action.route],
+            },
+          }
+        : state
+
+    case 'setRetryCandidate':
+      return state.executionGraph
+        ? {
+            ...state,
+            executionGraph: {
+              ...state.executionGraph,
+              retryCandidates: appendUnique(state.executionGraph.retryCandidates, action.stepId),
+            },
+          }
+        : state
+
+    case 'retryExecutionStep':
+      return {
+        ...state,
+        executionGraph: state.executionGraph
+          ? {
+              ...state.executionGraph,
+              steps: [...state.executionGraph.steps, action.step],
+              activeStepId: action.step.id,
+            }
+          : {
+              ...createEmptyExecutionGraph(action.step.runId),
+              steps: [action.step],
+              activeStepId: action.step.id,
+            },
+      }
+
+    case 'approveReviewStep': {
+      const updatedGraph = updateExecutionStep(state.executionGraph, action.stepId, (step) => ({
+        ...step,
+        status: 'success',
+        message: '確認後に続行しました。',
+      }))
+      return {
+        ...state,
+        executionGraph: updatedGraph
+          ? {
+              ...updatedGraph,
+              reviewStepId: undefined,
+              failedStepId: undefined,
+            }
+          : state.executionGraph,
+      }
+    }
+
+    case 'returnReviewStep': {
+      const updatedGraph = updateExecutionStep(state.executionGraph, action.stepId, (step) => ({
+        ...step,
+        status: 'failed',
+        error: step.error ?? '確認結果により差し戻されました。',
+      }))
+      return {
+        ...state,
+        executionGraph: updatedGraph
+          ? {
+              ...updatedGraph,
+              reviewStepId: undefined,
+              failedStepId: action.stepId,
+              retryCandidates: appendUnique(updatedGraph.retryCandidates, action.stepId),
+            }
+          : state.executionGraph,
+      }
+    }
+
+    case 'skipReviewStep':
+      return {
+        ...state,
+        executionGraph: state.executionGraph
+          ? {
+              ...state.executionGraph,
+              steps: [...state.executionGraph.steps, action.step],
+              reviewStepId: undefined,
+              activeStepId: undefined,
+            }
+          : {
+              ...createEmptyExecutionGraph(action.step.runId),
+              steps: [action.step],
+            },
       }
 
     case 'appendLog':
@@ -188,7 +430,6 @@ export function workflowReducer(
         workflow: {
           ...state.workflow,
           metrics: action.metrics,
-          status: state.checkOutcome === 'REVIEW' ? 'review_required' : 'success',
           updatedAt: new Date().toISOString(),
         },
       }
@@ -203,10 +444,21 @@ export function workflowReducer(
         },
       }
 
+    case 'setWorkflowStatus':
+      return {
+        ...state,
+        workflow: {
+          ...state.workflow,
+          status: action.status,
+          updatedAt: new Date().toISOString(),
+        },
+      }
+
     case 'importWorkflow':
       return {
         ...state,
         workflow: action.workflow,
+        executionGraph: null,
         selectedNodeId: action.workflow.nodes[0]?.id ?? '',
         isRunning: false,
         importError: null,

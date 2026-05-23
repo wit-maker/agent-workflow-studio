@@ -1,11 +1,19 @@
 import { useMemo, useReducer, useRef, useState } from 'react'
 import { calculateBottleneck } from '../domain/connectionRules'
+import type {
+  ExecutionRoute,
+  ExecutionRouteKind,
+  ExecutionStep,
+} from '../domain/executionGraph'
 import { createSampleWorkflow } from '../domain/sampleWorkflow'
 import type {
   AgentRole,
   ConnectionKind,
+  WorkflowArtifact,
   WorkflowDataType,
+  WorkflowNode,
   WorkflowRunLog,
+  WorkflowStatus,
 } from '../domain/workflow'
 import {
   deleteWorkflowTemplate,
@@ -53,6 +61,86 @@ function makeLog(
   }
 }
 
+function createStep(
+  runId: string,
+  node: WorkflowNode,
+  route: ExecutionRouteKind,
+  status: ExecutionStep['status'] = 'queued',
+  retryOfStepId?: string,
+): ExecutionStep {
+  return {
+    id: `${runId}-${node.id}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    runId,
+    nodeId: node.id,
+    nodeTitle: node.title,
+    status,
+    route,
+    message:
+      status === 'retry_ready'
+        ? '再試行待ちです。'
+        : status === 'review_required'
+          ? '確認待ちです。'
+          : undefined,
+    retryOfStepId,
+  }
+}
+
+function createRoute(
+  kind: ExecutionRouteKind,
+  fromNodeId: string,
+  toNodeId: string | undefined,
+  reason: string,
+): ExecutionRoute {
+  return {
+    id: `${kind}-${fromNodeId}-${toNodeId ?? 'end'}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    kind,
+    fromNodeId,
+    toNodeId,
+    reason,
+    createdAt: new Date().toISOString(),
+  }
+}
+
+function buildArtifactContent(options: {
+  outcome: 'PASS' | 'REVIEW' | 'FAIL'
+  executedNodes: WorkflowNode[]
+  retryCandidates: number
+  reviewPending: boolean
+  failedNodeTitle?: string
+  note?: string
+}): WorkflowArtifact {
+  const bottleneck = calculateBottleneck(options.executedNodes)
+
+  return {
+    title:
+      options.outcome === 'FAIL'
+        ? '実行失敗サマリー'
+        : options.outcome === 'REVIEW'
+          ? '確認待ちサマリー'
+          : 'Bootstrap MVP 成果物',
+    format: 'Markdown' as const,
+    status:
+      options.outcome === 'FAIL'
+        ? 'failed'
+        : options.outcome === 'REVIEW'
+          ? 'review_required'
+          : 'checked',
+    content: [
+      '# Agent Workflow Studio 実行サマリー',
+      '',
+      `- 判定: ${options.outcome}`,
+      `- 実行ノード数: ${options.executedNodes.length}`,
+      `- 確認待ち: ${options.reviewPending ? 'あり' : 'なし'}`,
+      `- 再試行候補: ${options.retryCandidates} 件`,
+      `- 失敗ノード: ${options.failedNodeTitle ?? 'なし'}`,
+      `- ボトルネック: ${bottleneck?.title ?? 'なし'}`,
+      ...(options.note ? [`- メモ: ${options.note}`] : []),
+      '',
+      'この結果はローカルモック実行によるものです。実APIは呼び出していません。',
+    ].join('\n'),
+  }
+}
+
 export function AppShell() {
   const [state, dispatch] = useReducer(
     workflowReducer,
@@ -65,7 +153,8 @@ export function AppShell() {
     listWorkflowSnapshots(),
   )
   const runTokenRef = useRef(0)
-  const { workflow, selectedNodeId, isRunning, checkOutcome, importError } = state
+  const runCountRef = useRef(0)
+  const { workflow, executionGraph, selectedNodeId, isRunning, checkOutcome, importError } = state
 
   const selectedNode = useMemo(
     () => selectSelectedNode(workflow, selectedNodeId),
@@ -73,113 +162,313 @@ export function AppShell() {
   )
   const connectionValidation = useMemo(() => validateConnections(workflow), [workflow])
 
+  function calculateOutcomeByRunCount(): 'PASS' | 'REVIEW' | 'FAIL' {
+    const currentCount = runCountRef.current
+    runCountRef.current += 1
+    if (currentCount % 3 === 0) {
+      return 'FAIL'
+    }
+    if (currentCount % 3 === 1) {
+      return 'REVIEW'
+    }
+    return 'PASS'
+  }
+
+  function getStepDuration(node: WorkflowNode, attempt = 0): number {
+    const base = Math.max(120, Math.round((node.metrics?.estimatedLatencyMs ?? 600) / 4))
+    return base + attempt * 90
+  }
+
+  function buildMetrics(
+    executedNodes: WorkflowNode[],
+    outcome: 'PASS' | 'REVIEW' | 'FAIL',
+    retryCount: number,
+  ) {
+    const bottleneck = calculateBottleneck(executedNodes)
+    return {
+      tokens: executedNodes.reduce(
+        (total, node) => total + (node.metrics?.estimatedTokens ?? 0),
+        0,
+      ),
+      cost: executedNodes.reduce(
+        (total, node) => total + (node.metrics?.estimatedCost ?? 0),
+        0,
+      ),
+      latencyMs: executedNodes.reduce(
+        (total, node) => total + getStepDuration(node),
+        0,
+      ),
+      successRate: outcome === 'FAIL' ? 54 : outcome === 'REVIEW' ? 78 : 100,
+      queueCount: Math.max(workflow.nodes.length - executedNodes.length, 0),
+      retryCount,
+      bottleneckNodeId: bottleneck?.id ?? null,
+    }
+  }
+
+  async function executeNodeStep(options: {
+    runId: string
+    node: WorkflowNode
+    route: ExecutionRouteKind
+    attempt?: number
+    retryOfStepId?: string
+    result: 'success' | 'review_required' | 'failed'
+  }): Promise<ExecutionStep> {
+    const durationMs = getStepDuration(options.node, options.attempt ?? 0)
+    const step = createStep(
+      options.runId,
+      options.node,
+      options.route,
+      options.route === 'retry' ? 'retry_ready' : 'queued',
+      options.retryOfStepId,
+    )
+
+    if (options.route === 'retry') {
+      dispatch({ type: 'retryExecutionStep', step })
+      dispatch({ type: 'runNodeRetryReady', nodeId: options.node.id })
+    } else {
+      dispatch({ type: 'runStepQueued', step })
+      dispatch({ type: 'runNodeQueued', nodeId: options.node.id })
+    }
+
+    await delay(90)
+
+    dispatch({
+      type: 'runStepRunning',
+      stepId: step.id,
+      startedAt: new Date().toISOString(),
+      message: `${options.node.title} を実行中です。`,
+    })
+    dispatch({
+      type: 'runNodeRunning',
+      nodeId: options.node.id,
+      log: makeLog(options.runId, `${options.node.title} を開始しました。`, options.node.id),
+    })
+
+    await delay(Math.min(durationMs, 260))
+
+    if (options.result === 'failed') {
+      dispatch({
+        type: 'runStepFailed',
+        stepId: step.id,
+        finishedAt: new Date().toISOString(),
+        durationMs,
+        message: `${options.node.title} が失敗しました。`,
+        error: 'ローカルモックでエラールートへ分岐しました。',
+      })
+      dispatch({
+        type: 'runNodeFailed',
+        nodeId: options.node.id,
+        error: 'ローカルモックでエラールートへ分岐しました。',
+        log: makeLog(
+          options.runId,
+          `${options.node.title} が失敗し、エラールートへ移動しました。`,
+          options.node.id,
+          'error',
+        ),
+      })
+      return step
+    }
+
+    if (options.result === 'review_required') {
+      dispatch({
+        type: 'runStepReviewRequired',
+        stepId: step.id,
+        finishedAt: new Date().toISOString(),
+        durationMs,
+        message: `${options.node.title} が確認待ちになりました。`,
+      })
+      dispatch({
+        type: 'runNodeSuccess',
+        nodeId: options.node.id,
+        status: 'review_required',
+        log: makeLog(
+          options.runId,
+          `${options.node.title} は確認待ちです。`,
+          options.node.id,
+          'warn',
+        ),
+      })
+      return step
+    }
+
+    dispatch({
+      type: 'runStepSuccess',
+      stepId: step.id,
+      finishedAt: new Date().toISOString(),
+      durationMs,
+      message: `${options.node.title} が完了しました。`,
+    })
+    dispatch({
+      type: 'runNodeSuccess',
+      nodeId: options.node.id,
+      log: makeLog(options.runId, `${options.node.title} が完了しました。`, options.node.id),
+    })
+
+    return step
+  }
+
+  async function continueMainSequence(options: {
+    runId: string
+    nodes: WorkflowNode[]
+    startIndex: number
+    reviewMode?: boolean
+  }): Promise<WorkflowNode[]> {
+    const executedNodes: WorkflowNode[] = []
+
+    for (let index = options.startIndex; index < options.nodes.length; index += 1) {
+      const node = options.nodes[index]
+
+      if (index > 0) {
+        const previousNode = options.nodes[index - 1]
+        dispatch({
+          type: 'addExecutionRoute',
+          route: createRoute('main', previousNode.id, node.id, '通常実行フロー'),
+        })
+      }
+
+      const step = await executeNodeStep({
+        runId: options.runId,
+        node,
+        route: 'main',
+        result: 'success',
+      })
+
+      executedNodes.push(node)
+
+      if (node.type === 'check' && options.reviewMode) {
+        dispatch({
+          type: 'runStepReviewRequired',
+          stepId: step.id,
+          finishedAt: new Date().toISOString(),
+          durationMs: getStepDuration(node),
+          message: '確認待ちで停止しました。',
+        })
+      }
+    }
+
+    return executedNodes
+  }
+
   async function runMockWorkflow() {
     const runToken = runTokenRef.current + 1
     runTokenRef.current = runToken
     const runId = `run-${new Date().toISOString()}`
+    const outcome = calculateOutcomeByRunCount()
+    const executedNodes: WorkflowNode[] = []
 
     dispatch({
       type: 'runWorkflowStart',
       runId,
       log: makeLog(runId, 'ローカルモック実行を開始しました。外部APIは呼び出しません。'),
     })
-
-    const outcomeSequence: Array<'PASS' | 'REVIEW' | 'FAIL'> = ['PASS', 'REVIEW', 'PASS']
-    const outcome = outcomeSequence[new Date().getSeconds() % outcomeSequence.length]
     dispatch({ type: 'setCheckOutcome', outcome })
 
-    for (const node of workflow.nodes) {
+    for (let index = 0; index < workflow.nodes.length; index += 1) {
       if (runTokenRef.current !== runToken) {
         return
       }
 
-      dispatch({
-        type: 'runNodeRunning',
-        nodeId: node.id,
-        log: makeLog(runId, `${node.title} を開始しました。`, node.id),
+      const node = workflow.nodes[index]
+
+      if (index > 0) {
+        const previousNode = workflow.nodes[index - 1]
+        dispatch({
+          type: 'addExecutionRoute',
+          route: createRoute('main', previousNode.id, node.id, '通常実行フロー'),
+        })
+      }
+
+      if (node.type === 'check') {
+        if (outcome === 'FAIL') {
+          const failedStep = await executeNodeStep({
+            runId,
+            node,
+            route: 'error',
+            result: 'failed',
+          })
+          executedNodes.push(node)
+          dispatch({
+            type: 'addExecutionRoute',
+            route: createRoute('error', node.id, undefined, '検査で失敗したため停止'),
+          })
+          dispatch({ type: 'setRetryCandidate', stepId: failedStep.id })
+          dispatch({ type: 'runNodeRetryReady', nodeId: node.id })
+          dispatch({
+            type: 'setArtifact',
+            artifact: buildArtifactContent({
+              outcome,
+              executedNodes,
+              retryCandidates: 1,
+              reviewPending: false,
+              failedNodeTitle: node.title,
+              note: '再試行ボタンから単体再試行できます。',
+            }),
+          })
+          dispatch({
+            type: 'updateMetrics',
+            metrics: buildMetrics(executedNodes, outcome, 1),
+          })
+          dispatch({ type: 'setRunning', isRunning: false })
+          return
+        }
+
+        if (outcome === 'REVIEW') {
+          const reviewStep = await executeNodeStep({
+            runId,
+            node,
+            route: 'review',
+            result: 'review_required',
+          })
+          executedNodes.push(node)
+          dispatch({
+            type: 'addExecutionRoute',
+            route: createRoute('review', node.id, workflow.nodes[index + 1]?.id, '人間確認待ち'),
+          })
+          dispatch({
+            type: 'setArtifact',
+            artifact: buildArtifactContent({
+              outcome,
+              executedNodes,
+              retryCandidates: 0,
+              reviewPending: true,
+              note: `確認対象: ${reviewStep.nodeTitle}`,
+            }),
+          })
+          dispatch({
+            type: 'updateMetrics',
+            metrics: buildMetrics(executedNodes, outcome, 0),
+          })
+          dispatch({ type: 'setRunning', isRunning: false })
+          return
+        }
+      }
+
+      await executeNodeStep({
+        runId,
+        node,
+        route: 'main',
+        result: 'success',
       })
-
-      await delay(220)
-
-      const isCheckNode = node.type === 'check'
-      const nextStatus =
-        isCheckNode && outcome === 'REVIEW' ? 'review_required' : 'success'
-
-      dispatch({
-        type: 'runNodeSuccess',
-        nodeId: node.id,
-        status: nextStatus,
-        log: makeLog(
-          runId,
-          isCheckNode ? `チェック結果は ${outcome} でした。` : `${node.title} が完了しました。`,
-          node.id,
-          isCheckNode && outcome !== 'PASS' ? 'warn' : 'info',
-        ),
-      })
+      executedNodes.push(node)
     }
-
-    if (runTokenRef.current !== runToken) {
-      return
-    }
-
-    const bottleneck = calculateBottleneck(workflow.nodes)
-    const tokens = workflow.nodes.reduce(
-      (total, node) => total + (node.metrics?.estimatedTokens ?? 0),
-      0,
-    )
-    const cost = workflow.nodes.reduce(
-      (total, node) => total + (node.metrics?.estimatedCost ?? 0),
-      0,
-    )
-    const latencyMs = workflow.nodes.reduce(
-      (total, node) => total + (node.metrics?.estimatedLatencyMs ?? 0),
-      0,
-    )
-
-    dispatch({
-      type: 'updateMetrics',
-      metrics: {
-        tokens,
-        cost,
-        latencyMs,
-        successRate: outcome === 'FAIL' ? 84 : outcome === 'REVIEW' ? 92 : 100,
-        queueCount: 0,
-        retryCount: workflow.nodes.reduce(
-          (total, node) => total + (node.metrics?.retryCount ?? 0),
-          0,
-        ),
-        bottleneckNodeId: bottleneck?.id ?? null,
-      },
-    })
 
     dispatch({
       type: 'setArtifact',
-      artifact: {
-        title: 'Bootstrap MVP 成果物',
-        format: 'Markdown',
-        status: outcome === 'REVIEW' ? 'review_required' : 'checked',
-        content: [
-          '# Agent Workflow Studio モック成果物',
-          '',
-          `- チェック結果: ${outcome}`,
-          `- 実行ノード数: ${workflow.nodes.length}`,
-          `- トークン数: ${tokens}`,
-          `- 想定コスト: $${cost.toFixed(3)}`,
-          `- ボトルネック: ${bottleneck?.title ?? 'なし'}`,
-          '',
-          'この成果物はローカルシミュレーターで生成されています。外部API呼び出しは行っていません。',
-        ].join('\n'),
-      },
+      artifact: buildArtifactContent({
+        outcome,
+        executedNodes,
+        retryCandidates: 0,
+        reviewPending: false,
+      }),
     })
-
+    dispatch({
+      type: 'updateMetrics',
+      metrics: buildMetrics(executedNodes, outcome, 0),
+    })
+    dispatch({ type: 'setWorkflowStatus', status: 'success' })
     dispatch({
       type: 'appendLog',
-      log: makeLog(
-        runId,
-        'メトリクス更新とテンプレート保存モックを完了しました。',
-        undefined,
-        'metric',
-      ),
+      log: makeLog(runId, '実行グラフとメトリクスを更新しました。', undefined, 'metric'),
     })
     dispatch({ type: 'setRunning', isRunning: false })
   }
@@ -187,15 +476,18 @@ export function AppShell() {
   function stopRun() {
     runTokenRef.current += 1
     dispatch({ type: 'setRunning', isRunning: false })
-    dispatch({
-      type: 'appendLog',
-      log: makeLog(
-        `run-stop-${Date.now()}`,
-        'ユーザー操作でローカルモック実行を停止しました。',
-        undefined,
-        'warn',
-      ),
-    })
+    dispatch({ type: 'setWorkflowStatus', status: 'paused' })
+    if (executionGraph) {
+      dispatch({
+        type: 'appendLog',
+        log: makeLog(
+          executionGraph.runId,
+          'ユーザー操作でローカルモック実行を停止しました。',
+          undefined,
+          'warn',
+        ),
+      })
+    }
   }
 
   function handleReset() {
@@ -234,7 +526,7 @@ export function AppShell() {
       dispatch({
         type: 'appendLog',
         log: makeLog(
-          `connection-${Date.now()}`,
+          executionGraph?.runId ?? `connection-${Date.now()}`,
           `接続を作成できませんでした: ${validation.reason}`,
           undefined,
           'warn',
@@ -258,7 +550,12 @@ export function AppShell() {
     })
     dispatch({
       type: 'appendLog',
-      log: makeLog(`connection-${Date.now()}`, '接続を作成しました。', undefined, 'info'),
+      log: makeLog(
+        executionGraph?.runId ?? `connection-${Date.now()}`,
+        '接続を作成しました。',
+        undefined,
+        'info',
+      ),
     })
   }
 
@@ -266,7 +563,12 @@ export function AppShell() {
     dispatch({ type: 'deleteConnection', connectionId })
     dispatch({
       type: 'appendLog',
-      log: makeLog(`connection-${Date.now()}`, '接続を削除しました。', undefined, 'warn'),
+      log: makeLog(
+        executionGraph?.runId ?? `connection-${Date.now()}`,
+        '接続を削除しました。',
+        undefined,
+        'warn',
+      ),
     })
   }
 
@@ -276,7 +578,7 @@ export function AppShell() {
     dispatch({
       type: 'appendLog',
       log: makeLog(
-        `template-${Date.now()}`,
+        executionGraph?.runId ?? `template-${Date.now()}`,
         `テンプレートを保存しました: ${template.name}`,
         undefined,
         'info',
@@ -302,7 +604,7 @@ export function AppShell() {
     dispatch({
       type: 'appendLog',
       log: makeLog(
-        `snapshot-${Date.now()}`,
+        executionGraph?.runId ?? `snapshot-${Date.now()}`,
         `スナップショットを保存しました: ${snapshot.name}`,
         undefined,
         'info',
@@ -320,6 +622,211 @@ export function AppShell() {
 
   function handleDeleteSnapshot(id: string) {
     setSnapshots(deleteWorkflowSnapshot(id))
+  }
+
+  async function handleApproveReviewStep(stepId: string) {
+    if (!executionGraph) {
+      return
+    }
+    const reviewStep = executionGraph.steps.find((step) => step.id === stepId)
+    if (!reviewStep) {
+      return
+    }
+
+    const nodeIndex = workflow.nodes.findIndex((node) => node.id === reviewStep.nodeId)
+    dispatch({ type: 'approveReviewStep', stepId })
+    dispatch({
+      type: 'runNodeSuccess',
+      nodeId: reviewStep.nodeId,
+      status: 'success',
+      log: makeLog(
+        executionGraph.runId,
+        `${reviewStep.nodeTitle} を承認して続行しました。`,
+        reviewStep.nodeId,
+        'approval',
+      ),
+    })
+    dispatch({
+      type: 'addExecutionRoute',
+      route: createRoute(
+        'review',
+        reviewStep.nodeId,
+        workflow.nodes[nodeIndex + 1]?.id,
+        '人間承認で続行',
+      ),
+    })
+    dispatch({ type: 'setCheckOutcome', outcome: 'PASS' })
+    dispatch({ type: 'setRunning', isRunning: true })
+    dispatch({ type: 'setWorkflowStatus', status: 'running' })
+
+    const remainingNodes = await continueMainSequence({
+      runId: executionGraph.runId,
+      nodes: workflow.nodes,
+      startIndex: nodeIndex + 1,
+      reviewMode: true,
+    })
+    const executedNodes = workflow.nodes.slice(0, nodeIndex + 1).concat(remainingNodes)
+
+    dispatch({
+      type: 'setArtifact',
+      artifact: buildArtifactContent({
+        outcome: 'PASS',
+        executedNodes,
+        retryCandidates: executionGraph.retryCandidates.filter((candidate) => candidate !== stepId)
+          .length,
+        reviewPending: false,
+        note: '確認後に残りのノードを続行しました。',
+      }),
+    })
+    dispatch({
+      type: 'updateMetrics',
+      metrics: buildMetrics(executedNodes, 'PASS', workflow.metrics.retryCount),
+    })
+    dispatch({ type: 'setWorkflowStatus', status: 'success' })
+    dispatch({ type: 'setRunning', isRunning: false })
+  }
+
+  function handleReturnReviewStep(stepId: string) {
+    if (!executionGraph) {
+      return
+    }
+    const reviewStep = executionGraph.steps.find((step) => step.id === stepId)
+    if (!reviewStep) {
+      return
+    }
+
+    dispatch({ type: 'returnReviewStep', stepId })
+    dispatch({
+      type: 'runNodeFailed',
+      nodeId: reviewStep.nodeId,
+      error: '人間確認で差し戻されました。',
+      log: makeLog(
+        executionGraph.runId,
+        `${reviewStep.nodeTitle} を差し戻しました。再試行候補に追加します。`,
+        reviewStep.nodeId,
+        'warn',
+      ),
+    })
+    dispatch({
+      type: 'addExecutionRoute',
+      route: createRoute('error', reviewStep.nodeId, undefined, '差し戻し'),
+    })
+    dispatch({
+      type: 'addExecutionRoute',
+      route: createRoute('retry', reviewStep.nodeId, reviewStep.nodeId, '差し戻し後の再試行候補'),
+    })
+    dispatch({ type: 'setCheckOutcome', outcome: 'FAIL' })
+    dispatch({
+      type: 'setArtifact',
+      artifact: buildArtifactContent({
+        outcome: 'FAIL',
+        executedNodes: workflow.nodes.filter((node) =>
+          executionGraph.steps.some((step) => step.nodeId === node.id),
+        ),
+        retryCandidates: executionGraph.retryCandidates.length + 1,
+        reviewPending: false,
+        failedNodeTitle: reviewStep.nodeTitle,
+        note: '差し戻しにより再試行候補へ追加しました。',
+      }),
+    })
+  }
+
+  function handleSkipReviewStep(stepId: string) {
+    if (!executionGraph) {
+      return
+    }
+    const reviewStep = executionGraph.steps.find((step) => step.id === stepId)
+    if (!reviewStep) {
+      return
+    }
+
+    dispatch({
+      type: 'skipReviewStep',
+      step: {
+        ...createStep(executionGraph.runId, workflow.nodes.find((node) => node.id === reviewStep.nodeId) ?? workflow.nodes[0], 'skip', 'skipped'),
+        message: '人間確認でスキップしました。',
+      },
+    })
+    dispatch({
+      type: 'runNodeSuccess',
+      nodeId: reviewStep.nodeId,
+      status: 'skipped',
+      log: makeLog(
+        executionGraph.runId,
+        `${reviewStep.nodeTitle} をスキップしました。`,
+        reviewStep.nodeId,
+        'warn',
+      ),
+    })
+    dispatch({
+      type: 'addExecutionRoute',
+      route: createRoute('skip', reviewStep.nodeId, undefined, '人間確認でスキップ'),
+    })
+    dispatch({ type: 'setWorkflowStatus', status: 'paused' })
+    dispatch({ type: 'setRunning', isRunning: false })
+  }
+
+  async function handleRetryExecutionStep(stepId: string) {
+    if (!executionGraph) {
+      return
+    }
+    const originalStep = executionGraph.steps.find((step) => step.id === stepId)
+    const targetNode = workflow.nodes.find((node) => node.id === originalStep?.nodeId)
+    if (!originalStep || !targetNode) {
+      return
+    }
+
+    dispatch({
+      type: 'addExecutionRoute',
+      route: createRoute('retry', targetNode.id, targetNode.id, '再試行を開始'),
+    })
+
+    const retryStep = await executeNodeStep({
+      runId: executionGraph.runId,
+      node: targetNode,
+      route: 'retry',
+      attempt: 1,
+      retryOfStepId: originalStep.id,
+      result: originalStep.nodeId === workflow.nodes.find((node) => node.type === 'check')?.id ? 'success' : 'success',
+    })
+
+    dispatch({
+      type: 'appendLog',
+      log: makeLog(
+        executionGraph.runId,
+        `${targetNode.title} を再試行し、成功しました。`,
+        targetNode.id,
+        'info',
+      ),
+    })
+    dispatch({ type: 'setCheckOutcome', outcome: 'PASS' })
+    dispatch({ type: 'setWorkflowStatus', status: 'success' })
+    dispatch({
+      type: 'updateMetrics',
+      metrics: {
+        ...workflow.metrics,
+        tokens: workflow.metrics.tokens + (targetNode.metrics?.estimatedTokens ?? 0),
+        cost: Number(
+          (workflow.metrics.cost + (targetNode.metrics?.estimatedCost ?? 0)).toFixed(3),
+        ),
+        latencyMs: workflow.metrics.latencyMs + getStepDuration(targetNode, 1),
+        retryCount: workflow.metrics.retryCount + 1,
+        successRate: 100,
+        bottleneckNodeId:
+          calculateBottleneck([...workflow.nodes.filter((node) => node.status === 'success'), targetNode])
+            ?.id ?? workflow.metrics.bottleneckNodeId,
+      },
+    })
+    dispatch({
+      type: 'setArtifact',
+      artifact: buildArtifactContent({
+        outcome: 'PASS',
+        executedNodes: workflow.nodes.filter((node) => node.status === 'success').concat(targetNode),
+        retryCandidates: executionGraph.retryCandidates.filter((candidate) => candidate !== retryStep.retryOfStepId).length,
+        reviewPending: false,
+        note: `${targetNode.title} の再試行に成功しました。`,
+      }),
+    })
   }
 
   function exportJson() {
@@ -348,7 +855,7 @@ export function AppShell() {
         dispatch({
           type: 'appendLog',
           log: makeLog(
-            `import-${Date.now()}`,
+            executionGraph?.runId ?? `import-${Date.now()}`,
             `JSON読込を中止しました: ${result.error ?? '不正なワークフローです。'}`,
             undefined,
             'warn',
@@ -370,7 +877,7 @@ export function AppShell() {
     <div className="app-shell">
       <TopBar
         workflowName={workflow.name}
-        status={workflow.status}
+        status={workflow.status as WorkflowStatus}
         isRunning={isRunning}
         onRun={runMockWorkflow}
         onStop={stopRun}
@@ -397,6 +904,7 @@ export function AppShell() {
             checkOutcome={checkOutcome}
             workflow={workflow}
             selectedNode={selectedNode}
+            executionGraph={executionGraph}
           />
         </div>
         <Inspector
@@ -411,6 +919,7 @@ export function AppShell() {
       </div>
       <BottomMonitor
         workflow={workflow}
+        executionGraph={executionGraph}
         templates={templates}
         snapshots={snapshots}
         onSaveTemplate={handleSaveTemplate}
@@ -419,6 +928,10 @@ export function AppShell() {
         onSaveSnapshot={handleSaveSnapshot}
         onLoadSnapshot={handleLoadSnapshot}
         onDeleteSnapshot={handleDeleteSnapshot}
+        onRetryExecutionStep={handleRetryExecutionStep}
+        onApproveReviewStep={handleApproveReviewStep}
+        onReturnReviewStep={handleReturnReviewStep}
+        onSkipReviewStep={handleSkipReviewStep}
       />
     </div>
   )
