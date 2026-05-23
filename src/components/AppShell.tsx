@@ -343,6 +343,7 @@ export function AppShell() {
           durationMs: getStepDuration(node),
           message: '確認待ちで停止しました。',
         })
+        return executedNodes
       }
     }
 
@@ -666,6 +667,7 @@ export function AppShell() {
       reviewMode: true,
     })
     const executedNodes = workflow.nodes.slice(0, nodeIndex + 1).concat(remainingNodes)
+    const isCompleted = executedNodes.length === workflow.nodes.length
 
     dispatch({
       type: 'setArtifact',
@@ -674,15 +676,20 @@ export function AppShell() {
         executedNodes,
         retryCandidates: executionGraph.retryCandidates.filter((candidate) => candidate !== stepId)
           .length,
-        reviewPending: false,
-        note: '確認後に残りのノードを続行しました。',
+        reviewPending: !isCompleted,
+        note: isCompleted
+          ? '確認後に残りのノードを続行しました。'
+          : '次の確認待ちで一時停止しました。',
       }),
     })
     dispatch({
       type: 'updateMetrics',
       metrics: buildMetrics(executedNodes, 'PASS', workflow.metrics.retryCount),
     })
-    dispatch({ type: 'setWorkflowStatus', status: 'success' })
+    dispatch({
+      type: 'setWorkflowStatus',
+      status: isCompleted ? 'success' : 'review_required',
+    })
     dispatch({ type: 'setRunning', isRunning: false })
   }
 
@@ -787,7 +794,7 @@ export function AppShell() {
       route: 'retry',
       attempt: 1,
       retryOfStepId: originalStep.id,
-      result: originalStep.nodeId === workflow.nodes.find((node) => node.type === 'check')?.id ? 'success' : 'success',
+      result: 'success',
     })
 
     dispatch({
