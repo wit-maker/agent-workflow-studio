@@ -2,20 +2,27 @@ import {
   Background,
   Controls,
   ReactFlow,
+  useStoreApi,
   type Connection,
+  type Edge,
   type NodeChange,
   type ReactFlowInstance,
   type XYPosition,
 } from '@xyflow/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { formatDataTypeLabel } from '../domain/displayLabels'
+import { connectionKindLabels, formatDataTypeLabel } from '../domain/displayLabels'
 import type { ConnectionKind, Workflow } from '../domain/workflow'
 import {
+  RF_X_SCALE,
+  RF_Y_SCALE,
   toReactFlowEdges,
   toReactFlowNodes,
   toWorkflowConnectionDraft,
 } from '../domain/reactFlowAdapter'
-import type { ConnectionValidationResult } from '../state/workflowSelectors'
+import {
+  type ConnectionValidationResult,
+  validateConnectionDraft,
+} from '../state/workflowSelectors'
 import { ReactFlowNode } from './ReactFlowNode'
 
 type CreateConnectionResult = {
@@ -42,6 +49,29 @@ const nodeTypes = {
   workflowNode: ReactFlowNode,
 }
 
+const escapeCssSelectorValue = (value: string) =>
+  typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
+    ? CSS.escape(value)
+    : value.replace(/["\\]/g, '\\$&')
+
+function NodeMeasurer({ nodeIds }: { nodeIds: string[] }) {
+  const store = useStoreApi()
+  useEffect(() => {
+    if (nodeIds.length === 0) return
+    const { domNode, updateNodeInternals } = store.getState()
+    if (!domNode) return
+    const updates = new Map(
+      nodeIds.flatMap((id) => {
+        const escapedId = escapeCssSelectorValue(id)
+        const el = domNode.querySelector(`.react-flow__node[data-id="${escapedId}"]`)
+        return el ? [[id, { id, nodeElement: el as HTMLDivElement, force: true }]] : []
+      }),
+    )
+    if (updates.size > 0) updateNodeInternals(updates)
+  }, [nodeIds, store])
+  return null
+}
+
 export function ReactFlowCanvas({
   workflow,
   selectedNodeId,
@@ -62,6 +92,7 @@ export function ReactFlowCanvas({
   useEffect(() => {
     setPositions((current) => {
       const next: Record<string, XYPosition> = {}
+      let changed = Object.keys(current).length !== workflow.nodes.length
 
       for (const node of workflow.nodes) {
         const previousWorkflowPosition = previousWorkflowPositionsRef.current[node.id]
@@ -72,16 +103,28 @@ export function ReactFlowCanvas({
           previousWorkflowPosition.x !== incomingPosition.x ||
           previousWorkflowPosition.y !== incomingPosition.y
 
-        next[node.id] = workflowPositionChanged
-          ? incomingPosition
-          : cachedPosition ?? incomingPosition
+        const scaledIncoming = {
+          x: incomingPosition.x * RF_X_SCALE,
+          y: incomingPosition.y * RF_Y_SCALE,
+        }
+
+        const newPos = workflowPositionChanged ? scaledIncoming : cachedPosition ?? scaledIncoming
+        next[node.id] = newPos
+
+        if (!changed && (
+          !cachedPosition ||
+          cachedPosition.x !== newPos.x ||
+          cachedPosition.y !== newPos.y
+        )) {
+          changed = true
+        }
       }
 
       previousWorkflowPositionsRef.current = Object.fromEntries(
         workflow.nodes.map((node) => [node.id, node.position]),
       )
 
-      return next
+      return changed ? next : current
     })
   }, [workflow.nodes])
 
@@ -93,6 +136,11 @@ export function ReactFlowCanvas({
       })),
     [positions, selectedNodeId, workflow],
   )
+  const nodeIds = useMemo(() => workflow.nodes.map((node) => node.id), [workflow.nodes])
+  const nodeTitleById = useMemo(
+    () => new Map(workflow.nodes.map((node) => [node.id, node.title])),
+    [workflow.nodes],
+  )
   const edges = useMemo(
     () => toReactFlowEdges(workflow, effectiveSelectedConnectionId ?? undefined),
     [effectiveSelectedConnectionId, workflow],
@@ -100,12 +148,8 @@ export function ReactFlowCanvas({
   const connectionOptions = useMemo(
     () =>
       workflow.connections.map((connection) => {
-        const sourceTitle =
-          workflow.nodes.find((node) => node.id === connection.sourceNodeId)?.title ??
-          connection.sourceNodeId
-        const targetTitle =
-          workflow.nodes.find((node) => node.id === connection.targetNodeId)?.title ??
-          connection.targetNodeId
+        const sourceTitle = nodeTitleById.get(connection.sourceNodeId) ?? connection.sourceNodeId
+        const targetTitle = nodeTitleById.get(connection.targetNodeId) ?? connection.targetNodeId
 
         return {
           id: connection.id,
@@ -114,24 +158,54 @@ export function ReactFlowCanvas({
             .join(', ')})`,
         }
       }),
-    [workflow.connections, workflow.nodes],
+    [nodeTitleById, workflow.connections],
+  )
+
+  useEffect(() => {
+    if (!connectMessage) return
+    const timer = window.setTimeout(() => setConnectMessage(null), 5000)
+    return () => window.clearTimeout(timer)
+  }, [connectMessage])
+
+  const selectedConnection = useMemo(
+    () => workflow.connections.find((c) => c.id === effectiveSelectedConnectionId) ?? null,
+    [effectiveSelectedConnectionId, workflow.connections],
   )
 
   const handleNodesChange = useCallback((changes: NodeChange[]) => {
     setPositions((current) => {
-      const next = { ...current }
+      const hasPositionChange = changes.some((c) => c.type === 'position' && c.position)
+      if (!hasPositionChange) return current
 
+      const next = { ...current }
       for (const change of changes) {
         if (change.type === 'position' && change.id && change.position) {
           next[change.id] = change.position
         }
       }
-
       return next
     })
   }, [])
 
-  const handleEdgesChange = useCallback(() => {}, [])
+  const handleEdgeClick = useCallback((_: React.MouseEvent, edge: Edge) => {
+    setSelectedConnectionId(edge.id)
+  }, [])
+
+  const isValidConnection = useCallback(
+    (connectionOrEdge: Connection | Edge): boolean => {
+      const { source, target, sourceHandle, targetHandle } = connectionOrEdge
+      if (!source || !target || !sourceHandle || !targetHandle) return false
+      if (source === target) return false
+      const draft = toWorkflowConnectionDraft(
+        workflow,
+        { source, target, sourceHandle, targetHandle },
+        'data',
+      )
+      if (!draft) return false
+      return validateConnectionDraft(workflow, draft).valid
+    },
+    [workflow],
+  )
 
   const handleConnect = useCallback((connection: Connection) => {
     const draft = toWorkflowConnectionDraft(workflow, connection, 'data')
@@ -193,14 +267,16 @@ export function ReactFlowCanvas({
             nodes={nodes}
             edges={edges}
             nodeTypes={nodeTypes}
-            defaultViewport={{ x: 8, y: 18, zoom: 0.28 }}
+            fitView
             onInit={setReactFlowInstance}
-            onConnect={handleConnect}
             onNodesChange={handleNodesChange}
-            onEdgesChange={handleEdgesChange}
+            onConnect={handleConnect}
+            onEdgeClick={handleEdgeClick}
             onNodeClick={(_, node) => onSelectNode(node.id)}
             onPaneClick={() => setSelectedConnectionId(null)}
+            isValidConnection={isValidConnection}
           >
+            <NodeMeasurer nodeIds={nodeIds} />
             <Background gap={24} size={1} />
             <Controls showInteractive={false} />
           </ReactFlow>
@@ -213,6 +289,23 @@ export function ReactFlowCanvas({
               <p className={connectMessage.ok ? 'success-text' : 'error-text'}>
                 {connectMessage.ok ? '接続を作成しました。' : connectMessage.reason}
               </p>
+            ) : null}
+            {selectedConnection ? (
+              <div className="selected-connection-detail">
+                <strong>選択中の接続</strong>
+                <span>
+                  {nodeTitleById.get(selectedConnection.sourceNodeId) ??
+                    selectedConnection.sourceNodeId}
+                  {' → '}
+                  {nodeTitleById.get(selectedConnection.targetNodeId) ??
+                    selectedConnection.targetNodeId}
+                </span>
+                <span>
+                  {connectionKindLabels[selectedConnection.kind]}
+                  {' / '}
+                  {selectedConnection.carries.map((t) => formatDataTypeLabel(t)).join(', ')}
+                </span>
+              </div>
             ) : null}
             {connectionValidation.slice(0, 4).map((result) => (
               <p key={result.connectionId} className={result.valid ? 'success-text' : 'error-text'}>

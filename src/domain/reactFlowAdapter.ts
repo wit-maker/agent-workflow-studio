@@ -119,6 +119,13 @@ export function resolveConnectionHandles(
   }
 }
 
+export const RF_X_SCALE = 1.35
+export const RF_Y_SCALE = 1.25
+
+export function scaleNodePosition(pos: { x: number; y: number }): { x: number; y: number } {
+  return { x: pos.x * RF_X_SCALE, y: pos.y * RF_Y_SCALE }
+}
+
 export function toReactFlowNodes(
   workflow: Workflow,
   positions: NodePositionMap = {},
@@ -130,7 +137,7 @@ export function toReactFlowNodes(
     return {
       id: node.id,
       type: reactFlowNodeType,
-      position: positions[node.id] ?? node.position,
+      position: positions[node.id] ?? scaleNodePosition(node.position),
       draggable: true,
       data: {
         node,
