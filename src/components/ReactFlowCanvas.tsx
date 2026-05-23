@@ -2,7 +2,7 @@ import {
   Background,
   Controls,
   ReactFlow,
-  useUpdateNodeInternals,
+  useStoreApi,
   type Connection,
   type Edge,
   type NodeChange,
@@ -50,11 +50,19 @@ const nodeTypes = {
 }
 
 function NodeMeasurer({ nodeIds }: { nodeIds: string[] }) {
-  const updateNodeInternals = useUpdateNodeInternals()
+  const store = useStoreApi()
   useEffect(() => {
     if (nodeIds.length === 0) return
-    updateNodeInternals(nodeIds)
-  }, [nodeIds, updateNodeInternals])
+    const { domNode, updateNodeInternals } = store.getState()
+    if (!domNode) return
+    const updates = new Map(
+      nodeIds.flatMap((id) => {
+        const el = domNode.querySelector(`.react-flow__node[data-id="${id}"]`)
+        return el ? [[id, { id, nodeElement: el as HTMLDivElement, force: true }]] : []
+      }),
+    )
+    if (updates.size > 0) updateNodeInternals(updates)
+  }, [nodeIds, store])
   return null
 }
 
@@ -78,6 +86,7 @@ export function ReactFlowCanvas({
   useEffect(() => {
     setPositions((current) => {
       const next: Record<string, XYPosition> = {}
+      let changed = Object.keys(current).length !== workflow.nodes.length
 
       for (const node of workflow.nodes) {
         const previousWorkflowPosition = previousWorkflowPositionsRef.current[node.id]
@@ -93,16 +102,23 @@ export function ReactFlowCanvas({
           y: incomingPosition.y * RF_Y_SCALE,
         }
 
-        next[node.id] = workflowPositionChanged
-          ? scaledIncoming
-          : cachedPosition ?? scaledIncoming
+        const newPos = workflowPositionChanged ? scaledIncoming : cachedPosition ?? scaledIncoming
+        next[node.id] = newPos
+
+        if (!changed && (
+          !cachedPosition ||
+          cachedPosition.x !== newPos.x ||
+          cachedPosition.y !== newPos.y
+        )) {
+          changed = true
+        }
       }
 
       previousWorkflowPositionsRef.current = Object.fromEntries(
         workflow.nodes.map((node) => [node.id, node.position]),
       )
 
-      return next
+      return changed ? next : current
     })
   }, [workflow.nodes])
 
