@@ -42,8 +42,9 @@ import {
 import { BottomMonitor } from './BottomMonitor'
 import { Inspector } from './Inspector'
 import { PartsPalette } from './PartsPalette'
+import { ReactFlowCanvas } from './ReactFlowCanvas'
 import { StagePreview } from './StagePreview'
-import { TopBar } from './TopBar'
+import { TopBar, type CanvasMode } from './TopBar'
 import { WorkflowCanvas } from './WorkflowCanvas'
 
 const delay = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms))
@@ -158,6 +159,7 @@ export function AppShell() {
   const runTokenRef = useRef(0)
   const runCountRef = useRef(0)
   const [isEvaluating, setIsEvaluating] = useState(false)
+  const [canvasMode, setCanvasMode] = useState<CanvasMode>('standard')
   const artifactVersionCountRef = useRef(0)
   const cancelledRebuildIdsRef = useRef<Set<string>>(new Set())
   const {
@@ -527,7 +529,7 @@ export function AppShell() {
     dispatch({ type: 'updateNodeConfig', nodeId, updates })
   }
 
-  function handleCreateConnection(draft: {
+  function createConnectionFromDraft(draft: {
     sourceNodeId: string
     sourcePortId: string
     targetNodeId: string
@@ -552,7 +554,10 @@ export function AppShell() {
           'warn',
         ),
       })
-      return
+      return {
+        ok: false as const,
+        reason: validation.reason,
+      }
     }
 
     const srcNode = workflow.nodes.find((n) => n.id === draft.sourceNodeId)
@@ -580,6 +585,20 @@ export function AppShell() {
         'info',
       ),
     })
+    return {
+      ok: true as const,
+      reason: null,
+    }
+  }
+
+  function handleCreateConnection(draft: {
+    sourceNodeId: string
+    sourcePortId: string
+    targetNodeId: string
+    targetPortId: string
+    kind: ConnectionKind
+  }) {
+    return createConnectionFromDraft(draft)
   }
 
   function handleDeleteConnection(connectionId: string) {
@@ -1062,16 +1081,18 @@ export function AppShell() {
 
   return (
     <div className="app-shell">
-      <TopBar
-        workflowName={workflow.name}
-        status={workflow.status as WorkflowStatus}
-        isRunning={isRunning}
-        onRun={runMockWorkflow}
-        onStop={stopRun}
-        onReset={handleReset}
-        onExportJson={exportJson}
-        onImportJson={importJson}
-      />
+        <TopBar
+          workflowName={workflow.name}
+          status={workflow.status as WorkflowStatus}
+          isRunning={isRunning}
+          canvasMode={canvasMode}
+          onRun={runMockWorkflow}
+          onStop={stopRun}
+          onReset={handleReset}
+          onExportJson={exportJson}
+          onImportJson={importJson}
+          onChangeCanvasMode={setCanvasMode}
+        />
       {importError ? <div className="import-error">{importError}</div> : null}
       <div className="workspace-grid">
         <PartsPalette
@@ -1080,12 +1101,23 @@ export function AppShell() {
           onSelectNode={(nodeId) => dispatch({ type: 'selectNode', nodeId })}
         />
         <div className="center-stack">
-          <WorkflowCanvas
-            workflow={workflow}
-            selectedNodeId={selectedNodeId}
-            onSelectNode={(nodeId) => dispatch({ type: 'selectNode', nodeId })}
-            connectionValidation={connectionValidation}
-          />
+          {canvasMode === 'standard' ? (
+            <WorkflowCanvas
+              workflow={workflow}
+              selectedNodeId={selectedNodeId}
+              onSelectNode={(nodeId) => dispatch({ type: 'selectNode', nodeId })}
+              connectionValidation={connectionValidation}
+            />
+          ) : (
+            <ReactFlowCanvas
+              workflow={workflow}
+              selectedNodeId={selectedNodeId}
+              onSelectNode={(nodeId) => dispatch({ type: 'selectNode', nodeId })}
+              connectionValidation={connectionValidation}
+              onCreateConnection={createConnectionFromDraft}
+              onDeleteConnection={handleDeleteConnection}
+            />
+          )}
           <StagePreview
             artifact={workflow.artifact}
             checkOutcome={checkOutcome}

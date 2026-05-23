@@ -15,6 +15,7 @@ Agent Workflow Studio は、AI 作業を型付きワークフローノードと�
 Phase 3 の実行グラフMVPは `docs/implementation/EXECUTION_GRAPH_MVP.md` に整理しています。
 Phase 5 のポートモデルMVPは `docs/implementation/PORT_MODEL_MVP.md` に整理しています。
 Phase 6 のテンプレート再利用UXは `docs/implementation/TEMPLATE_REUSE_UX_MVP.md` に整理しています。
+Phase 7 の React Flow Canvas MVP は `docs/implementation/REACT_FLOW_CANVAS_MVP.md` に整理しています。
 
 ## 開始手順
 
@@ -27,7 +28,7 @@ npm run lint
 
 ## 現在フェーズ
 
-現在は Phase 6 のテンプレート再利用UX強化まで実装しています。
+現在は Phase 7 の React Flow Canvas MVP まで実装しています。
 
 - `useReducer` ベースの workflow state
 - Inspector 編集
@@ -43,6 +44,8 @@ npm run lint
 - 成果物バージョン履歴
 - **ポートモデル**（id / direction / dataType / required / optional の明示的なポートオブジェクト）
 - **ポートベース接続検証**（ポートID存在チェック・型互換チェック）
+- **Canvas表示モード切替**（標準 / React Flow）
+- **React Flow Canvas MVP**（Port Handle 表示、ドラッグ接続、Edge 削除、Inspector 選択連動）
 - 旧 inputTypes / outputTypes との後方互換
 - 日本語優先 UI / ドキュメント
 
@@ -52,6 +55,7 @@ npm run lint
 - TopBar、左パレット、メインキャンバス、右インスペクター、下部モニター、成果物ステージ
 - 12個のMVPノード表示
 - 最小限のドメイン型、サンプルワークフロー、接続ルール、ボトルネック算出
+- 既存 `WorkflowCanvas` と共存する `ReactFlowCanvas`
 - ローカルモック実行、ExecutionGraph、実行タイムライン
 - review / error / retry / skip の可視化
 - localStorage によるテンプレート保存、検索、プレビュー、複製とワークフロー履歴保存
@@ -67,14 +71,14 @@ Human Review も現時点ではローカル状態だけで扱うモック導線�
 
 - 実API呼び出し
 - Credential 保存
-- Tauri、SQLite、React Flow、本番DB
-- 本格的なドラッグ接続ライブラリ
+- Tauri、SQLite、本番DB
+- 自動レイアウト、複雑なEdge編集、DnDノード追加
 - 非同期ジョブエンジン化
 - Human Review の永続化
 
 ## 次の実装順候補
 
-1. Phase 7 として React Flow 導入検討・ドラッグ接続UIを進める
+1. Phase 8 として React Flow 側のノード追加、レイアウト、永続位置保存を検討する
 2. 実行グラフと評価結果を結びつけた差分表示を追加する
 3. テンプレート version / metadata 編集を追加する
 4. UIモデルが安定した後に Tauri 2 と永続ローカル保存を再評価する

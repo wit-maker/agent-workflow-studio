@@ -1,26 +1,32 @@
 import type { WorkflowStatus } from '../domain/workflow'
 import { workflowStatusLabels } from '../domain/displayLabels'
 
+export type CanvasMode = 'standard' | 'reactFlow'
+
 type TopBarProps = {
   workflowName: string
   status: WorkflowStatus
   isRunning: boolean
+  canvasMode: CanvasMode
   onRun: () => void
   onStop: () => void
   onReset: () => void
   onExportJson: () => void
   onImportJson: (file: File) => void
+  onChangeCanvasMode: (mode: CanvasMode) => void
 }
 
 export function TopBar({
   workflowName,
   status,
   isRunning,
+  canvasMode,
   onRun,
   onStop,
   onReset,
   onExportJson,
   onImportJson,
+  onChangeCanvasMode,
 }: TopBarProps) {
   return (
     <header className="top-bar">
@@ -29,6 +35,25 @@ export function TopBar({
         <strong>{workflowName}</strong>
       </div>
       <div className="top-actions" aria-label="ワークフロー操作">
+        <div className="canvas-mode-switch" aria-label="キャンバス表示モード">
+          <span className="canvas-mode-label">Canvas</span>
+          <div className="segmented-control compact" role="tablist" aria-label="Canvas表示モード">
+            <button
+              type="button"
+              className={canvasMode === 'standard' ? 'active' : ''}
+              onClick={() => onChangeCanvasMode('standard')}
+            >
+              標準
+            </button>
+            <button
+              type="button"
+              className={canvasMode === 'reactFlow' ? 'active' : ''}
+              onClick={() => onChangeCanvasMode('reactFlow')}
+            >
+              React Flow
+            </button>
+          </div>
+        </div>
         <button type="button" className="icon-button" title="ワークフロー保存">
           保存
         </button>

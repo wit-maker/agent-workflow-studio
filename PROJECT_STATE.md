@@ -4,7 +4,7 @@ Last updated: 2026-05-23
 
 ## Current Phase
 
-Phase 6 テンプレート再利用UX強化。
+Phase 7 React Flow Canvas MVP。
 
 ## Completed
 
@@ -30,6 +30,12 @@ Phase 6 テンプレート再利用UX強化。
 - BottomMonitor に確認待ち操作、再試行操作、実行グラフ表示を追加した。
 - StagePreview に executionGraph summary を追加した。
 - Check ノードを `node.type === 'check'` ベースで判定するよう維持した。
+- Phase 7 として `@xyflow/react` を導入した。
+- `ReactFlowCanvas`、`ReactFlowNode`、`reactFlowAdapter` を追加した。
+- 既存 `WorkflowCanvas` を残したまま、TopBar から `標準 / React Flow` を切り替えられるようにした。
+- React Flow Canvas 上で Port Handle を表示し、Handle ドラッグで既存 reducer / validation を通して接続作成できるようにした。
+- React Flow Edge の選択削除導線と Inspector 選択連動を追加した。
+- `docs/implementation/REACT_FLOW_CANVAS_MVP.md` を追加した。
 
 ## Phase 3 実装内容
 
@@ -64,7 +70,7 @@ Phase 6 テンプレート再利用UX強化。
 
 - 実外部 API 接続なし
 - Credential 保存なし
-- Tauri / SQLite / React Flow / Zustand なし
+- Tauri / SQLite / Zustand なし
 - Web Worker なし
 - Human Review はローカル状態のみ
 - retry は対象ノード単体のモック再試行のみ
@@ -105,7 +111,7 @@ Phase 6 テンプレート再利用UX強化。
 
 ## Next Work
 
-1. Phase 7 React Flow 導入検討 — ポートをノード上にドットで表示し、ドラッグ接続UIを試作する。
+1. Phase 8 として React Flow 側の位置永続化、ノード追加、エッジ詳細編集を検討する。
 2. 評価結果と実行グラフを結びつけた差分表示を追加する。
 3. テンプレートの version / metadata 編集を追加する。
 4. localStorage MVP から永続ストレージへ進む条件を整理する。
@@ -123,6 +129,19 @@ Phase 6 テンプレート再利用UX強化。
 - `docs/implementation/SCREEN_SPEC_ALIGNMENT.md` に UI-01、UI-02、UI-05、UI-06、UI-08、UI-09、UI-10 の整合表を記録している。
 - `docs/implementation/EXECUTION_GRAPH_MVP.md` に Phase 3 の実行グラフMVPを整理している。
 - `docs/implementation/TEMPLATE_REUSE_UX_MVP.md` に Phase 6 の再利用UX整理を記録している。
+- `docs/implementation/REACT_FLOW_CANVAS_MVP.md` に Phase 7 の Canvas MVP を整理している。
+
+## Phase 7 実装内容
+
+- `@xyflow/react` を導入
+- `src/components/ReactFlowCanvas.tsx` を追加
+- `src/components/ReactFlowNode.tsx` を追加
+- `src/domain/reactFlowAdapter.ts` を追加
+- `WorkflowNode` / `WorkflowConnection` を React Flow の Node / Edge に変換
+- 既存接続のうち port ID 未保持のものは representative handle を推定して可視化
+- Handle ドラッグ接続時に `validateConnectionDraft(...)` と既存 `createConnection` reducer を再利用
+- Edge 選択と「選択中の接続を削除」導線を追加
+- Inspector とのノード選択連動を維持
 
 ## Phase 6 実装内容
 
@@ -135,6 +154,15 @@ Phase 6 テンプレート再利用UX強化。
 - 読み込み前に注意表示と確認 UI を追加
 - テンプレート複製を追加
 - localStorage 既存データの後方互換を維持
+
+## Phase 7 Verification
+
+- Model: Codex
+- Branch: `feature/react-flow-canvas-mvp`
+- `npm run build`: success
+- `npm run lint`: success
+- Browser QA: 標準 / React Flow 切替、12ノード描画、Port Handle 描画、Inspector 選択連動、接続削除導線、最新ビルドの console error なしを確認
+- Browser QA note: in-app browser automation では Handle ドラッグを安定再現できず、接続作成 / 無効接続拒否はコード経路と DOM 構造中心で確認
 
 ## Phase 1 Verification
 
