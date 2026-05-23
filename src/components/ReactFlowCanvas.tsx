@@ -114,6 +114,7 @@ export function ReactFlowCanvas({
       })),
     [positions, selectedNodeId, workflow],
   )
+  const nodeIds = useMemo(() => nodes.map((node) => node.id), [nodes])
   const edges = useMemo(
     () => toReactFlowEdges(workflow, effectiveSelectedConnectionId ?? undefined),
     [effectiveSelectedConnectionId, workflow],
@@ -253,7 +254,7 @@ export function ReactFlowCanvas({
             onPaneClick={() => setSelectedConnectionId(null)}
             isValidConnection={isValidConnection}
           >
-            <NodeMeasurer nodeIds={nodes.map((n) => n.id)} />
+            <NodeMeasurer nodeIds={nodeIds} />
             <Background gap={24} size={1} />
             <Controls showInteractive={false} />
           </ReactFlow>
