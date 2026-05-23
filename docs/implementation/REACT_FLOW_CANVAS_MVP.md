@@ -1,11 +1,14 @@
 # React Flow Canvas MVP
 
-Last updated: 2026-05-23
+Last updated: 2026-05-24
 
 ## 目的
 
 Phase 7 の目的は、既存の `WorkflowCanvas` を壊さずに、React Flow ベースの Canvas MVP を安全に追加することです。
 既存の Run、評価、テンプレート、履歴、JSON import/export、Inspector、Port 検証のQA範囲を守るため、全面置換ではなく共存方式を採用します。
+
+Phase 7.1 では大きな機能追加よりも、React Flow Canvas を「試せる状態」から「安定して使える状態」に近づけることを優先します。
+具体的には、Canvas 表示モード保存、ノード位置保存、位置リセット、軽微な安定化、Undo / Redo 方針整理を行います。
 
 ## なぜ既存Canvasを残すのか
 
@@ -26,6 +29,20 @@ Phase 7 の目的は、既存の `WorkflowCanvas` を壊さずに、React Flow �
 - 既存 reducer の `createConnection` / `deleteConnection` を再利用
 - Edge 選択と削除導線を追加
 - ノード選択を Inspector と連動
+- Canvas 表示モードを localStorage に保存
+- React Flow ノード位置を localStorage に保存
+- React Flow ノード位置のリセット導線を追加
+
+## Phase 7.1 の整理
+
+- Canvas 表示モードは `agent-workflow-studio:canvas-mode` に保存する
+- 保存値は `standard` / `react-flow` を使い、不正値は `standard` 扱いに戻す
+- React Flow ノード位置は `agent-workflow-studio:react-flow-positions` に保存する
+- 保存済み位置がある場合は `workflow.node.position` より優先する
+- 保存済み位置が無い場合は既存 `workflow.node.position` を fallback に使う
+- 存在しない node id の位置は無視する
+- JSON parse 失敗時は空扱いで安全に復元する
+- React Flow Canvas 上で「位置をリセット」を実行すると、保存済み位置を削除して初期配置へ戻す
 
 ## Port Handle と WorkflowPort の対応
 
@@ -67,6 +84,25 @@ Phase 5 で `WorkflowConnection.sourcePortId?` / `targetPortId?` を導入済み
 - React Flow Canvas で作成した接続も、同じ workflow state に保存される
 - そのため標準Canvas、React Flow Canvas、Inspector の接続一覧は同じ状態を参照する
 
+## 安定化メモ
+
+- `NodeMeasurer` は `workflow.nodes` 由来の node id 配列をもとに内部サイズ更新を行う
+- DOM selector の data-id 参照では `CSS.escape(...)` を使い、特殊文字混入時の再発を避ける
+- 重複接続検証は `workflowSelectors.ts` 側の `validateConnectionDraft(...)` に寄せる
+- React Flow 用 adapter では node / connection lookup を使い、描画中の探索回数を減らす
+- `visibility: hidden` を前提にした隠し測定には戻さず、実ノード DOM を測定対象にする
+
+## Undo / Redo
+
+Phase 7.1 では本格 Undo / Redo は実装しません。
+理由は、React Flow のノード移動だけでなく、Import、Template 読込、評価、再作成、Human Review を含む workflow 全体置換系まで巻き戻し対象を決める必要があるためです。
+
+方針は `docs/implementation/UNDO_REDO_POLICY.md` に整理し、当面は次を分離して扱います。
+
+- workflow 本体の履歴
+- React Flow の node position 保存
+- Canvas 表示モード保存
+
 ## 未実装範囲
 
 - `WorkflowCanvas` の削除
@@ -77,13 +113,11 @@ Phase 5 で `WorkflowConnection.sourcePortId?` / `targetPortId?` を導入済み
 - ノード追加DnD
 - 複雑なEdge編集
 - Deleteキー削除
-- ノード位置の永続化
-- localStorage への Canvas mode 保存
 - 本格 Undo / Redo
 
 ## 次フェーズ候補
 
-- React Flow ノード位置の workflow 反映と永続化
+- Phase 7.2 として React Flow Canvas の操作性改善
 - ノード追加DnD
 - Edge 詳細編集UI
 - legacy 接続の port ID 補完または migration 戦略整理

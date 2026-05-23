@@ -1,4 +1,4 @@
-import { useMemo, useReducer, useRef, useState } from 'react'
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { calculateBottleneck } from '../domain/connectionRules'
 import { findPort, getOutputPorts } from '../domain/portRules'
 import type { ArtifactVersion, ReviewDecision } from '../domain/evaluation'
@@ -32,6 +32,11 @@ import {
   saveWorkflowSnapshot,
   type SavedWorkflowSnapshot,
 } from '../storage/localWorkflowHistory'
+import {
+  readCanvasModePreference,
+  writeCanvasModePreference,
+  type SavedCanvasMode,
+} from '../storage/localCanvasState'
 import { createWorkflowState, workflowReducer } from '../state/workflowReducer'
 import {
   selectSelectedNode,
@@ -48,6 +53,14 @@ import { TopBar, type CanvasMode } from './TopBar'
 import { WorkflowCanvas } from './WorkflowCanvas'
 
 const delay = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms))
+
+function toCanvasMode(savedMode: SavedCanvasMode | null): CanvasMode {
+  return savedMode === 'react-flow' ? 'reactFlow' : 'standard'
+}
+
+function toSavedCanvasMode(mode: CanvasMode): SavedCanvasMode {
+  return mode === 'reactFlow' ? 'react-flow' : 'standard'
+}
 
 function makeLog(
   runId: string,
@@ -159,7 +172,9 @@ export function AppShell() {
   const runTokenRef = useRef(0)
   const runCountRef = useRef(0)
   const [isEvaluating, setIsEvaluating] = useState(false)
-  const [canvasMode, setCanvasMode] = useState<CanvasMode>('standard')
+  const [canvasMode, setCanvasMode] = useState<CanvasMode>(() =>
+    toCanvasMode(readCanvasModePreference()),
+  )
   const artifactVersionCountRef = useRef(0)
   const cancelledRebuildIdsRef = useRef<Set<string>>(new Set())
   const {
@@ -181,6 +196,10 @@ export function AppShell() {
     [selectedNodeId, workflow],
   )
   const connectionValidation = useMemo(() => validateConnections(workflow), [workflow])
+
+  useEffect(() => {
+    writeCanvasModePreference(toSavedCanvasMode(canvasMode))
+  }, [canvasMode])
 
   function calculateOutcomeByRunCount(): 'PASS' | 'REVIEW' | 'FAIL' {
     const currentCount = runCountRef.current
@@ -727,6 +746,16 @@ export function AppShell() {
     setSnapshots(deleteWorkflowSnapshot(id))
   }
 
+  function handleResetReactFlowPositions() {
+    dispatch({
+      type: 'appendLog',
+      log: makeLog(
+        executionGraph?.runId ?? `canvas-${Date.now()}`,
+        'React Flow Canvas のノード位置を初期配置に戻しました。',
+      ),
+    })
+  }
+
   async function handleApproveReviewStep(stepId: string) {
     if (!executionGraph) {
       return
@@ -1116,6 +1145,7 @@ export function AppShell() {
               connectionValidation={connectionValidation}
               onCreateConnection={createConnectionFromDraft}
               onDeleteConnection={handleDeleteConnection}
+              onResetPositions={handleResetReactFlowPositions}
             />
           )}
           <StagePreview
