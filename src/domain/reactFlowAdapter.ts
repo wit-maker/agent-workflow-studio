@@ -165,7 +165,14 @@ export function toReactFlowEdges(
   workflow: Workflow,
   selectedConnectionId?: string,
 ): Edge[] {
-  return workflow.connections.map((connection) => {
+  const nodeIds = new Set(workflow.nodes.map((node) => node.id))
+
+  return workflow.connections
+    .filter(
+      (connection) =>
+        nodeIds.has(connection.sourceNodeId) && nodeIds.has(connection.targetNodeId),
+    )
+    .map((connection) => {
     const { sourceHandle, targetHandle } = resolveConnectionHandles(workflow, connection)
     const stroke = getStatusColor(connection.status)
 
@@ -198,7 +205,7 @@ export function toReactFlowEdges(
         carries: connection.carries,
       },
     }
-  })
+    })
 }
 
 export function toWorkflowConnectionDraft(
