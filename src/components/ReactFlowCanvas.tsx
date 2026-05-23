@@ -2,6 +2,7 @@ import {
   Background,
   Controls,
   ReactFlow,
+  useUpdateNodeInternals,
   type Connection,
   type Edge,
   type NodeChange,
@@ -46,6 +47,15 @@ const nodeTypes = {
   workflowNode: ReactFlowNode,
 }
 
+function NodeMeasurer({ nodeIds }: { nodeIds: string[] }) {
+  const updateNodeInternals = useUpdateNodeInternals()
+  useEffect(() => {
+    if (nodeIds.length === 0) return
+    updateNodeInternals(nodeIds)
+  }, [nodeIds, updateNodeInternals])
+  return null
+}
+
 export function ReactFlowCanvas({
   workflow,
   selectedNodeId,
@@ -88,23 +98,6 @@ export function ReactFlowCanvas({
       return next
     })
   }, [workflow.nodes])
-
-  // DEBUG: minimal 3-node test
-  const debugNodes = useMemo(
-    () =>
-      workflow.nodes.slice(0, 3).map((node) => ({
-        id: node.id,
-        position: node.position,
-        data: { label: node.title },
-      })),
-    [workflow.nodes],
-  )
-  const debugEdges = useMemo(
-    () => [
-      { id: 'debug-edge', source: workflow.nodes[0]?.id ?? '', target: workflow.nodes[1]?.id ?? '' },
-    ],
-    [workflow.nodes],
-  )
 
   const nodes = useMemo(
     () =>
