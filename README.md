@@ -14,6 +14,7 @@ Agent Workflow Studio は、AI 作業を型付きワークフローノードと�
 現在実装と画面設計の対応は `docs/implementation/SCREEN_SPEC_ALIGNMENT.md` で管理しています。
 Phase 3 の実行グラフMVPは `docs/implementation/EXECUTION_GRAPH_MVP.md` に整理しています。
 Phase 5 のポートモデルMVPは `docs/implementation/PORT_MODEL_MVP.md` に整理しています。
+Phase 6 のテンプレート再利用UXは `docs/implementation/TEMPLATE_REUSE_UX_MVP.md` に整理しています。
 
 ## 開始手順
 
@@ -26,13 +27,15 @@ npm run lint
 
 ## 現在フェーズ
 
-現在は Phase 5 のポートモデルと接続検証強化のMVPまで実装しています。
+現在は Phase 6 のテンプレート再利用UX強化まで実装しています。
 
 - `useReducer` ベースの workflow state
 - Inspector 編集
 - JSON import / export
 - 接続検証と接続作成 / 削除
 - localStorage によるテンプレート保存と履歴保存
+- テンプレート metadata（タグ / カテゴリ / Port要約 / 評価要約 / ArtifactVersion要約）
+- テンプレート検索 / 詳細プレビュー / 安全確認付き読込 / 複製
 - 実行グラフ（review / fail / retry のローカルモック導線）
 - ローカル評価エンジン（7基準・100点満点）
 - Human Review（承認 / 却下 / 修正依頼 / スキップ）
@@ -51,7 +54,7 @@ npm run lint
 - 最小限のドメイン型、サンプルワークフロー、接続ルール、ボトルネック算出
 - ローカルモック実行、ExecutionGraph、実行タイムライン
 - review / error / retry / skip の可視化
-- localStorage によるテンプレート保存とワークフロー履歴保存
+- localStorage によるテンプレート保存、検索、プレビュー、複製とワークフロー履歴保存
 
 ## 外部APIの扱い
 
@@ -71,8 +74,8 @@ Human Review も現時点ではローカル状態だけで扱うモック導線�
 
 ## 次の実装順候補
 
-1. Phase 4 として評価・再作成・Human Review を強化する
-2. required / optional を持つ明示的なポートオブジェクトへ進める
-3. 実行グラフと評価結果を結びつけた差分表示を追加する
-4. テンプレートのメタデータと再利用導線を広げる
-5. UIモデルが安定した後に Tauri 2 と永続ローカル保存を再評価する
+1. Phase 7 として React Flow 導入検討・ドラッグ接続UIを進める
+2. 実行グラフと評価結果を結びつけた差分表示を追加する
+3. テンプレート version / metadata 編集を追加する
+4. UIモデルが安定した後に Tauri 2 と永続ローカル保存を再評価する
+5. 必要になった場合のみ共有・同期系ストレージを検討する

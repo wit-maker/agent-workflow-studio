@@ -18,6 +18,7 @@ import type {
   WorkflowStatus,
 } from '../domain/workflow'
 import {
+  duplicateWorkflowTemplate,
   deleteWorkflowTemplate,
   listWorkflowTemplates,
   loadWorkflowTemplate,
@@ -510,6 +511,7 @@ export function AppShell() {
 
   function handleReset() {
     runTokenRef.current += 1
+    artifactVersionCountRef.current = 0
     dispatch({ type: 'resetWorkflow', workflow: createSampleWorkflow() })
   }
 
@@ -593,8 +595,23 @@ export function AppShell() {
     })
   }
 
-  function handleSaveTemplate() {
-    const template = saveWorkflowTemplate(workflow)
+  function handleSaveTemplate(input: {
+    name: string
+    description: string
+    tags: string[]
+    category?: string
+  }) {
+    const template = saveWorkflowTemplate({
+      workflow,
+      name: input.name,
+      description: input.description,
+      tags: input.tags,
+      category: input.category,
+      lastEvaluationStatus: evaluation?.status,
+      lastEvaluationScore: evaluation?.totalScore,
+      artifactVersionCount: artifactVersions.length,
+      createdFromRunId: executionGraph?.runId,
+    })
     setTemplates(listWorkflowTemplates())
     dispatch({
       type: 'appendLog',
@@ -605,18 +622,63 @@ export function AppShell() {
         'info',
       ),
     })
+    return template
   }
 
   function handleLoadTemplate(id: string) {
+    const selectedTemplate = templates.find((template) => template.id === id)
     const loaded = loadWorkflowTemplate(id)
     if (!loaded) {
       return
     }
-    dispatch({ type: 'importWorkflow', workflow: loaded })
+
+    const importedWorkflow = JSON.parse(JSON.stringify(loaded)) as typeof loaded
+    importedWorkflow.logs = [
+      ...importedWorkflow.logs,
+      makeLog(
+        executionGraph?.runId ?? `template-load-${Date.now()}`,
+        `テンプレートを読み込みました: ${selectedTemplate?.name ?? importedWorkflow.name}`,
+        undefined,
+        'info',
+      ),
+    ]
+    importedWorkflow.updatedAt = new Date().toISOString()
+
+    artifactVersionCountRef.current = 0
+    dispatch({ type: 'importWorkflow', workflow: importedWorkflow })
+  }
+
+  function handleDuplicateTemplate(id: string) {
+    const duplicated = duplicateWorkflowTemplate(id)
+    if (!duplicated) {
+      return null
+    }
+
+    setTemplates(listWorkflowTemplates())
+    dispatch({
+      type: 'appendLog',
+      log: makeLog(
+        executionGraph?.runId ?? `template-duplicate-${Date.now()}`,
+        `テンプレートを複製しました: ${duplicated.name}`,
+        undefined,
+        'info',
+      ),
+    })
+
+    return duplicated
   }
 
   function handleDeleteTemplate(id: string) {
     setTemplates(deleteWorkflowTemplate(id))
+    dispatch({
+      type: 'appendLog',
+      log: makeLog(
+        executionGraph?.runId ?? `template-delete-${Date.now()}`,
+        'テンプレートを削除しました。',
+        undefined,
+        'warn',
+      ),
+    })
   }
 
   function handleSaveSnapshot() {
@@ -638,6 +700,7 @@ export function AppShell() {
     if (!loaded) {
       return
     }
+    artifactVersionCountRef.current = 0
     dispatch({ type: 'importWorkflow', workflow: loaded })
   }
 
@@ -987,6 +1050,7 @@ export function AppShell() {
         return
       }
 
+      artifactVersionCountRef.current = 0
       dispatch({ type: 'importWorkflow', workflow: result.workflow })
     } catch (error) {
       dispatch({
@@ -1049,6 +1113,7 @@ export function AppShell() {
         snapshots={snapshots}
         onSaveTemplate={handleSaveTemplate}
         onLoadTemplate={handleLoadTemplate}
+        onDuplicateTemplate={handleDuplicateTemplate}
         onDeleteTemplate={handleDeleteTemplate}
         onSaveSnapshot={handleSaveSnapshot}
         onLoadSnapshot={handleLoadSnapshot}
