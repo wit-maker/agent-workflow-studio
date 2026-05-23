@@ -2,6 +2,7 @@ import type {
   Workflow,
   WorkflowArtifact,
   WorkflowMetric,
+  WorkflowConnection,
   WorkflowNode,
   WorkflowNodeStatus,
   WorkflowRunLog,
@@ -15,6 +16,8 @@ export type NodeEditableFields = Pick<WorkflowNode, 'title' | 'description'> &
 export type WorkflowAction =
   | { type: 'selectNode'; nodeId: string }
   | { type: 'updateNodeConfig'; nodeId: string; updates: NodeEditableFields }
+  | { type: 'createConnection'; connection: WorkflowConnection }
+  | { type: 'deleteConnection'; connectionId: string }
   | { type: 'runWorkflowStart'; runId: string; log: WorkflowRunLog }
   | { type: 'runNodeQueued'; nodeId: string }
   | { type: 'runNodeRunning'; nodeId: string; log: WorkflowRunLog }

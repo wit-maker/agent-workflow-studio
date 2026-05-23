@@ -64,6 +64,21 @@ export type ConnectionKind =
   | 'template'
   | 'improvement'
 
+export const connectionKinds = [
+  'data',
+  'instruction',
+  'result',
+  'decision',
+  'evidence',
+  'log',
+  'error',
+  'retry',
+  'approval',
+  'resource',
+  'template',
+  'improvement',
+] as const satisfies ConnectionKind[]
+
 export type ConnectionStatus =
   | 'inactive'
   | 'active'
