@@ -89,6 +89,23 @@ export function ReactFlowCanvas({
     })
   }, [workflow.nodes])
 
+  // DEBUG: minimal 3-node test
+  const debugNodes = useMemo(
+    () =>
+      workflow.nodes.slice(0, 3).map((node) => ({
+        id: node.id,
+        position: node.position,
+        data: { label: node.title },
+      })),
+    [workflow.nodes],
+  )
+  const debugEdges = useMemo(
+    () => [
+      { id: 'debug-edge', source: workflow.nodes[0]?.id ?? '', target: workflow.nodes[1]?.id ?? '' },
+    ],
+    [workflow.nodes],
+  )
+
   const nodes = useMemo(
     () =>
       toReactFlowNodes(workflow, positions).map((node) => ({
@@ -224,13 +241,11 @@ export function ReactFlowCanvas({
       <div className="canvas-scroll react-flow-canvas-body">
         <div className="react-flow-canvas-root">
           <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            nodeTypes={nodeTypes}
+            nodes={debugNodes}
+            edges={debugEdges}
             fitView
             onInit={setReactFlowInstance}
             onConnect={handleConnect}
-            onNodesChange={handleNodesChange}
             onEdgeClick={handleEdgeClick}
             onNodeClick={(_, node) => onSelectNode(node.id)}
             onPaneClick={() => setSelectedConnectionId(null)}
