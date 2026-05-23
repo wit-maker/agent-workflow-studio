@@ -1,7 +1,13 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useReducer, useRef } from 'react'
 import { calculateBottleneck } from '../domain/connectionRules'
 import { createSampleWorkflow } from '../domain/sampleWorkflow'
-import type { Workflow, WorkflowNodeStatus, WorkflowRunLog } from '../domain/workflow'
+import type { AgentRole, WorkflowRunLog } from '../domain/workflow'
+import { createWorkflowState, workflowReducer } from '../state/workflowReducer'
+import {
+  selectSelectedNode,
+  validateConnections,
+  validateWorkflowImport,
+} from '../state/workflowSelectors'
 import { BottomMonitor } from './BottomMonitor'
 import { Inspector } from './Inspector'
 import { PartsPalette } from './PartsPalette'
@@ -27,198 +33,182 @@ function makeLog(
   }
 }
 
-function setNodeStatus(
-  workflow: Workflow,
-  nodeId: string,
-  status: WorkflowNodeStatus,
-): Workflow {
-  return {
-    ...workflow,
-    nodes: workflow.nodes.map((node) =>
-      node.id === nodeId
-        ? {
-            ...node,
-            status,
-            lastRun: {
-              ...node.lastRun,
-              ...(status === 'running' ? { startedAt: new Date().toISOString() } : {}),
-              ...(status === 'success' || status === 'review_required'
-                ? { finishedAt: new Date().toISOString() }
-                : {}),
-            },
-          }
-        : node,
-    ),
-    updatedAt: new Date().toISOString(),
-  }
-}
-
-function resetWorkflow(): Workflow {
-  return createSampleWorkflow()
-}
-
 export function AppShell() {
-  const [workflow, setWorkflow] = useState<Workflow>(() => createSampleWorkflow())
-  const [selectedNodeId, setSelectedNodeId] = useState('node-1')
-  const [isRunning, setIsRunning] = useState(false)
-  const [checkOutcome, setCheckOutcome] = useState<'PASS' | 'REVIEW' | 'FAIL'>('PASS')
+  const [state, dispatch] = useReducer(
+    workflowReducer,
+    createWorkflowState(createSampleWorkflow()),
+  )
   const runTokenRef = useRef(0)
+  const { workflow, selectedNodeId, isRunning, checkOutcome, importError } = state
 
   const selectedNode = useMemo(
-    () => workflow.nodes.find((node) => node.id === selectedNodeId),
-    [selectedNodeId, workflow.nodes],
+    () => selectSelectedNode(workflow, selectedNodeId),
+    [selectedNodeId, workflow],
   )
+  const connectionValidation = useMemo(() => validateConnections(workflow), [workflow])
 
   async function runMockWorkflow() {
     const runToken = runTokenRef.current + 1
     runTokenRef.current = runToken
     const runId = `run-${new Date().toISOString()}`
-    setIsRunning(true)
-    setWorkflow((current) => ({
-      ...current,
-      status: 'running',
-      nodes: current.nodes.map((node) => ({ ...node, status: 'queued' })),
-      connections: current.connections.map((connection) => ({
-        ...connection,
-        status: 'inactive',
-      })),
-      logs: [makeLog(runId, 'Local mock run queued. No external APIs will be called.')],
-      artifact: {
-        title: 'Artifact in progress',
-        format: 'Preview',
-        content: 'The local simulator is preparing the workflow artifact.',
-        status: 'draft',
-      },
-    }))
+    dispatch({
+      type: 'runWorkflowStart',
+      runId,
+      log: makeLog(runId, 'Local mock run queued. No external APIs will be called.'),
+    })
 
     const outcomeSequence: Array<'PASS' | 'REVIEW' | 'FAIL'> = ['PASS', 'REVIEW', 'PASS']
     const outcome = outcomeSequence[new Date().getSeconds() % outcomeSequence.length]
-    setCheckOutcome(outcome)
+    dispatch({ type: 'setCheckOutcome', outcome })
 
     for (const node of workflow.nodes) {
       if (runTokenRef.current !== runToken) {
         return
       }
 
-      setWorkflow((current) => ({
-        ...setNodeStatus(current, node.id, 'running'),
-        logs: [...current.logs, makeLog(runId, `${node.title} started.`, node.id)],
-        connections: current.connections.map((connection) =>
-          connection.sourceNodeId === node.id || connection.targetNodeId === node.id
-            ? { ...connection, status: 'active' }
-            : connection,
-        ),
-      }))
+      dispatch({
+        type: 'runNodeRunning',
+        nodeId: node.id,
+        log: makeLog(runId, `${node.title} started.`, node.id),
+      })
 
       await delay(220)
 
       const nextStatus =
         node.title === 'Check' && outcome === 'REVIEW' ? 'review_required' : 'success'
-      setWorkflow((current) => ({
-        ...setNodeStatus(current, node.id, nextStatus),
-        logs: [
-          ...current.logs,
-          makeLog(
-            runId,
-            node.title === 'Check'
-              ? `Check completed with ${outcome}.`
-              : `${node.title} completed.`,
-            node.id,
-            node.title === 'Check' && outcome !== 'PASS' ? 'warn' : 'info',
-          ),
-        ],
-        connections: current.connections.map((connection) =>
-          connection.sourceNodeId === node.id || connection.targetNodeId === node.id
-            ? { ...connection, status: 'success' }
-            : connection,
+      dispatch({
+        type: 'runNodeSuccess',
+        nodeId: node.id,
+        status: nextStatus,
+        log: makeLog(
+          runId,
+          node.title === 'Check'
+            ? `Check completed with ${outcome}.`
+            : `${node.title} completed.`,
+          node.id,
+          node.title === 'Check' && outcome !== 'PASS' ? 'warn' : 'info',
         ),
-      }))
+      })
     }
 
     if (runTokenRef.current !== runToken) {
       return
     }
 
-    setWorkflow((current) => {
-      const bottleneck = calculateBottleneck(current.nodes)
-      const tokens = current.nodes.reduce(
-        (total, node) => total + (node.metrics?.estimatedTokens ?? 0),
-        0,
-      )
-      const cost = current.nodes.reduce(
-        (total, node) => total + (node.metrics?.estimatedCost ?? 0),
-        0,
-      )
-      const latencyMs = current.nodes.reduce(
-        (total, node) => total + (node.metrics?.estimatedLatencyMs ?? 0),
-        0,
-      )
+    const bottleneck = calculateBottleneck(workflow.nodes)
+    const tokens = workflow.nodes.reduce(
+      (total, node) => total + (node.metrics?.estimatedTokens ?? 0),
+      0,
+    )
+    const cost = workflow.nodes.reduce(
+      (total, node) => total + (node.metrics?.estimatedCost ?? 0),
+      0,
+    )
+    const latencyMs = workflow.nodes.reduce(
+      (total, node) => total + (node.metrics?.estimatedLatencyMs ?? 0),
+      0,
+    )
 
-      return {
-        ...current,
-        status: outcome === 'REVIEW' ? 'review_required' : 'success',
-        metrics: {
-          tokens,
-          cost,
-          latencyMs,
-          successRate: outcome === 'FAIL' ? 84 : outcome === 'REVIEW' ? 92 : 100,
-          queueCount: 0,
-          retryCount: current.nodes.reduce(
-            (total, node) => total + (node.metrics?.retryCount ?? 0),
-            0,
-          ),
-          bottleneckNodeId: bottleneck?.id ?? null,
-        },
-        logs: [
-          ...current.logs,
-          makeLog(runId, 'Metrics updated and template save mock completed.', undefined, 'metric'),
-        ],
-        artifact: {
-          title: 'Bootstrap MVP Artifact',
-          format: 'Markdown',
-          status: outcome === 'REVIEW' ? 'review_required' : 'checked',
-          content: [
-            '# Agent Workflow Studio Mock Artifact',
-            '',
-            `- Check result: ${outcome}`,
-            `- Nodes executed: ${current.nodes.length}`,
-            `- Tokens: ${tokens}`,
-            `- Estimated cost: $${cost.toFixed(3)}`,
-            `- Bottleneck: ${bottleneck?.title ?? 'None'}`,
-            '',
-            'This artifact was produced by a local simulator. No Codex, Hermes, Grok, X, or external API call was made.',
-          ].join('\n'),
-        },
-        updatedAt: new Date().toISOString(),
-      }
+    dispatch({
+      type: 'updateMetrics',
+      metrics: {
+        tokens,
+        cost,
+        latencyMs,
+        successRate: outcome === 'FAIL' ? 84 : outcome === 'REVIEW' ? 92 : 100,
+        queueCount: 0,
+        retryCount: workflow.nodes.reduce(
+          (total, node) => total + (node.metrics?.retryCount ?? 0),
+          0,
+        ),
+        bottleneckNodeId: bottleneck?.id ?? null,
+      },
     })
-    setIsRunning(false)
+    dispatch({
+      type: 'setArtifact',
+      artifact: {
+        title: 'Bootstrap MVP Artifact',
+        format: 'Markdown',
+        status: outcome === 'REVIEW' ? 'review_required' : 'checked',
+        content: [
+          '# Agent Workflow Studio Mock Artifact',
+          '',
+          `- Check result: ${outcome}`,
+          `- Nodes executed: ${workflow.nodes.length}`,
+          `- Tokens: ${tokens}`,
+          `- Estimated cost: $${cost.toFixed(3)}`,
+          `- Bottleneck: ${bottleneck?.title ?? 'None'}`,
+          '',
+          'This artifact was produced by a local simulator. No Codex, Hermes, Grok, X, or external API call was made.',
+        ].join('\n'),
+      },
+    })
+    dispatch({
+      type: 'appendLog',
+      log: makeLog(runId, 'Metrics updated and template save mock completed.', undefined, 'metric'),
+    })
+    dispatch({ type: 'setRunning', isRunning: false })
   }
 
   function stopRun() {
     runTokenRef.current += 1
-    setIsRunning(false)
-    setWorkflow((current) => ({
-      ...current,
-      status: 'paused',
-      nodes: current.nodes.map((node) =>
-        node.status === 'running' || node.status === 'queued'
-          ? { ...node, status: 'skipped' }
-          : node,
-      ),
-      logs: [
-        ...current.logs,
-        makeLog(`run-stop-${Date.now()}`, 'Local mock run stopped by user.', undefined, 'warn'),
-      ],
-    }))
+    dispatch({ type: 'setRunning', isRunning: false })
+    dispatch({
+      type: 'appendLog',
+      log: makeLog(`run-stop-${Date.now()}`, 'Local mock run stopped by user.', undefined, 'warn'),
+    })
   }
 
   function handleReset() {
     runTokenRef.current += 1
-    setIsRunning(false)
-    setWorkflow(resetWorkflow())
-    setSelectedNodeId('node-1')
-    setCheckOutcome('PASS')
+    dispatch({ type: 'resetWorkflow', workflow: createSampleWorkflow() })
+  }
+
+  function handleSaveNode(
+    nodeId: string,
+    updates: {
+      title: string
+      description: string
+      agentRole: AgentRole | undefined
+      config: Record<string, unknown>
+    },
+  ) {
+    dispatch({ type: 'updateNodeConfig', nodeId, updates })
+  }
+
+  function exportJson() {
+    const blob = new Blob([JSON.stringify(workflow, null, 2)], {
+      type: 'application/json',
+    })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `${workflow.id || 'workflow'}.json`
+    anchor.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function importJson(file: File) {
+    try {
+      const text = await file.text()
+      const parsed = JSON.parse(text) as unknown
+      const result = validateWorkflowImport(parsed)
+
+      if (!result.valid || !result.workflow) {
+        dispatch({
+          type: 'setImportError',
+          message: result.error ?? 'Imported workflow is invalid.',
+        })
+        return
+      }
+
+      dispatch({ type: 'importWorkflow', workflow: result.workflow })
+    } catch (error) {
+      dispatch({
+        type: 'setImportError',
+        message: error instanceof Error ? error.message : 'Failed to import JSON.',
+      })
+    }
   }
 
   return (
@@ -230,22 +220,36 @@ export function AppShell() {
         onRun={runMockWorkflow}
         onStop={stopRun}
         onReset={handleReset}
+        onExportJson={exportJson}
+        onImportJson={importJson}
       />
+      {importError ? <div className="import-error">{importError}</div> : null}
       <div className="workspace-grid">
         <PartsPalette
           parts={workflow.nodes}
           selectedNodeId={selectedNodeId}
-          onSelectNode={setSelectedNodeId}
+          onSelectNode={(nodeId) => dispatch({ type: 'selectNode', nodeId })}
         />
         <div className="center-stack">
           <WorkflowCanvas
             workflow={workflow}
             selectedNodeId={selectedNodeId}
-            onSelectNode={setSelectedNodeId}
+            onSelectNode={(nodeId) => dispatch({ type: 'selectNode', nodeId })}
+            connectionValidation={connectionValidation}
           />
-          <StagePreview artifact={workflow.artifact} checkOutcome={checkOutcome} />
+          <StagePreview
+            artifact={workflow.artifact}
+            checkOutcome={checkOutcome}
+            workflow={workflow}
+            selectedNode={selectedNode}
+          />
         </div>
-        <Inspector selectedNode={selectedNode} nodes={workflow.nodes} />
+        <Inspector
+          selectedNode={selectedNode}
+          nodes={workflow.nodes}
+          connectionValidation={connectionValidation}
+          onSaveNode={handleSaveNode}
+        />
       </div>
       <BottomMonitor workflow={workflow} />
     </div>

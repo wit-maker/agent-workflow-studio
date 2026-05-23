@@ -7,6 +7,8 @@ type TopBarProps = {
   onRun: () => void
   onStop: () => void
   onReset: () => void
+  onExportJson: () => void
+  onImportJson: (file: File) => void
 }
 
 export function TopBar({
@@ -16,6 +18,8 @@ export function TopBar({
   onRun,
   onStop,
   onReset,
+  onExportJson,
+  onImportJson,
 }: TopBarProps) {
   return (
     <header className="top-bar">
@@ -41,6 +45,23 @@ export function TopBar({
         <button type="button" className="icon-button" onClick={onReset} disabled={isRunning}>
           Reset
         </button>
+        <button type="button" className="icon-button" onClick={onExportJson}>
+          Export JSON
+        </button>
+        <label className="file-action">
+          Import JSON
+          <input
+            type="file"
+            accept="application/json,.json"
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              if (file) {
+                onImportJson(file)
+                event.target.value = ''
+              }
+            }}
+          />
+        </label>
         <button type="button" className="icon-button" disabled>
           Schedule
         </button>

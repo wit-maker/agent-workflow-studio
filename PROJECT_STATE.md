@@ -4,7 +4,7 @@ Last updated: 2026-05-23
 
 ## Current Phase
 
-Bootstrap MVP foundation.
+Phase 1 UI state and JSON foundation.
 
 ## Completed
 
@@ -19,30 +19,48 @@ Bootstrap MVP foundation.
   stage preview, and bottom monitor.
 - Added a local-only mock run simulation with node statuses, logs, metrics,
   PASS/REVIEW outcome, and mock artifact output.
+- Tightened `AGENTS.md` model gate so non-recommended or unknown models must
+  stop unless the user explicitly overrides.
+- Added useReducer-based workflow state management.
+- Added editable Inspector fields for title, description, agent role, and config
+  JSON.
+- Added Workflow JSON export and import with minimum shape validation.
+- Split BottomMonitor into Logs, Metrics, Queue, and Output tabs.
+- Split StagePreview into Preview, Markdown, and JSON tabs.
+- Added visible connection validation in Canvas and Inspector.
 
 ## Not Implemented Yet
 
 - Real external API connections.
 - Credential storage.
 - Tauri desktop wrapper.
-- Durable JSON save/load UI.
 - Drag-and-drop node creation.
 - Port-level interactive connection editing.
+- Durable template-save mock storage.
 - Automated tests beyond build and lint.
 
 ## Next Work
 
-1. Improve node and edge interaction details.
-2. Add workflow JSON export/import.
-3. Split monitor tabs for logs, metrics, queue, and output.
-4. Add editable inspector fields and template-save mock storage.
-5. Decide whether to introduce Zustand or keep a reducer-based state model.
+1. Add drag connection affordances.
+2. Add port-level connection validation and editing.
+3. Add template-save mock persistence.
+4. Add local workflow JSON save/load history.
+5. Revisit Zustand only if reducer state becomes hard to follow.
 
 ## Known Risks
 
-- The source instruction recommends GPT-5.5 xhigh/high; this session identified
-  the active agent as GPT-5-based and cannot self-switch models.
+- Model gate is strict: if the model is not GPT-5.5 high or GPT-5.5 xhigh,
+  implementation must stop unless the user explicitly overrides.
 - Vite generated current latest package versions, so future dependency changes
   should be reviewed before extending the app.
 - Git user identity was missing globally, so this repository uses a local
   `wit-maker` noreply identity for the bootstrap commit.
+
+## Phase 1 Verification
+
+- Model: GPT-5.5 high confirmed by user before implementation.
+- Branch: `feature/ui-state-and-json-foundation`.
+- `npm run build`: success.
+- `npm run lint`: success.
+- Browser QA: verified tabs, Inspector editing, local mock run, logs, metrics,
+  artifact output, and connection validation display.

@@ -1,11 +1,39 @@
-import type { WorkflowArtifact } from '../domain/workflow'
+import { useState } from 'react'
+import type { Workflow, WorkflowArtifact, WorkflowNode } from '../domain/workflow'
 
 type StagePreviewProps = {
   artifact: WorkflowArtifact
   checkOutcome: string
+  workflow: Workflow
+  selectedNode: WorkflowNode | undefined
 }
 
-export function StagePreview({ artifact, checkOutcome }: StagePreviewProps) {
+export function StagePreview({
+  artifact,
+  checkOutcome,
+  workflow,
+  selectedNode,
+}: StagePreviewProps) {
+  const [activeTab, setActiveTab] = useState<'Preview' | 'Markdown' | 'JSON'>('Preview')
+  const jsonView = JSON.stringify(
+    {
+      artifact,
+      metrics: workflow.metrics,
+      selectedNode: selectedNode
+        ? {
+            id: selectedNode.id,
+            title: selectedNode.title,
+            status: selectedNode.status,
+            inputTypes: selectedNode.inputTypes,
+            outputTypes: selectedNode.outputTypes,
+            config: selectedNode.config,
+          }
+        : null,
+    },
+    null,
+    2,
+  )
+
   return (
     <section className="stage-preview" aria-label="Stage preview">
       <div className="panel-heading compact">
@@ -13,16 +41,24 @@ export function StagePreview({ artifact, checkOutcome }: StagePreviewProps) {
         <h2>{artifact.title}</h2>
       </div>
       <div className="stage-tabs" aria-label="Artifact views">
-        <button type="button" className="active">
-          Preview
-        </button>
-        <button type="button">Markdown</button>
-        <button type="button">JSON</button>
-        <button type="button" disabled>
-          Publish
-        </button>
+        {(['Preview', 'Markdown', 'JSON'] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            className={activeTab === tab ? 'active' : ''}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tab}
+          </button>
+        ))}
       </div>
-      <pre>{artifact.content}</pre>
+      <pre>
+        {activeTab === 'Preview'
+          ? `${artifact.title}\n\n${artifact.content}`
+          : activeTab === 'Markdown'
+            ? artifact.content
+            : jsonView}
+      </pre>
       <div className={`review-badge review-${checkOutcome.toLowerCase()}`}>
         Check: {checkOutcome}
       </div>
