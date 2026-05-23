@@ -13,6 +13,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { connectionKindLabels, formatDataTypeLabel } from '../domain/displayLabels'
 import type { ConnectionKind, Workflow } from '../domain/workflow'
 import {
+  RF_X_SCALE,
+  RF_Y_SCALE,
   toReactFlowEdges,
   toReactFlowNodes,
   toWorkflowConnectionDraft,
@@ -86,9 +88,14 @@ export function ReactFlowCanvas({
           previousWorkflowPosition.x !== incomingPosition.x ||
           previousWorkflowPosition.y !== incomingPosition.y
 
+        const scaledIncoming = {
+          x: incomingPosition.x * RF_X_SCALE,
+          y: incomingPosition.y * RF_Y_SCALE,
+        }
+
         next[node.id] = workflowPositionChanged
-          ? incomingPosition
-          : cachedPosition ?? incomingPosition
+          ? scaledIncoming
+          : cachedPosition ?? scaledIncoming
       }
 
       previousWorkflowPositionsRef.current = Object.fromEntries(
