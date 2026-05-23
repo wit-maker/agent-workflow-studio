@@ -4,23 +4,31 @@ import {
   connectionStatusLabels,
   formatDataTypeLabel,
 } from '../domain/displayLabels'
+import { findPort, getInputPorts, getOutputPorts } from '../domain/portRules'
 import {
   connectionKinds,
   type ConnectionKind,
   type Workflow,
-  type WorkflowDataType,
+  type WorkflowPort,
 } from '../domain/workflow'
 import type { ConnectionValidationResult } from '../state/workflowSelectors'
 import { validateConnectionDraft } from '../state/workflowSelectors'
+
+function formatPortDisplay(port: WorkflowPort | undefined, fallback: string | undefined): string {
+  if (port) {
+    return `${port.label}（${formatDataTypeLabel(port.dataType)}）`
+  }
+  return fallback ? formatDataTypeLabel(fallback) : '未指定'
+}
 
 type ConnectionEditorProps = {
   workflow: Workflow
   connectionValidation: ConnectionValidationResult[]
   onCreateConnection: (draft: {
     sourceNodeId: string
-    sourcePort: string
+    sourcePortId: string
     targetNodeId: string
-    targetPort: string
+    targetPortId: string
     kind: ConnectionKind
   }) => void
   onDeleteConnection: (connectionId: string) => void
@@ -36,12 +44,18 @@ export function ConnectionEditor({
   const [targetNodeId, setTargetNodeId] = useState(workflow.nodes[1]?.id ?? '')
   const sourceNode = workflow.nodes.find((node) => node.id === sourceNodeId) ?? workflow.nodes[0]
   const targetNode = workflow.nodes.find((node) => node.id === targetNodeId) ?? workflow.nodes[1]
-  const [sourcePort, setSourcePort] = useState<WorkflowDataType>(
-    sourceNode?.outputTypes[0] ?? 'Trigger',
+
+  const sourceOutputPorts = useMemo(
+    () => (sourceNode ? getOutputPorts(sourceNode) : []),
+    [sourceNode],
   )
-  const [targetPort, setTargetPort] = useState<WorkflowDataType>(
-    targetNode?.inputTypes[0] ?? 'Trigger',
+  const targetInputPorts = useMemo(
+    () => (targetNode ? getInputPorts(targetNode) : []),
+    [targetNode],
   )
+
+  const [sourcePortId, setSourcePortId] = useState<string>(sourceOutputPorts[0]?.id ?? '')
+  const [targetPortId, setTargetPortId] = useState<string>(targetInputPorts[0]?.id ?? '')
   const [kind, setKind] = useState<ConnectionKind>('data')
 
   const draftValidation = useMemo(() => {
@@ -50,24 +64,29 @@ export function ConnectionEditor({
     }
     return validateConnectionDraft(workflow, {
       sourceNodeId,
-      sourcePort,
+      sourcePortId,
       targetNodeId,
-      targetPort,
+      targetPortId,
       kind,
     })
-  }, [kind, sourceNode, sourceNodeId, sourcePort, targetNode, targetNodeId, targetPort, workflow])
+  }, [kind, sourceNode, sourceNodeId, sourcePortId, targetNode, targetNodeId, targetPortId, workflow])
 
   function selectSource(nodeId: string) {
     const nextSource = workflow.nodes.find((node) => node.id === nodeId)
     setSourceNodeId(nodeId)
-    setSourcePort(nextSource?.outputTypes[0] ?? 'Trigger')
+    const nextPorts = nextSource ? getOutputPorts(nextSource) : []
+    setSourcePortId(nextPorts[0]?.id ?? '')
   }
 
   function selectTarget(nodeId: string) {
     const nextTarget = workflow.nodes.find((node) => node.id === nodeId)
     setTargetNodeId(nodeId)
-    setTargetPort(nextTarget?.inputTypes[0] ?? 'Trigger')
+    const nextPorts = nextTarget ? getInputPorts(nextTarget) : []
+    setTargetPortId(nextPorts[0]?.id ?? '')
   }
+
+  const selectedSourcePort = findPort(sourceOutputPorts, sourcePortId)
+  const selectedTargetPort = findPort(targetInputPorts, targetPortId)
 
   return (
     <section className="connection-editor" aria-label="接続エディター">
@@ -87,17 +106,22 @@ export function ConnectionEditor({
           </select>
         </label>
         <label className="field-label">
-          接続元出力
+          接続元出力ポート
           <select
-            value={sourcePort}
-            onChange={(event) => setSourcePort(event.target.value as WorkflowDataType)}
+            value={sourcePortId}
+            onChange={(event) => setSourcePortId(event.target.value)}
           >
-            {(sourceNode?.outputTypes ?? []).map((type) => (
-              <option key={type} value={type}>
-                {formatDataTypeLabel(type)}
+            {sourceOutputPorts.map((port) => (
+              <option key={port.id} value={port.id}>
+                {formatDataTypeLabel(port.dataType)}
               </option>
             ))}
           </select>
+          {selectedSourcePort && (
+            <span className="port-meta">
+              {formatDataTypeLabel(selectedSourcePort.dataType)} / 出力
+            </span>
+          )}
         </label>
         <label className="field-label">
           接続先ノード
@@ -110,17 +134,24 @@ export function ConnectionEditor({
           </select>
         </label>
         <label className="field-label">
-          接続先入力
+          接続先入力ポート
           <select
-            value={targetPort}
-            onChange={(event) => setTargetPort(event.target.value as WorkflowDataType)}
+            value={targetPortId}
+            onChange={(event) => setTargetPortId(event.target.value)}
           >
-            {(targetNode?.inputTypes ?? []).map((type) => (
-              <option key={type} value={type}>
-                {formatDataTypeLabel(type)}
+            {targetInputPorts.map((port) => (
+              <option key={port.id} value={port.id}>
+                {formatDataTypeLabel(port.dataType)}
+                {port.required ? '（必須）' : '（任意）'}
               </option>
             ))}
           </select>
+          {selectedTargetPort && (
+            <span className="port-meta">
+              {formatDataTypeLabel(selectedTargetPort.dataType)} /{' '}
+              {selectedTargetPort.required ? '必須' : '任意'}
+            </span>
+          )}
         </label>
         <label className="field-label">
           接続種別
@@ -139,9 +170,9 @@ export function ConnectionEditor({
           onClick={() =>
             onCreateConnection({
               sourceNodeId,
-              sourcePort,
+              sourcePortId,
               targetNodeId,
-              targetPort,
+              targetPortId,
               kind,
             })
           }
@@ -173,6 +204,26 @@ export function ConnectionEditor({
                   {connection.carries.map(formatDataTypeLabel).join(', ')} /{' '}
                   {connectionStatusLabels[connection.status]}
                 </span>
+                {(connection.sourcePortId ?? connection.sourcePort) && (
+                  <span className="port-meta">
+                    出力: {formatPortDisplay(
+                      connection.sourcePortId && source
+                        ? findPort(getOutputPorts(source), connection.sourcePortId)
+                        : undefined,
+                      connection.sourcePort,
+                    )}
+                  </span>
+                )}
+                {(connection.targetPortId ?? connection.targetPort) && (
+                  <span className="port-meta">
+                    入力: {formatPortDisplay(
+                      connection.targetPortId && target
+                        ? findPort(getInputPorts(target), connection.targetPortId)
+                        : undefined,
+                      connection.targetPort,
+                    )}
+                  </span>
+                )}
                 <span className={validation?.valid ? 'success-text' : 'error-text'}>
                   {validation?.valid ? '有効' : validation?.reason}
                 </span>

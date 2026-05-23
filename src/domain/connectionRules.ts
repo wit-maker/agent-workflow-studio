@@ -1,6 +1,8 @@
 import type { ConnectionKind, WorkflowDataType, WorkflowNode } from './workflow'
 import { connectionKinds } from './workflow'
 
+export type ConnectionValidationSeverity = 'info' | 'warn' | 'error'
+
 const compatibleTypes: Partial<Record<WorkflowDataType, WorkflowDataType[]>> = {
   Trigger: ['Trigger'],
   Text: ['Text', 'Prompt', 'Context', 'Markdown'],

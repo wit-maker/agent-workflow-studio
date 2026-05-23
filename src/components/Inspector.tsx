@@ -6,6 +6,12 @@ import {
   metricLabels,
   statusLabels,
 } from '../domain/displayLabels'
+import {
+  getInputPorts,
+  getOutputPorts,
+  getUnconnectedRequiredInputPorts,
+  isPortConnected,
+} from '../domain/portRules'
 import type {
   AgentRole,
   ConnectionKind,
@@ -31,9 +37,9 @@ type InspectorProps = {
   ) => void
   onCreateConnection: (draft: {
     sourceNodeId: string
-    sourcePort: string
+    sourcePortId: string
     targetNodeId: string
-    targetPort: string
+    targetPortId: string
     kind: ConnectionKind
   }) => void
   onDeleteConnection: (connectionId: string) => void
@@ -152,11 +158,21 @@ function InspectorContent({
           </div>
           <div>
             <dt>入力</dt>
-            <dd>{selectedNode.inputTypes.map(formatDataTypeLabel).join(', ') || 'なし'}</dd>
+            <dd>
+              {getInputPorts(selectedNode).length === 0
+                ? 'なし'
+                : getInputPorts(selectedNode)
+                    .map((p) => `${formatDataTypeLabel(p.dataType)}${p.required ? '（必須）' : ''}`)
+                    .join('、')}
+            </dd>
           </div>
           <div>
             <dt>出力</dt>
-            <dd>{selectedNode.outputTypes.map(formatDataTypeLabel).join(', ')}</dd>
+            <dd>
+              {getOutputPorts(selectedNode)
+                .map((p) => formatDataTypeLabel(p.dataType))
+                .join('、')}
+            </dd>
           </div>
           <div>
             <dt>モード</dt>
@@ -166,21 +182,27 @@ function InspectorContent({
 
         <section className="inspector-section">
           <h3>ポート</h3>
+          {(() => {
+            const unconnectedRequired = getUnconnectedRequiredInputPorts(selectedNode, connections)
+            return unconnectedRequired.length > 0 ? (
+              <p className="warning-text">
+                必須入力ポートが未接続です:{' '}
+                {unconnectedRequired.map((p) => formatDataTypeLabel(p.dataType)).join('、')}
+              </p>
+            ) : null
+          })()}
           <div className="port-list">
             <div>
               <strong>入力ポート</strong>
-              {selectedNode.inputTypes.length === 0 ? (
+              {getInputPorts(selectedNode).length === 0 ? (
                 <span className="muted">開始ノード</span>
               ) : (
-                selectedNode.inputTypes.map((type) => {
-                  const connected = connections.some(
-                    (connection) =>
-                      connection.targetNodeId === selectedNode.id &&
-                      (connection.targetPort === type || connection.carries.includes(type)),
-                  )
+                getInputPorts(selectedNode).map((port) => {
+                  const connected = isPortConnected(port, selectedNode.id, connections)
                   return (
-                    <span key={type} className={connected ? 'port-chip connected' : 'port-chip'}>
-                      {formatDataTypeLabel(type)} / {connected ? '接続済み' : '任意'}
+                    <span key={port.id} className={connected ? 'port-chip connected' : 'port-chip'}>
+                      {formatDataTypeLabel(port.dataType)} /{' '}
+                      {connected ? '接続済み' : port.required ? '必須・未接続' : '任意'}
                     </span>
                   )
                 })
@@ -188,15 +210,11 @@ function InspectorContent({
             </div>
             <div>
               <strong>出力ポート</strong>
-              {selectedNode.outputTypes.map((type) => {
-                const connected = connections.some(
-                  (connection) =>
-                    connection.sourceNodeId === selectedNode.id &&
-                    (connection.sourcePort === type || connection.carries.includes(type)),
-                )
+              {getOutputPorts(selectedNode).map((port) => {
+                const connected = isPortConnected(port, selectedNode.id, connections)
                 return (
-                  <span key={type} className={connected ? 'port-chip connected' : 'port-chip'}>
-                    {formatDataTypeLabel(type)} / {connected ? '接続済み' : '任意'}
+                  <span key={port.id} className={connected ? 'port-chip connected' : 'port-chip'}>
+                    {formatDataTypeLabel(port.dataType)} / {connected ? '接続済み' : '任意'}
                   </span>
                 )
               })}

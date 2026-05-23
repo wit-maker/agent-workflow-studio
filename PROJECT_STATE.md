@@ -4,7 +4,7 @@ Last updated: 2026-05-23
 
 ## Current Phase
 
-Phase 4 評価・再作成・Human Review 強化MVP。
+Phase 5 ポートモデルと接続検証強化。
 
 ## Completed
 
@@ -81,10 +81,28 @@ Phase 4 評価・再作成・Human Review 強化MVP。
 - 評価実行後にバージョン自動保存
 - 再作成完了後にバージョン自動保存
 
+## Phase 5 実装内容
+
+- `WorkflowPort` 型（id / label / direction / dataType / required / description）
+- `WorkflowPortDirection` 型
+- `WorkflowNode` に `inputPorts?` / `outputPorts?` を追加
+- `WorkflowConnection` に `sourcePortId?` / `targetPortId?` を追加
+- `Workflow` に `schemaVersion?` を追加
+- `src/domain/portRules.ts` 新規作成（getInputPorts / getOutputPorts / findPort / isPortConnected / getUnconnectedRequiredInputPorts / createPortsFromTypes）
+- `connectionRules.ts` に `ConnectionValidationSeverity` を export
+- `validateConnection` にポートID存在チェック・型互換チェックを追加
+- `ConnectionDraft` を `sourcePortId` / `targetPortId` ベースに更新
+- `ConnectionEditor` をポート対応に更新（required/optional 表示）
+- `Inspector` のポートセクションをポートオブジェクトで表示、required 未接続警告を追加
+- `NodeCard` のポート表示をポートオブジェクトで更新（必須ポートに `*` 表示）
+- 旧 `inputTypes` / `outputTypes` による fallback 維持
+- 旧接続（sourcePort / targetPort）との後方互換維持
+- `docs/implementation/PORT_MODEL_MVP.md` 新規作成
+
 ## Next Work
 
-1. 評価結果と実行グラフを結びつけた差分表示を追加する。
-2. required / optional を持つ明示的なポートオブジェクトへ進める。
+1. React Flow 導入 — ポートをノード上にドットで表示し、ドラッグ接続を実現
+2. テンプレート再利用 UX 強化 — ポート情報をテンプレートメタデータに含める
 3. 評価結果と実行グラフを結びつけた差分表示を追加する。
 4. テンプレートの version / metadata 編集を追加する。
 5. reducer state が複雑化した場合のみ Zustand を再評価する。
