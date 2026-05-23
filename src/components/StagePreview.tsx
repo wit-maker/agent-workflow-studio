@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { checkOutcomeLabels } from '../domain/displayLabels'
+import { checkOutcomeLabels, evaluationStatusLabels, reviewDecisionLabels } from '../domain/displayLabels'
+import type { EvaluationResult, HumanReviewState } from '../domain/evaluation'
 import type { ExecutionGraph } from '../domain/executionGraph'
 import { summarizeExecutionGraph } from '../domain/executionGraph'
 import type { Workflow, WorkflowArtifact, WorkflowNode } from '../domain/workflow'
@@ -10,6 +11,8 @@ type StagePreviewProps = {
   workflow: Workflow
   selectedNode: WorkflowNode | undefined
   executionGraph: ExecutionGraph | null
+  evaluation?: EvaluationResult
+  humanReview?: HumanReviewState
 }
 
 export function StagePreview({
@@ -18,6 +21,8 @@ export function StagePreview({
   workflow,
   selectedNode,
   executionGraph,
+  evaluation,
+  humanReview,
 }: StagePreviewProps) {
   const [activeTab, setActiveTab] = useState<'Preview' | 'Markdown' | 'JSON'>('Preview')
   const tabLabels = {
@@ -85,8 +90,20 @@ export function StagePreview({
             ? artifact.content
             : jsonView}
       </pre>
-      <div className={`review-badge review-${checkOutcome.toLowerCase()}`}>
-        判定: {checkOutcomeLabels[checkOutcome as keyof typeof checkOutcomeLabels] ?? checkOutcome}
+      <div className="stage-meta-row">
+        <div className={`review-badge review-${checkOutcome.toLowerCase()}`}>
+          判定: {checkOutcomeLabels[checkOutcome as keyof typeof checkOutcomeLabels] ?? checkOutcome}
+        </div>
+        {evaluation ? (
+          <div className={`eval-status-badge eval-status-${evaluation.status}`}>
+            評価: {evaluationStatusLabels[evaluation.status]}
+          </div>
+        ) : null}
+        {humanReview && humanReview.decision !== 'pending' ? (
+          <div className={`hr-decision-badge hr-decision-${humanReview.decision}`}>
+            レビュー: {reviewDecisionLabels[humanReview.decision]}
+          </div>
+        ) : null}
       </div>
     </section>
   )

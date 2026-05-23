@@ -1,3 +1,4 @@
+import type { EvaluationResult, HumanReviewState, RebuildRequest, ArtifactVersion, ReviewDecision } from '../domain/evaluation'
 import type { ExecutionRoute, ExecutionStep } from '../domain/executionGraph'
 import type {
   Workflow,
@@ -71,3 +72,14 @@ export type WorkflowAction =
   | { type: 'setRunning'; isRunning: boolean }
   | { type: 'setCheckOutcome'; outcome: 'PASS' | 'REVIEW' | 'FAIL' }
   | { type: 'setImportError'; message: string | null }
+  | { type: 'startEvaluation' }
+  | { type: 'setEvaluationResult'; result: EvaluationResult }
+  | { type: 'setHumanReviewDecision'; decision: ReviewDecision; reviewer: string; note?: string }
+  | { type: 'updateHumanReview'; review: HumanReviewState }
+  | { type: 'requestRebuild'; request: RebuildRequest }
+  | { type: 'startRebuild'; requestId: string }
+  | { type: 'completeRebuild'; requestId: string }
+  | { type: 'cancelRebuild'; requestId: string }
+  | { type: 'addArtifactVersion'; version: ArtifactVersion }
+  | { type: 'selectArtifactVersion'; versionId: string }
+  | { type: 'clearEvaluation' }

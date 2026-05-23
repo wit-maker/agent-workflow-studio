@@ -4,7 +4,7 @@ Last updated: 2026-05-23
 
 ## Current Phase
 
-Phase 3 実行グラフ・エラールート・リトライ経路MVP。
+Phase 4 評価・再作成・Human Review 強化MVP。
 
 ## Completed
 
@@ -69,9 +69,21 @@ Phase 3 実行グラフ・エラールート・リトライ経路MVP。
 - Human Review はローカル状態のみ
 - retry は対象ノード単体のモック再試行のみ
 
+## Phase 4 実装内容
+
+- ローカル評価エンジン（7基準・100点満点・閾値判定）
+- EvaluationPanel（スコアバー / 基準テーブル）
+- HumanReviewPanel（承認 / 却下 / 修正依頼 / スキップ）
+- RebuildPanel（再作成リクエスト一覧 / 実行 / キャンセル）
+- ArtifactVersionHistory（バージョン履歴 / 切り替え）
+- BottomMonitor に評価タブを追加（6タブ）
+- StagePreview に評価・レビューバッジを追加
+- 評価実行後にバージョン自動保存
+- 再作成完了後にバージョン自動保存
+
 ## Next Work
 
-1. Phase 4 として評価・再作成・Human Review 強化へ進む。
+1. 評価結果と実行グラフを結びつけた差分表示を追加する。
 2. required / optional を持つ明示的なポートオブジェクトへ進める。
 3. 評価結果と実行グラフを結びつけた差分表示を追加する。
 4. テンプレートの version / metadata 編集を追加する。
