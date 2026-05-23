@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { evaluationStatusLabels } from '../domain/displayLabels'
 import type { SavedWorkflowTemplate } from '../storage/localTemplates'
 import { TemplatePreview } from './TemplatePreview'
@@ -47,10 +47,26 @@ export function TemplateLibrary({
   const [descriptionInput, setDescriptionInput] = useState(currentWorkflowDescription)
   const [tagsInput, setTagsInput] = useState('')
   const [categoryInput, setCategoryInput] = useState('')
+  const previousWorkflowNameRef = useRef(currentWorkflowName)
+  const previousWorkflowDescriptionRef = useRef(currentWorkflowDescription)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
     templates[0]?.id ?? null,
   )
   const [pendingLoadTemplateId, setPendingLoadTemplateId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (nameInput === previousWorkflowNameRef.current) {
+      setNameInput(currentWorkflowName)
+    }
+    previousWorkflowNameRef.current = currentWorkflowName
+  }, [currentWorkflowName, nameInput])
+
+  useEffect(() => {
+    if (descriptionInput === previousWorkflowDescriptionRef.current) {
+      setDescriptionInput(currentWorkflowDescription)
+    }
+    previousWorkflowDescriptionRef.current = currentWorkflowDescription
+  }, [currentWorkflowDescription, descriptionInput])
 
   const filteredTemplates = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLocaleLowerCase('ja-JP')

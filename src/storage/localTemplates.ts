@@ -3,6 +3,9 @@ import type { Workflow, WorkflowTemplateMetadata } from '../domain/workflow'
 
 const TEMPLATE_STORAGE_KEY = 'agent-workflow-studio.templates.v1'
 
+const createTemplateId = () =>
+  `template-${Date.now()}-${Math.random().toString(16).slice(2)}`
+
 export type SavedWorkflowTemplate = {
   id: string
   name: string
@@ -59,7 +62,7 @@ function normalizeTemplate(value: unknown): SavedWorkflowTemplate | null {
     id:
       typeof value.id === 'string' && value.id
         ? value.id
-        : `template-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        : createTemplateId(),
     name,
     description,
     workflowId:
@@ -111,7 +114,7 @@ export function saveWorkflowTemplate(
   snapshot.updatedAt = now
 
   const template: SavedWorkflowTemplate = {
-    id: `template-${Date.now()}`,
+    id: createTemplateId(),
     name,
     description,
     workflowId: input.workflow.id,
@@ -157,7 +160,7 @@ export function duplicateWorkflowTemplate(id: string): SavedWorkflowTemplate | n
   duplicatedSnapshot.updatedAt = now
 
   const duplicate: SavedWorkflowTemplate = {
-    id: `template-${Date.now()}`,
+    id: createTemplateId(),
     name: duplicateName,
     description: original.description,
     workflowId: original.workflowId,
