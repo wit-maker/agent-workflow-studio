@@ -185,26 +185,4 @@ export type Workflow = {
   updatedAt: string
 }
 
-export const agentRoleLabels: Record<AgentRole, string> = {
-  human: 'Human',
-  dev_leader_ai: 'Dev Leader AI',
-  sub_leader_ai: 'Sub Leader AI',
-  programmer_ai: 'Programmer AI',
-  designer_ai: 'Designer AI',
-  research_ai: 'Research AI',
-  qa_ai: 'QA AI',
-  security_ai: 'Security AI',
-  recorder_ai: 'Recorder AI',
-  lightwork_ai: 'Lightwork AI',
-}
-
-export const statusLabels: Record<WorkflowNodeStatus, string> = {
-  idle: 'Idle',
-  queued: 'Queued',
-  running: 'Running',
-  success: 'Success',
-  failed: 'Failed',
-  skipped: 'Skipped',
-  review_required: 'Review',
-  blocked: 'Blocked',
-}
+export { agentRoleLabels, statusLabels } from './displayLabels'

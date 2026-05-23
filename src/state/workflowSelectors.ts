@@ -55,34 +55,34 @@ export function validateWorkflowImport(value: unknown): {
   error?: string
 } {
   if (!isRecord(value)) {
-    return { valid: false, error: 'Imported file must contain a workflow object.' }
+    return { valid: false, error: '読み込んだファイルには workflow オブジェクトが必要です。' }
   }
 
   const nodes = value.nodes
   const connections = value.connections
 
   if (typeof value.id !== 'string' || value.id.trim() === '') {
-    return { valid: false, error: 'Workflow id is missing.' }
+    return { valid: false, error: 'workflow.id がありません。' }
   }
 
   if (typeof value.name !== 'string' || value.name.trim() === '') {
-    return { valid: false, error: 'Workflow name is missing.' }
+    return { valid: false, error: 'workflow.name がありません。' }
   }
 
   if (!Array.isArray(nodes)) {
-    return { valid: false, error: 'Workflow nodes must be an array.' }
+    return { valid: false, error: 'workflow.nodes は配列である必要があります。' }
   }
 
   if (!Array.isArray(connections)) {
-    return { valid: false, error: 'Workflow connections must be an array.' }
+    return { valid: false, error: 'workflow.connections は配列である必要があります。' }
   }
 
   if (!isRecord(value.metrics)) {
-    return { valid: false, error: 'Workflow metrics are missing.' }
+    return { valid: false, error: 'workflow.metrics がありません。' }
   }
 
   if (!isRecord(value.artifact) || typeof value.artifact.content !== 'string') {
-    return { valid: false, error: 'Workflow artifact is missing.' }
+    return { valid: false, error: 'workflow.artifact.content がありません。' }
   }
 
   const hasInvalidNode = nodes.some(
@@ -95,7 +95,7 @@ export function validateWorkflowImport(value: unknown): {
   )
 
   if (hasInvalidNode) {
-    return { valid: false, error: 'At least one node is missing required fields.' }
+    return { valid: false, error: '必須項目が不足しているノードがあります。' }
   }
 
   const hasInvalidConnection = connections.some(
@@ -108,7 +108,7 @@ export function validateWorkflowImport(value: unknown): {
   if (hasInvalidConnection) {
     return {
       valid: false,
-      error: 'At least one connection is missing required source or target fields.',
+      error: '接続に source または target の必須項目が不足しています。',
     }
   }
 
@@ -132,7 +132,7 @@ export function validateConnection(
       sourceLabel: connection.sourceNodeId,
       targetLabel: formatNodeLabel(target, connection.targetNodeId),
       valid: false,
-      reason: 'Source node does not exist.',
+      reason: '接続元ノードが存在しません。',
       severity: 'error',
     }
   }
@@ -143,7 +143,7 @@ export function validateConnection(
       sourceLabel: source.title,
       targetLabel: connection.targetNodeId,
       valid: false,
-      reason: 'Target node does not exist.',
+      reason: '接続先ノードが存在しません。',
       severity: 'error',
     }
   }
@@ -154,7 +154,7 @@ export function validateConnection(
       sourceLabel: source.title,
       targetLabel: target.title,
       valid: false,
-      reason: 'Source and target cannot be the same node.',
+      reason: '接続元と接続先に同じノードは指定できません。',
       severity: 'error',
     }
   }
@@ -165,7 +165,7 @@ export function validateConnection(
       sourceLabel: source.title,
       targetLabel: target.title,
       valid: false,
-      reason: 'Unknown connection kind.',
+      reason: '未知の接続種別です。',
       severity: 'error',
     }
   }
@@ -176,7 +176,7 @@ export function validateConnection(
       sourceLabel: source.title,
       targetLabel: target.title,
       valid: false,
-      reason: 'Connection must carry at least one data type.',
+      reason: '接続には最低1つのデータ型が必要です。',
       severity: 'error',
     }
   }
@@ -190,7 +190,7 @@ export function validateConnection(
       sourceLabel: source.title,
       targetLabel: target.title,
       valid: false,
-      reason: `Source cannot output: ${carriesMissingFromSource.join(', ')}.`,
+      reason: `接続元が出力できない型です: ${carriesMissingFromSource.join(', ')}。`,
       severity: 'error',
     }
   }
@@ -208,7 +208,7 @@ export function validateConnection(
       sourceLabel: source.title,
       targetLabel: target.title,
       valid: false,
-      reason: 'Connection references a port that is not present on the node.',
+      reason: '存在しないポートが指定されています。',
       severity: 'error',
     }
   }
@@ -225,7 +225,7 @@ export function validateConnection(
       sourceLabel: source.title,
       targetLabel: target.title,
       valid: false,
-      reason: `Target cannot receive: ${targetCannotReceive.join(', ')}.`,
+      reason: `接続先が受け取れない型です: ${targetCannotReceive.join(', ')}。`,
       severity: 'error',
     }
   }

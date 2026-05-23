@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { checkOutcomeLabels } from '../domain/displayLabels'
 import type { Workflow, WorkflowArtifact, WorkflowNode } from '../domain/workflow'
 
 type StagePreviewProps = {
@@ -15,6 +16,11 @@ export function StagePreview({
   selectedNode,
 }: StagePreviewProps) {
   const [activeTab, setActiveTab] = useState<'Preview' | 'Markdown' | 'JSON'>('Preview')
+  const tabLabels = {
+    Preview: 'プレビュー',
+    Markdown: 'Markdown',
+    JSON: 'JSON',
+  } as const
   const jsonView = JSON.stringify(
     {
       artifact,
@@ -35,12 +41,12 @@ export function StagePreview({
   )
 
   return (
-    <section className="stage-preview" aria-label="Stage preview">
+    <section className="stage-preview" aria-label="成果物ステージ">
       <div className="panel-heading compact">
-        <span className="eyebrow">Stage</span>
+        <span className="eyebrow">成果物</span>
         <h2>{artifact.title}</h2>
       </div>
-      <div className="stage-tabs" aria-label="Artifact views">
+      <div className="stage-tabs" aria-label="成果物表示">
         {(['Preview', 'Markdown', 'JSON'] as const).map((tab) => (
           <button
             key={tab}
@@ -48,7 +54,7 @@ export function StagePreview({
             className={activeTab === tab ? 'active' : ''}
             onClick={() => setActiveTab(tab)}
           >
-            {tab}
+            {tabLabels[tab]}
           </button>
         ))}
       </div>
@@ -60,7 +66,7 @@ export function StagePreview({
             : jsonView}
       </pre>
       <div className={`review-badge review-${checkOutcome.toLowerCase()}`}>
-        Check: {checkOutcome}
+        判定: {checkOutcomeLabels[checkOutcome as keyof typeof checkOutcomeLabels] ?? checkOutcome}
       </div>
     </section>
   )

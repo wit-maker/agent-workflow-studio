@@ -77,10 +77,11 @@ export function AppShell() {
     const runToken = runTokenRef.current + 1
     runTokenRef.current = runToken
     const runId = `run-${new Date().toISOString()}`
+
     dispatch({
       type: 'runWorkflowStart',
       runId,
-      log: makeLog(runId, 'Local mock run queued. No external APIs will be called.'),
+      log: makeLog(runId, 'ローカルモック実行を開始しました。外部APIは呼び出しません。'),
     })
 
     const outcomeSequence: Array<'PASS' | 'REVIEW' | 'FAIL'> = ['PASS', 'REVIEW', 'PASS']
@@ -95,24 +96,24 @@ export function AppShell() {
       dispatch({
         type: 'runNodeRunning',
         nodeId: node.id,
-        log: makeLog(runId, `${node.title} started.`, node.id),
+        log: makeLog(runId, `${node.title} を開始しました。`, node.id),
       })
 
       await delay(220)
 
+      const isCheckNode = node.type === 'check'
       const nextStatus =
-        node.title === 'Check' && outcome === 'REVIEW' ? 'review_required' : 'success'
+        isCheckNode && outcome === 'REVIEW' ? 'review_required' : 'success'
+
       dispatch({
         type: 'runNodeSuccess',
         nodeId: node.id,
         status: nextStatus,
         log: makeLog(
           runId,
-          node.title === 'Check'
-            ? `Check completed with ${outcome}.`
-            : `${node.title} completed.`,
+          isCheckNode ? `チェック結果は ${outcome} でした。` : `${node.title} が完了しました。`,
           node.id,
-          node.title === 'Check' && outcome !== 'PASS' ? 'warn' : 'info',
+          isCheckNode && outcome !== 'PASS' ? 'warn' : 'info',
         ),
       })
     }
@@ -150,28 +151,35 @@ export function AppShell() {
         bottleneckNodeId: bottleneck?.id ?? null,
       },
     })
+
     dispatch({
       type: 'setArtifact',
       artifact: {
-        title: 'Bootstrap MVP Artifact',
+        title: 'Bootstrap MVP 成果物',
         format: 'Markdown',
         status: outcome === 'REVIEW' ? 'review_required' : 'checked',
         content: [
-          '# Agent Workflow Studio Mock Artifact',
+          '# Agent Workflow Studio モック成果物',
           '',
-          `- Check result: ${outcome}`,
-          `- Nodes executed: ${workflow.nodes.length}`,
-          `- Tokens: ${tokens}`,
-          `- Estimated cost: $${cost.toFixed(3)}`,
-          `- Bottleneck: ${bottleneck?.title ?? 'None'}`,
+          `- チェック結果: ${outcome}`,
+          `- 実行ノード数: ${workflow.nodes.length}`,
+          `- トークン数: ${tokens}`,
+          `- 想定コスト: $${cost.toFixed(3)}`,
+          `- ボトルネック: ${bottleneck?.title ?? 'なし'}`,
           '',
-          'This artifact was produced by a local simulator. No Codex, Hermes, Grok, X, or external API call was made.',
+          'この成果物はローカルシミュレーターで生成されています。外部API呼び出しは行っていません。',
         ].join('\n'),
       },
     })
+
     dispatch({
       type: 'appendLog',
-      log: makeLog(runId, 'Metrics updated and template save mock completed.', undefined, 'metric'),
+      log: makeLog(
+        runId,
+        'メトリクス更新とテンプレート保存モックを完了しました。',
+        undefined,
+        'metric',
+      ),
     })
     dispatch({ type: 'setRunning', isRunning: false })
   }
@@ -181,7 +189,12 @@ export function AppShell() {
     dispatch({ type: 'setRunning', isRunning: false })
     dispatch({
       type: 'appendLog',
-      log: makeLog(`run-stop-${Date.now()}`, 'Local mock run stopped by user.', undefined, 'warn'),
+      log: makeLog(
+        `run-stop-${Date.now()}`,
+        'ユーザー操作でローカルモック実行を停止しました。',
+        undefined,
+        'warn',
+      ),
     })
   }
 
@@ -222,7 +235,7 @@ export function AppShell() {
         type: 'appendLog',
         log: makeLog(
           `connection-${Date.now()}`,
-          `Connection rejected: ${validation.reason}`,
+          `接続を作成できませんでした: ${validation.reason}`,
           undefined,
           'warn',
         ),
@@ -245,7 +258,7 @@ export function AppShell() {
     })
     dispatch({
       type: 'appendLog',
-      log: makeLog(`connection-${Date.now()}`, 'Connection created.', undefined, 'info'),
+      log: makeLog(`connection-${Date.now()}`, '接続を作成しました。', undefined, 'info'),
     })
   }
 
@@ -253,7 +266,7 @@ export function AppShell() {
     dispatch({ type: 'deleteConnection', connectionId })
     dispatch({
       type: 'appendLog',
-      log: makeLog(`connection-${Date.now()}`, 'Connection deleted.', undefined, 'warn'),
+      log: makeLog(`connection-${Date.now()}`, '接続を削除しました。', undefined, 'warn'),
     })
   }
 
@@ -264,7 +277,7 @@ export function AppShell() {
       type: 'appendLog',
       log: makeLog(
         `template-${Date.now()}`,
-        `Template saved: ${template.name}.`,
+        `テンプレートを保存しました: ${template.name}`,
         undefined,
         'info',
       ),
@@ -290,7 +303,7 @@ export function AppShell() {
       type: 'appendLog',
       log: makeLog(
         `snapshot-${Date.now()}`,
-        `Snapshot saved: ${snapshot.name}.`,
+        `スナップショットを保存しました: ${snapshot.name}`,
         undefined,
         'info',
       ),
@@ -330,13 +343,13 @@ export function AppShell() {
       if (!result.valid || !result.workflow) {
         dispatch({
           type: 'setImportError',
-          message: result.error ?? 'Imported workflow is invalid.',
+          message: result.error ?? '読み込んだワークフローが不正です。',
         })
         dispatch({
           type: 'appendLog',
           log: makeLog(
             `import-${Date.now()}`,
-            `Import rejected: ${result.error ?? 'invalid workflow'}.`,
+            `JSON読込を中止しました: ${result.error ?? '不正なワークフローです。'}`,
             undefined,
             'warn',
           ),
@@ -348,7 +361,7 @@ export function AppShell() {
     } catch (error) {
       dispatch({
         type: 'setImportError',
-        message: error instanceof Error ? error.message : 'Failed to import JSON.',
+        message: error instanceof Error ? error.message : 'JSONの読込に失敗しました。',
       })
     }
   }

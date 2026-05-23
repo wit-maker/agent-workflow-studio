@@ -34,17 +34,17 @@ export function canCarryToInput(
 }
 
 const mvpAllowedPairs = new Set([
-  'Manual Trigger->Text Input',
-  'Text Input->Normalize',
-  'File Input->Normalize',
-  'Normalize->Route',
-  'Route->AI Execute',
-  'AI Execute->Check',
-  'External Connector->Check',
-  'Check->Aggregate',
-  'Aggregate->Output',
-  'Output->Run Log',
-  'Run Log->Template Save',
+  '手動開始->テキスト入力',
+  'テキスト入力->正規化',
+  'ファイル入力->正規化',
+  '正規化->ルーティング',
+  'ルーティング->AI実行',
+  'AI実行->チェック',
+  '外部コネクタ->チェック',
+  'チェック->集約',
+  '集約->出力',
+  '出力->実行ログ',
+  '実行ログ->テンプレート保存',
 ])
 
 export function canConnect(source: WorkflowNode, target: WorkflowNode): boolean {
@@ -56,7 +56,7 @@ export function getConnectionError(
   target: WorkflowNode,
 ): string | null {
   if (source.id === target.id) {
-    return 'A node cannot connect to itself.'
+    return 'ノードは自分自身へ接続できません。'
   }
 
   if (mvpAllowedPairs.has(`${source.title}->${target.title}`)) {
@@ -69,11 +69,11 @@ export function getConnectionError(
   })
 
   if (!hasTypeMatch) {
-    return `Type mismatch: ${source.outputTypes.join(', ')} cannot feed ${target.inputTypes.join(', ')}.`
+    return `型が一致しません: ${source.outputTypes.join(', ')} を ${target.inputTypes.join(', ')} へ渡せません。`
   }
 
-  if (target.title === 'Output' && source.title !== 'Aggregate') {
-    return 'Output should receive artifacts after the Check and Aggregate path.'
+  if (target.title === '出力' && source.title !== '集約') {
+    return '出力ノードはチェックと集約の後に成果物を受け取る想定です。'
   }
 
   return null

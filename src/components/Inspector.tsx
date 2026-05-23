@@ -2,11 +2,15 @@ import { useMemo, useState } from 'react'
 import { getConnectionError } from '../domain/connectionRules'
 import {
   agentRoleLabels,
+  formatDataTypeLabel,
+  metricLabels,
   statusLabels,
-  type ConnectionKind,
-  type WorkflowConnection,
-  type AgentRole,
-  type WorkflowNode,
+} from '../domain/displayLabels'
+import type {
+  AgentRole,
+  ConnectionKind,
+  WorkflowConnection,
+  WorkflowNode,
 } from '../domain/workflow'
 import type { ConnectionValidationResult } from '../state/workflowSelectors'
 import { ConnectionEditor } from './ConnectionEditor'
@@ -46,12 +50,12 @@ export function Inspector({
 }: InspectorProps) {
   if (!selectedNode) {
     return (
-      <aside className="inspector" aria-label="Selected node inspector">
+      <aside className="inspector" aria-label="選択ノードのインスペクター">
         <div className="panel-heading">
-          <span className="eyebrow">Inspector</span>
-          <h2>No node selected</h2>
+          <span className="eyebrow">インスペクター</span>
+          <h2>ノードが選択されていません</h2>
         </div>
-        <p className="muted">Select a node from the canvas or palette.</p>
+        <p className="muted">キャンバスまたはパレットからノードを選択してください。</p>
       </aside>
     )
   }
@@ -110,7 +114,7 @@ function InspectorContent({
         parsedConfig === null ||
         Array.isArray(parsedConfig)
       ) {
-        setEditError('Config JSON must be an object.')
+        setEditError('Config JSON はオブジェクト形式で入力してください。')
         setSaveMessage(null)
         return
       }
@@ -122,191 +126,193 @@ function InspectorContent({
         config: parsedConfig as Record<string, unknown>,
       })
       setEditError(null)
-      setSaveMessage('Saved to workflow state.')
+      setSaveMessage('ワークフロー状態へ保存しました。')
     } catch (error) {
-      setEditError(error instanceof Error ? error.message : 'Config JSON is invalid.')
+      setEditError(error instanceof Error ? error.message : 'JSON形式が正しくありません。')
       setSaveMessage(null)
     }
   }
 
   return (
-    <aside className="inspector" aria-label="Selected node inspector">
+    <aside className="inspector" aria-label="選択ノードのインスペクター">
       <div className="panel-heading">
-        <span className="eyebrow">Inspector</span>
+        <span className="eyebrow">インスペクター</span>
         <h2>{selectedNode.title}</h2>
       </div>
       <>
-          <p className="muted">{selectedNode.description}</p>
-          <dl className="property-list">
+        <p className="muted">{selectedNode.description}</p>
+        <dl className="property-list">
+          <div>
+            <dt>状態</dt>
+            <dd>{statusLabels[selectedNode.status]}</dd>
+          </div>
+          <div>
+            <dt>担当</dt>
+            <dd>{selectedNode.agentRole ? agentRoleLabels[selectedNode.agentRole] : '未割当'}</dd>
+          </div>
+          <div>
+            <dt>入力</dt>
+            <dd>{selectedNode.inputTypes.map(formatDataTypeLabel).join(', ') || 'なし'}</dd>
+          </div>
+          <div>
+            <dt>出力</dt>
+            <dd>{selectedNode.outputTypes.map(formatDataTypeLabel).join(', ')}</dd>
+          </div>
+          <div>
+            <dt>モード</dt>
+            <dd>{String(selectedNode.config.mode)}</dd>
+          </div>
+        </dl>
+
+        <section className="inspector-section">
+          <h3>ポート</h3>
+          <div className="port-list">
             <div>
-              <dt>Status</dt>
-              <dd>{statusLabels[selectedNode.status]}</dd>
-            </div>
-            <div>
-              <dt>Agent</dt>
-              <dd>
-                {selectedNode.agentRole
-                  ? agentRoleLabels[selectedNode.agentRole]
-                  : 'Unassigned'}
-              </dd>
-            </div>
-            <div>
-              <dt>Inputs</dt>
-              <dd>{selectedNode.inputTypes.join(', ') || 'None'}</dd>
-            </div>
-            <div>
-              <dt>Outputs</dt>
-              <dd>{selectedNode.outputTypes.join(', ')}</dd>
-            </div>
-            <div>
-              <dt>Mode</dt>
-              <dd>{String(selectedNode.config.mode)}</dd>
-            </div>
-          </dl>
-          <section className="inspector-section">
-            <h3>Ports</h3>
-            <div className="port-list">
-              <div>
-                <strong>Input ports</strong>
-                {selectedNode.inputTypes.length === 0 ? (
-                  <span className="muted">Start node</span>
-                ) : (
-                  selectedNode.inputTypes.map((type) => {
-                    const connected = connections.some(
-                      (connection) =>
-                        connection.targetNodeId === selectedNode.id &&
-                        (connection.targetPort === type || connection.carries.includes(type)),
-                    )
-                    return (
-                      <span key={type} className={connected ? 'port-chip connected' : 'port-chip'}>
-                        {type} / {connected ? 'connected' : 'optional'}
-                      </span>
-                    )
-                  })
-                )}
-              </div>
-              <div>
-                <strong>Output ports</strong>
-                {selectedNode.outputTypes.map((type) => {
+              <strong>入力ポート</strong>
+              {selectedNode.inputTypes.length === 0 ? (
+                <span className="muted">開始ノード</span>
+              ) : (
+                selectedNode.inputTypes.map((type) => {
                   const connected = connections.some(
                     (connection) =>
-                      connection.sourceNodeId === selectedNode.id &&
-                      (connection.sourcePort === type || connection.carries.includes(type)),
+                      connection.targetNodeId === selectedNode.id &&
+                      (connection.targetPort === type || connection.carries.includes(type)),
                   )
                   return (
                     <span key={type} className={connected ? 'port-chip connected' : 'port-chip'}>
-                      {type} / {connected ? 'connected' : 'optional'}
+                      {formatDataTypeLabel(type)} / {connected ? '接続済み' : '任意'}
                     </span>
                   )
-                })}
-              </div>
-            </div>
-          </section>
-          <section className="inspector-section">
-            <h3>Edit Node</h3>
-            <label className="field-label">
-              Title
-              <input value={title} onChange={(event) => setTitle(event.target.value)} />
-            </label>
-            <label className="field-label">
-              Description
-              <textarea
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                rows={3}
-              />
-            </label>
-            <label className="field-label">
-              Agent role
-              <select
-                value={agentRole}
-                onChange={(event) => setAgentRole(event.target.value as AgentRole | '')}
-              >
-                <option value="">Unassigned</option>
-                {Object.entries(agentRoleLabels).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field-label">
-              Config JSON
-              <textarea
-                className="json-editor"
-                value={configText}
-                onChange={(event) => setConfigText(event.target.value)}
-                rows={7}
-              />
-            </label>
-            {editError ? <p className="error-text">{editError}</p> : null}
-            {saveMessage ? <p className="success-text">{saveMessage}</p> : null}
-            <button type="button" className="primary-button inline-action" onClick={saveChanges}>
-              Save Node
-            </button>
-          </section>
-          <section className="inspector-section">
-            <h3>Type Check</h3>
-            <p className={connectionError ? 'warning-text' : 'success-text'}>
-              {nextNode
-                ? connectionError ?? `Can connect to ${nextNode.title}.`
-                : 'End of this sample path.'}
-            </p>
-          </section>
-          <section className="inspector-section">
-            <h3>Connection Validation</h3>
-            <div className="validation-list">
-              {selectedValidation.length === 0 ? (
-                <p className="muted">No direct validation entries for this node.</p>
-              ) : (
-                selectedValidation.map((result) => (
-                  <p key={result.connectionId} className={result.valid ? 'success-text' : 'error-text'}>
-                    {result.sourceLabel} to {result.targetLabel}: {result.valid ? 'valid' : result.reason}
-                  </p>
-                ))
+                })
               )}
             </div>
-          </section>
-          <section className="inspector-section">
-            <h3>Metrics</h3>
-            <div className="mini-metrics">
-              <span>{selectedNode.metrics?.estimatedTokens ?? 0} tokens</span>
-              <span>${selectedNode.metrics?.estimatedCost?.toFixed(3) ?? '0.000'}</span>
-              <span>{selectedNode.metrics?.estimatedLatencyMs ?? 0} ms</span>
+            <div>
+              <strong>出力ポート</strong>
+              {selectedNode.outputTypes.map((type) => {
+                const connected = connections.some(
+                  (connection) =>
+                    connection.sourceNodeId === selectedNode.id &&
+                    (connection.sourcePort === type || connection.carries.includes(type)),
+                )
+                return (
+                  <span key={type} className={connected ? 'port-chip connected' : 'port-chip'}>
+                    {formatDataTypeLabel(type)} / {connected ? '接続済み' : '任意'}
+                  </span>
+                )
+              })}
             </div>
-          </section>
-          <ConnectionEditor
-            workflow={{
-              id: 'inspector-workflow-view',
-              name: 'Inspector workflow view',
-              description: '',
-              version: 1,
-              status: 'ready',
-              nodes,
-              connections,
-              metrics: {
-                tokens: 0,
-                cost: 0,
-                latencyMs: 0,
-                successRate: 0,
-                queueCount: 0,
-                retryCount: 0,
-                bottleneckNodeId: null,
-              },
-              logs: [],
-              artifact: {
-                title: '',
-                format: 'Preview',
-                content: '',
-                status: 'draft',
-              },
-              createdAt: '',
-              updatedAt: '',
-            }}
-            connectionValidation={connectionValidation}
-            onCreateConnection={onCreateConnection}
-            onDeleteConnection={onDeleteConnection}
-          />
+          </div>
+        </section>
+
+        <section className="inspector-section">
+          <h3>ノード編集</h3>
+          <label className="field-label">
+            タイトル
+            <input value={title} onChange={(event) => setTitle(event.target.value)} />
+          </label>
+          <label className="field-label">
+            説明
+            <textarea
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              rows={3}
+            />
+          </label>
+          <label className="field-label">
+            担当ロール
+            <select
+              value={agentRole}
+              onChange={(event) => setAgentRole(event.target.value as AgentRole | '')}
+            >
+              <option value="">未割当</option>
+              {Object.entries(agentRoleLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field-label">
+            Config JSON
+            <textarea
+              className="json-editor"
+              value={configText}
+              onChange={(event) => setConfigText(event.target.value)}
+              rows={7}
+            />
+          </label>
+          {editError ? <p className="error-text">{editError}</p> : null}
+          {saveMessage ? <p className="success-text">{saveMessage}</p> : null}
+          <button type="button" className="primary-button inline-action" onClick={saveChanges}>
+            ノードを保存
+          </button>
+        </section>
+
+        <section className="inspector-section">
+          <h3>型チェック</h3>
+          <p className={connectionError ? 'warning-text' : 'success-text'}>
+            {nextNode
+              ? connectionError ?? `${nextNode.title} に接続できます。`
+              : 'このサンプル経路の終端です。'}
+          </p>
+        </section>
+
+        <section className="inspector-section">
+          <h3>接続検証</h3>
+          <div className="validation-list">
+            {selectedValidation.length === 0 ? (
+              <p className="muted">このノードに直接関係する検証結果はありません。</p>
+            ) : (
+              selectedValidation.map((result) => (
+                <p key={result.connectionId} className={result.valid ? 'success-text' : 'error-text'}>
+                  {result.sourceLabel} → {result.targetLabel}: {result.valid ? '有効' : result.reason}
+                </p>
+              ))
+            )}
+          </div>
+        </section>
+
+        <section className="inspector-section">
+          <h3>メトリクス</h3>
+          <div className="mini-metrics">
+            <span>{selectedNode.metrics?.estimatedTokens ?? 0} {metricLabels.tokens}</span>
+            <span>${selectedNode.metrics?.estimatedCost?.toFixed(3) ?? '0.000'}</span>
+            <span>{selectedNode.metrics?.estimatedLatencyMs ?? 0} ms</span>
+          </div>
+        </section>
+
+        <ConnectionEditor
+          workflow={{
+            id: 'inspector-workflow-view',
+            name: 'インスペクター表示用ワークフロー',
+            description: '',
+            version: 1,
+            status: 'ready',
+            nodes,
+            connections,
+            metrics: {
+              tokens: 0,
+              cost: 0,
+              latencyMs: 0,
+              successRate: 0,
+              queueCount: 0,
+              retryCount: 0,
+              bottleneckNodeId: null,
+            },
+            logs: [],
+            artifact: {
+              title: '',
+              format: 'Preview',
+              content: '',
+              status: 'draft',
+            },
+            createdAt: '',
+            updatedAt: '',
+          }}
+          connectionValidation={connectionValidation}
+          onCreateConnection={onCreateConnection}
+          onDeleteConnection={onDeleteConnection}
+        />
       </>
     </aside>
   )

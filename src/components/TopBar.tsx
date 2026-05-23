@@ -1,4 +1,5 @@
 import type { WorkflowStatus } from '../domain/workflow'
+import { workflowStatusLabels } from '../domain/displayLabels'
 
 type TopBarProps = {
   workflowName: string
@@ -27,9 +28,9 @@ export function TopBar({
         <span className="eyebrow">Agent Workflow Studio</span>
         <strong>{workflowName}</strong>
       </div>
-      <div className="top-actions" aria-label="Workflow actions">
-        <button type="button" className="icon-button" title="Save workflow">
-          Save
+      <div className="top-actions" aria-label="ワークフロー操作">
+        <button type="button" className="icon-button" title="ワークフロー保存">
+          保存
         </button>
         <button
           type="button"
@@ -37,19 +38,19 @@ export function TopBar({
           onClick={onRun}
           disabled={isRunning}
         >
-          Run
+          実行
         </button>
         <button type="button" className="icon-button" onClick={onStop} disabled={!isRunning}>
-          Stop
+          停止
         </button>
         <button type="button" className="icon-button" onClick={onReset} disabled={isRunning}>
-          Reset
+          リセット
         </button>
         <button type="button" className="icon-button" onClick={onExportJson}>
-          Export JSON
+          JSONを書き出し
         </button>
         <label className="file-action">
-          Import JSON
+          JSONを読み込み
           <input
             type="file"
             accept="application/json,.json"
@@ -63,12 +64,12 @@ export function TopBar({
           />
         </label>
         <button type="button" className="icon-button" disabled>
-          Schedule
+          スケジュール
         </button>
       </div>
       <div className="status-cluster">
-        <span className={`status-pill status-${status}`}>{status}</span>
-        <span className="model-pill">GPT-5.5 recommended</span>
+        <span className={`status-pill status-${status}`}>{workflowStatusLabels[status]}</span>
+        <span className="model-pill">推奨: GPT-5.4 high / GPT-5.5 high</span>
       </div>
     </header>
   )

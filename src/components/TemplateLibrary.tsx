@@ -14,15 +14,15 @@ export function TemplateLibrary({
   onDeleteTemplate,
 }: TemplateLibraryProps) {
   return (
-    <section className="library-panel" aria-label="Saved templates">
+    <section className="library-panel" aria-label="保存済みテンプレート">
       <div className="library-heading">
-        <h3>Templates</h3>
+        <h3>テンプレート一覧</h3>
         <button type="button" className="primary-button" onClick={onSaveTemplate}>
-          Save Template
+          テンプレート保存
         </button>
       </div>
       {templates.length === 0 ? (
-        <p className="muted">No templates saved in localStorage yet.</p>
+        <p className="muted">localStorage に保存されたテンプレートはまだありません。</p>
       ) : (
         templates.map((template) => (
           <div key={template.id} className="library-row">
@@ -31,10 +31,10 @@ export function TemplateLibrary({
               <span>{new Date(template.updatedAt).toLocaleString()}</span>
             </div>
             <button type="button" className="icon-button" onClick={() => onLoadTemplate(template.id)}>
-              Load
+              読込
             </button>
             <button type="button" className="icon-button" onClick={() => onDeleteTemplate(template.id)}>
-              Delete
+              削除
             </button>
           </div>
         ))

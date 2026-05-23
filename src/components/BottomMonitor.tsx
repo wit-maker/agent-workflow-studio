@@ -1,4 +1,9 @@
 import { useState } from 'react'
+import {
+  artifactStatusLabels,
+  metricLabels,
+  statusLabels,
+} from '../domain/displayLabels'
 import type { Workflow } from '../domain/workflow'
 import type { SavedWorkflowTemplate } from '../storage/localTemplates'
 import type { SavedWorkflowSnapshot } from '../storage/localWorkflowHistory'
@@ -30,11 +35,17 @@ export function BottomMonitor({
   onDeleteSnapshot,
 }: BottomMonitorProps) {
   const [activeTab, setActiveTab] = useState<'Logs' | 'Metrics' | 'Queue' | 'Output'>('Logs')
+  const tabLabels = {
+    Logs: 'ログ',
+    Metrics: 'メトリクス',
+    Queue: 'キュー',
+    Output: '出力',
+  } as const
   const bottleneck = selectBottleneckNode(workflow)
   const queueNodes = selectActiveQueueNodes(workflow)
 
   return (
-    <footer className="bottom-monitor" aria-label="Metrics and logs">
+    <footer className="bottom-monitor" aria-label="メトリクスとログ">
       <section className="monitor-tabs">
         {(['Logs', 'Metrics', 'Queue', 'Output'] as const).map((tab) => (
           <button
@@ -43,7 +54,7 @@ export function BottomMonitor({
             className={activeTab === tab ? 'active' : ''}
             onClick={() => setActiveTab(tab)}
           >
-            {tab}
+            {tabLabels[tab]}
           </button>
         ))}
         <div className="timeline">
@@ -58,7 +69,7 @@ export function BottomMonitor({
         {activeTab === 'Logs' ? (
           <div className="log-list">
             {workflow.logs.length === 0 ? (
-              <p className="muted">Run logs will appear here after the local mock run.</p>
+              <p className="muted">ローカルモック実行後にログがここへ表示されます。</p>
             ) : (
               workflow.logs.map((log) => (
                 <p key={log.id} className={`log-${log.level}`}>
@@ -72,40 +83,40 @@ export function BottomMonitor({
         {activeTab === 'Metrics' ? (
           <div className="metric-strip">
             <div>
-              <span>Tokens</span>
+              <span>{metricLabels.tokens}</span>
               <strong>{workflow.metrics.tokens.toLocaleString()}</strong>
             </div>
             <div>
-              <span>Cost</span>
+              <span>{metricLabels.cost}</span>
               <strong>${workflow.metrics.cost.toFixed(3)}</strong>
             </div>
             <div>
-              <span>Latency</span>
+              <span>{metricLabels.latencyMs}</span>
               <strong>{workflow.metrics.latencyMs} ms</strong>
             </div>
             <div>
-              <span>Success</span>
+              <span>{metricLabels.successRate}</span>
               <strong>{workflow.metrics.successRate}%</strong>
             </div>
             <div>
-              <span>Retry Count</span>
+              <span>{metricLabels.retryCount}</span>
               <strong>{workflow.metrics.retryCount}</strong>
             </div>
             <div>
-              <span>Bottleneck</span>
-              <strong>{bottleneck?.title ?? 'None'}</strong>
+              <span>{metricLabels.bottleneck}</span>
+              <strong>{bottleneck?.title ?? 'なし'}</strong>
             </div>
           </div>
         ) : null}
         {activeTab === 'Queue' ? (
           <div className="queue-list">
             {queueNodes.length === 0 ? (
-              <p className="muted">No queued, running, failed, or review nodes.</p>
+              <p className="muted">待機列・実行中・失敗・確認待ちのノードはありません。</p>
             ) : (
               queueNodes.map((node) => (
                 <p key={node.id}>
                   <strong>{node.title}</strong>
-                  <span>{node.status}</span>
+                  <span>{statusLabels[node.status]}</span>
                 </p>
               ))
             )}
@@ -114,8 +125,8 @@ export function BottomMonitor({
         {activeTab === 'Output' ? (
           <div className="output-summary">
             <h3>{workflow.artifact.title}</h3>
-            <p>Status: {workflow.artifact.status}</p>
-            <p>Format: {workflow.artifact.format}</p>
+            <p>状態: {artifactStatusLabels[workflow.artifact.status]}</p>
+            <p>形式: {workflow.artifact.format}</p>
             <p>{workflow.artifact.content.slice(0, 220)}</p>
             <div className="library-grid">
               <TemplateLibrary
