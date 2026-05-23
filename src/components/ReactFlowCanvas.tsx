@@ -234,16 +234,19 @@ export function ReactFlowCanvas({
       <div className="canvas-scroll react-flow-canvas-body">
         <div className="react-flow-canvas-root">
           <ReactFlow
-            nodes={debugNodes}
-            edges={debugEdges}
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
             fitView
             onInit={setReactFlowInstance}
+            onNodesChange={handleNodesChange}
             onConnect={handleConnect}
             onEdgeClick={handleEdgeClick}
             onNodeClick={(_, node) => onSelectNode(node.id)}
             onPaneClick={() => setSelectedConnectionId(null)}
             isValidConnection={isValidConnection}
           >
+            <NodeMeasurer nodeIds={nodes.map((n) => n.id)} />
             <Background gap={24} size={1} />
             <Controls showInteractive={false} />
           </ReactFlow>
