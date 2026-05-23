@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { checkOutcomeLabels } from '../domain/displayLabels'
+import type { ExecutionGraph } from '../domain/executionGraph'
+import { summarizeExecutionGraph } from '../domain/executionGraph'
 import type { Workflow, WorkflowArtifact, WorkflowNode } from '../domain/workflow'
 
 type StagePreviewProps = {
@@ -7,6 +9,7 @@ type StagePreviewProps = {
   checkOutcome: string
   workflow: Workflow
   selectedNode: WorkflowNode | undefined
+  executionGraph: ExecutionGraph | null
 }
 
 export function StagePreview({
@@ -14,6 +17,7 @@ export function StagePreview({
   checkOutcome,
   workflow,
   selectedNode,
+  executionGraph,
 }: StagePreviewProps) {
   const [activeTab, setActiveTab] = useState<'Preview' | 'Markdown' | 'JSON'>('Preview')
   const tabLabels = {
@@ -21,6 +25,21 @@ export function StagePreview({
     Markdown: 'Markdown',
     JSON: 'JSON',
   } as const
+
+  const executionSummary = useMemo(
+    () => summarizeExecutionGraph(executionGraph),
+    [executionGraph],
+  )
+
+  const previewSummary = [
+    `最終判定: ${checkOutcomeLabels[checkOutcome as keyof typeof checkOutcomeLabels] ?? checkOutcome}`,
+    `確認待ち: ${executionSummary.reviewStepId ? 'あり' : 'なし'}`,
+    `失敗ノード: ${executionSummary.failedStepId ? 'あり' : 'なし'}`,
+    `再試行候補: ${executionSummary.retryCandidates.length} 件`,
+    '',
+    artifact.content,
+  ].join('\n')
+
   const jsonView = JSON.stringify(
     {
       artifact,
@@ -35,6 +54,7 @@ export function StagePreview({
             config: selectedNode.config,
           }
         : null,
+      executionGraph: executionSummary,
     },
     null,
     2,
@@ -60,7 +80,7 @@ export function StagePreview({
       </div>
       <pre>
         {activeTab === 'Preview'
-          ? `${artifact.title}\n\n${artifact.content}`
+          ? previewSummary
           : activeTab === 'Markdown'
             ? artifact.content
             : jsonView}

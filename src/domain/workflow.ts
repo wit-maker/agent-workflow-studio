@@ -35,6 +35,7 @@ export type WorkflowNodeStatus =
   | 'running'
   | 'success'
   | 'failed'
+  | 'retry_ready'
   | 'skipped'
   | 'review_required'
   | 'blocked'
