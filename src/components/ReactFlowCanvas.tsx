@@ -49,6 +49,11 @@ const nodeTypes = {
   workflowNode: ReactFlowNode,
 }
 
+const escapeCssSelectorValue = (value: string) =>
+  typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
+    ? CSS.escape(value)
+    : value.replace(/["\\]/g, '\\$&')
+
 function NodeMeasurer({ nodeIds }: { nodeIds: string[] }) {
   const store = useStoreApi()
   useEffect(() => {
@@ -57,7 +62,8 @@ function NodeMeasurer({ nodeIds }: { nodeIds: string[] }) {
     if (!domNode) return
     const updates = new Map(
       nodeIds.flatMap((id) => {
-        const el = domNode.querySelector(`.react-flow__node[data-id="${id}"]`)
+        const escapedId = escapeCssSelectorValue(id)
+        const el = domNode.querySelector(`.react-flow__node[data-id="${escapedId}"]`)
         return el ? [[id, { id, nodeElement: el as HTMLDivElement, force: true }]] : []
       }),
     )
@@ -130,7 +136,11 @@ export function ReactFlowCanvas({
       })),
     [positions, selectedNodeId, workflow],
   )
-  const nodeIds = useMemo(() => nodes.map((node) => node.id), [nodes])
+  const nodeIds = useMemo(() => workflow.nodes.map((node) => node.id), [workflow.nodes])
+  const nodeTitleById = useMemo(
+    () => new Map(workflow.nodes.map((node) => [node.id, node.title])),
+    [workflow.nodes],
+  )
   const edges = useMemo(
     () => toReactFlowEdges(workflow, effectiveSelectedConnectionId ?? undefined),
     [effectiveSelectedConnectionId, workflow],
@@ -138,12 +148,8 @@ export function ReactFlowCanvas({
   const connectionOptions = useMemo(
     () =>
       workflow.connections.map((connection) => {
-        const sourceTitle =
-          workflow.nodes.find((node) => node.id === connection.sourceNodeId)?.title ??
-          connection.sourceNodeId
-        const targetTitle =
-          workflow.nodes.find((node) => node.id === connection.targetNodeId)?.title ??
-          connection.targetNodeId
+        const sourceTitle = nodeTitleById.get(connection.sourceNodeId) ?? connection.sourceNodeId
+        const targetTitle = nodeTitleById.get(connection.targetNodeId) ?? connection.targetNodeId
 
         return {
           id: connection.id,
@@ -152,7 +158,7 @@ export function ReactFlowCanvas({
             .join(', ')})`,
         }
       }),
-    [workflow.connections, workflow.nodes],
+    [nodeTitleById, workflow.connections],
   )
 
   useEffect(() => {
@@ -288,9 +294,11 @@ export function ReactFlowCanvas({
               <div className="selected-connection-detail">
                 <strong>選択中の接続</strong>
                 <span>
-                  {workflow.nodes.find((n) => n.id === selectedConnection.sourceNodeId)?.title ?? selectedConnection.sourceNodeId}
+                  {nodeTitleById.get(selectedConnection.sourceNodeId) ??
+                    selectedConnection.sourceNodeId}
                   {' → '}
-                  {workflow.nodes.find((n) => n.id === selectedConnection.targetNodeId)?.title ?? selectedConnection.targetNodeId}
+                  {nodeTitleById.get(selectedConnection.targetNodeId) ??
+                    selectedConnection.targetNodeId}
                 </span>
                 <span>
                   {connectionKindLabels[selectedConnection.kind]}

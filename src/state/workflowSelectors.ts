@@ -29,6 +29,18 @@ export type ConnectionDraft = {
   kind: ConnectionKind
 }
 
+export const isDuplicateConnectionDraft = (
+  workflow: Workflow,
+  draft: ConnectionDraft,
+): boolean =>
+  workflow.connections.some(
+    (connection) =>
+      connection.sourceNodeId === draft.sourceNodeId &&
+      connection.sourcePortId === draft.sourcePortId &&
+      connection.targetNodeId === draft.targetNodeId &&
+      connection.targetPortId === draft.targetPortId,
+  )
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -291,6 +303,18 @@ export function validateConnectionDraft(
   workflow: Workflow,
   draft: ConnectionDraft,
 ): ConnectionValidationResult {
+  if (isDuplicateConnectionDraft(workflow, draft)) {
+    const sourceNode = workflow.nodes.find((node) => node.id === draft.sourceNodeId)
+    const targetNode = workflow.nodes.find((node) => node.id === draft.targetNodeId)
+    return {
+      sourceLabel: formatNodeLabel(sourceNode, draft.sourceNodeId),
+      targetLabel: formatNodeLabel(targetNode, draft.targetNodeId),
+      valid: false,
+      reason: '同じポート同士の接続はすでに存在します。',
+      severity: 'warn',
+    }
+  }
+
   const sourceNode = workflow.nodes.find((node) => node.id === draft.sourceNodeId)
   const targetNode = workflow.nodes.find((node) => node.id === draft.targetNodeId)
   const srcPorts = sourceNode ? getOutputPorts(sourceNode) : []
