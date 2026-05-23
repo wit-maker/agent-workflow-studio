@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import type { ArtifactVersion } from '../domain/evaluation'
 
 type ArtifactVersionHistoryProps = {
@@ -11,6 +12,8 @@ export function ArtifactVersionHistory({
   selectedVersionId,
   onSelectVersion,
 }: ArtifactVersionHistoryProps) {
+  const reversedVersions = useMemo(() => [...versions].reverse(), [versions])
+
   if (versions.length === 0) {
     return (
       <div className="artifact-version-history">
@@ -24,7 +27,7 @@ export function ArtifactVersionHistory({
     <div className="artifact-version-history">
       <h3>成果物バージョン履歴</h3>
       <ul className="version-list">
-        {[...versions].reverse().map((version) => {
+        {reversedVersions.map((version) => {
           const isSelected = version.id === selectedVersionId
           return (
             <li

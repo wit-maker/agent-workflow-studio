@@ -21,10 +21,9 @@ export function runLocalEvaluation(
   const failedNodes = workflow.nodes.filter((node) => node.status === 'failed')
   const reviewNodes = workflow.nodes.filter((node) => node.status === 'review_required')
   const retryCandidates = executionGraph?.retryCandidates ?? []
-  const hasJapaneseContent =
-    workflow.artifact.content.includes('実行') ||
-    workflow.artifact.content.includes('成果物') ||
-    workflow.artifact.content.includes('ローカル')
+  const hasJapaneseContent = /[぀-ゟ゠-ヿ一-龯]/.test(
+    workflow.artifact.content,
+  )
   const hasArtifactContent = workflow.artifact.content.length > 30
 
   const criteria: EvaluationCriterion[] = [

@@ -158,6 +158,7 @@ export function AppShell() {
   const runCountRef = useRef(0)
   const [isEvaluating, setIsEvaluating] = useState(false)
   const artifactVersionCountRef = useRef(0)
+  const cancelledRebuildIdsRef = useRef<Set<string>>(new Set())
   const {
     workflow,
     executionGraph,
@@ -856,18 +857,25 @@ export function AppShell() {
     if (!executionGraph || isEvaluating) {
       return
     }
+    const snapshotRunToken = runTokenRef.current
+    const snapshotRunId = executionGraph.runId
+    const snapshotWorkflow = workflow
     setIsEvaluating(true)
     dispatch({ type: 'startEvaluation' })
     await delay(800)
-    const result = runLocalEvaluation(workflow, executionGraph, executionGraph.runId)
+    if (runTokenRef.current !== snapshotRunToken) {
+      setIsEvaluating(false)
+      return
+    }
+    const result = runLocalEvaluation(snapshotWorkflow, executionGraph, snapshotRunId)
     dispatch({ type: 'setEvaluationResult', result })
 
     artifactVersionCountRef.current += 1
     const version: ArtifactVersion = {
       id: `av-${Date.now()}-${Math.random().toString(16).slice(2)}`,
       version: artifactVersionCountRef.current,
-      sourceRunId: executionGraph.runId,
-      content: workflow.artifact.content,
+      sourceRunId: snapshotRunId,
+      content: snapshotWorkflow.artifact.content,
       createdAt: new Date().toISOString(),
       evaluationId: result.id,
     }
@@ -900,16 +908,23 @@ export function AppShell() {
   }
 
   async function handleStartRebuild(requestId: string) {
+    cancelledRebuildIdsRef.current.delete(requestId)
     dispatch({ type: 'startRebuild', requestId })
+    const snapshotRunId = executionGraph?.runId ?? `rebuild-${requestId}`
+    const snapshotContent = workflow.artifact.content
     await delay(800)
+    if (cancelledRebuildIdsRef.current.has(requestId)) {
+      cancelledRebuildIdsRef.current.delete(requestId)
+      return
+    }
     dispatch({ type: 'completeRebuild', requestId })
 
     artifactVersionCountRef.current += 1
     const version: ArtifactVersion = {
       id: `av-${Date.now()}-${Math.random().toString(16).slice(2)}`,
       version: artifactVersionCountRef.current,
-      sourceRunId: executionGraph?.runId ?? `rebuild-${requestId}`,
-      content: `${workflow.artifact.content}\n\n---\n再作成バージョン v${artifactVersionCountRef.current} (${new Date().toLocaleString('ja-JP')})`,
+      sourceRunId: snapshotRunId,
+      content: `${snapshotContent}\n\n---\n再作成バージョン v${artifactVersionCountRef.current} (${new Date().toLocaleString('ja-JP')})`,
       createdAt: new Date().toISOString(),
       rebuildRequestId: requestId,
     }
@@ -917,7 +932,7 @@ export function AppShell() {
     dispatch({
       type: 'appendLog',
       log: makeLog(
-        executionGraph?.runId ?? `rebuild-${requestId}`,
+        snapshotRunId,
         `再作成が完了し、バージョン v${version.version} を保存しました。`,
         undefined,
         'info',
@@ -926,6 +941,7 @@ export function AppShell() {
   }
 
   function handleCancelRebuild(requestId: string) {
+    cancelledRebuildIdsRef.current.add(requestId)
     dispatch({ type: 'cancelRebuild', requestId })
   }
 

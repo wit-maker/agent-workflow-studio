@@ -475,6 +475,11 @@ export function workflowReducer(
         selectedNodeId: action.workflow.nodes[0]?.id ?? '',
         isRunning: false,
         importError: null,
+        evaluation: undefined,
+        humanReview: undefined,
+        rebuildRequests: [],
+        artifactVersions: [],
+        selectedArtifactVersionId: undefined,
       }
 
     case 'resetWorkflow':
@@ -549,10 +554,27 @@ export function workflowReducer(
         ...state,
         artifactVersions: [...state.artifactVersions, action.version],
         selectedArtifactVersionId: action.version.id,
+        workflow: {
+          ...state.workflow,
+          artifact: { ...state.workflow.artifact, content: action.version.content },
+          updatedAt: new Date().toISOString(),
+        },
       }
 
-    case 'selectArtifactVersion':
-      return { ...state, selectedArtifactVersionId: action.versionId }
+    case 'selectArtifactVersion': {
+      const version = state.artifactVersions.find((v) => v.id === action.versionId)
+      return {
+        ...state,
+        selectedArtifactVersionId: action.versionId,
+        workflow: version
+          ? {
+              ...state.workflow,
+              artifact: { ...state.workflow.artifact, content: version.content },
+              updatedAt: new Date().toISOString(),
+            }
+          : state.workflow,
+      }
+    }
 
     case 'clearEvaluation':
       return {
