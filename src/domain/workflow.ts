@@ -186,6 +186,19 @@ export type WorkflowArtifact = {
   status: 'draft' | 'checked' | 'review_required' | 'approved' | 'failed'
 }
 
+export type WorkflowTemplateMetadata = {
+  tags: string[]
+  category?: string
+  nodeCount: number
+  connectionCount: number
+  requiredPortCount: number
+  unconnectedRequiredPortCount: number
+  lastEvaluationStatus?: string
+  lastEvaluationScore?: number
+  artifactVersionCount?: number
+  createdFromRunId?: string
+}
+
 export type Workflow = {
   id: string
   schemaVersion?: '1.0' | '1.1'

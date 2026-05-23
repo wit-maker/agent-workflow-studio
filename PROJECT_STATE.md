@@ -4,7 +4,7 @@ Last updated: 2026-05-23
 
 ## Current Phase
 
-Phase 5 ポートモデルと接続検証強化。
+Phase 6 テンプレート再利用UX強化。
 
 ## Completed
 
@@ -98,13 +98,17 @@ Phase 5 ポートモデルと接続検証強化。
 - 旧 `inputTypes` / `outputTypes` による fallback 維持
 - 旧接続（sourcePort / targetPort）との後方互換維持
 - `docs/implementation/PORT_MODEL_MVP.md` 新規作成
+- Phase 6 としてテンプレート metadata、検索、詳細プレビュー、複製、読込前確認を追加した。
+- `src/domain/templateMetadata.ts` を追加し、Port / 評価 / ArtifactVersion 要約の生成を集約した。
+- 既存 localStorage テンプレートに `metadata` がなくても読めるよう後方互換を維持した。
+- `docs/implementation/TEMPLATE_REUSE_UX_MVP.md` を追加した。
 
 ## Next Work
 
-1. React Flow 導入 — ポートをノード上にドットで表示し、ドラッグ接続を実現
-2. テンプレート再利用 UX 強化 — ポート情報をテンプレートメタデータに含める
-3. 評価結果と実行グラフを結びつけた差分表示を追加する。
-4. テンプレートの version / metadata 編集を追加する。
+1. Phase 7 React Flow 導入検討 — ポートをノード上にドットで表示し、ドラッグ接続UIを試作する。
+2. 評価結果と実行グラフを結びつけた差分表示を追加する。
+3. テンプレートの version / metadata 編集を追加する。
+4. localStorage MVP から永続ストレージへ進む条件を整理する。
 5. reducer state が複雑化した場合のみ Zustand を再評価する。
 
 ## Known Risks
@@ -112,11 +116,25 @@ Phase 5 ポートモデルと接続検証強化。
 - 実行グラフはMVPであり、本格的な非同期エンジンや分散実行はまだ扱っていない。
 - review / retry はローカルモックのため、セッションを跨いだ承認フローはない。
 - localStorage ベースの保存はブラウザローカルに閉じるため、共有や永続保証はまだない。
+- テンプレート metadata は要約情報であり、ArtifactVersion 本体や評価履歴全文は保持しない。
 
 ## Screen Spec Alignment
 
 - `docs/implementation/SCREEN_SPEC_ALIGNMENT.md` に UI-01、UI-02、UI-05、UI-06、UI-08、UI-09、UI-10 の整合表を記録している。
 - `docs/implementation/EXECUTION_GRAPH_MVP.md` に Phase 3 の実行グラフMVPを整理している。
+- `docs/implementation/TEMPLATE_REUSE_UX_MVP.md` に Phase 6 の再利用UX整理を記録している。
+
+## Phase 6 実装内容
+
+- `SavedWorkflowTemplate` に `metadata` を追加
+- `createTemplateMetadata(...)` / `normalizeTemplateMetadata(...)` を追加
+- template save 時に tags / category / description を受け取り metadata を生成
+- 一覧で node 数、connection 数、未接続 required port 数、評価状態、評価スコア、ArtifactVersion 数を表示
+- name / description / tag / category を対象にした検索を追加
+- `TemplatePreview` でノード一覧、接続一覧、Port 要約、評価要約、ArtifactVersion 要約を表示
+- 読み込み前に注意表示と確認 UI を追加
+- テンプレート複製を追加
+- localStorage 既存データの後方互換を維持
 
 ## Phase 1 Verification
 

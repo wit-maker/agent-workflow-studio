@@ -23,8 +23,14 @@ type BottomMonitorProps = {
   executionGraph: ExecutionGraph | null
   templates: SavedWorkflowTemplate[]
   snapshots: SavedWorkflowSnapshot[]
-  onSaveTemplate: () => void
+  onSaveTemplate: (input: {
+    name: string
+    description: string
+    tags: string[]
+    category?: string
+  }) => SavedWorkflowTemplate
   onLoadTemplate: (id: string) => void
+  onDuplicateTemplate: (id: string) => SavedWorkflowTemplate | null
   onDeleteTemplate: (id: string) => void
   onSaveSnapshot: () => void
   onLoadSnapshot: (id: string) => void
@@ -55,6 +61,7 @@ export function BottomMonitor({
   snapshots,
   onSaveTemplate,
   onLoadTemplate,
+  onDuplicateTemplate,
   onDeleteTemplate,
   onSaveSnapshot,
   onLoadSnapshot,
@@ -258,8 +265,11 @@ export function BottomMonitor({
             <div className="library-grid">
               <TemplateLibrary
                 templates={templates}
+                currentWorkflowName={workflow.name}
+                currentWorkflowDescription={workflow.description}
                 onSaveTemplate={onSaveTemplate}
                 onLoadTemplate={onLoadTemplate}
+                onDuplicateTemplate={onDuplicateTemplate}
                 onDeleteTemplate={onDeleteTemplate}
               />
               <WorkflowHistoryPanel
