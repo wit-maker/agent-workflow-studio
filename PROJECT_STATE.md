@@ -56,12 +56,19 @@ Phase 2 connection, template, and local history foundation.
 
 ## Known Risks
 
-- Model gate is strict: if the model is not GPT-5.5 high or GPT-5.5 xhigh,
-  implementation must stop unless the user explicitly overrides.
+- Model gate is now cost/performance balanced: stop only when the available
+  model is insufficient for the actual task risk. User override must be recorded
+  before continuing with an otherwise insufficient model.
 - Vite generated current latest package versions, so future dependency changes
   should be reviewed before extending the app.
 - Git user identity was missing globally, so this repository uses a local
   `wit-maker` noreply identity for the bootstrap commit.
+
+## Screen Spec Alignment
+
+- Added `docs/implementation/SCREEN_SPEC_ALIGNMENT.md` to map UI-01, UI-02,
+  UI-05, UI-06, UI-08, UI-09, and UI-10 against current implementation files,
+  gaps, and next actions.
 
 ## Phase 1 Verification
 
