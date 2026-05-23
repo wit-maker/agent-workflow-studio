@@ -37,7 +37,9 @@ body {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 
@@ -58,6 +60,10 @@ button:disabled {
   min-height: 100vh;
   display: grid;
   grid-template-rows: 56px minmax(0, 1fr) 230px;
+}
+
+.app-shell:has(.import-error) {
+  grid-template-rows: 56px 36px minmax(0, 1fr) 230px;
 }
 
 .top-bar {
@@ -87,7 +93,8 @@ button:disabled {
 .top-actions,
 .status-cluster,
 .stage-tabs,
-.segmented-control {
+.segmented-control,
+.monitor-tabs {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -95,7 +102,9 @@ button:disabled {
 
 .primary-button,
 .icon-button,
+.file-action,
 .stage-tabs button,
+.monitor-tabs button,
 .segmented-control button,
 .canvas-toolbar button {
   min-height: 32px;
@@ -106,6 +115,16 @@ button:disabled {
   color: var(--text);
 }
 
+.file-action {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.file-action input {
+  display: none;
+}
+
 .primary-button {
   border-color: var(--blue);
   background: var(--blue);
@@ -114,10 +133,22 @@ button:disabled {
 }
 
 .stage-tabs .active,
-.segmented-control .active {
+.segmented-control .active,
+.monitor-tabs .active {
   border-color: var(--blue);
   background: var(--blue-soft);
   color: var(--blue);
+}
+
+.import-error {
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  border-bottom: 1px solid rgba(190, 63, 59, 0.25);
+  background: var(--red-soft);
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .status-pill,
@@ -295,6 +326,23 @@ button:disabled {
   font-weight: 800;
 }
 
+.canvas-toolbar .valid-count,
+.canvas-toolbar .invalid-count {
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.canvas-toolbar .valid-count {
+  color: var(--green);
+  background: var(--green-soft);
+}
+
+.canvas-toolbar .invalid-count {
+  color: var(--red);
+  background: var(--red-soft);
+}
+
 .canvas-scroll {
   overflow: auto;
   background:
@@ -402,6 +450,31 @@ button:disabled {
   background: var(--red-soft);
 }
 
+.connection-validation-card {
+  position: absolute;
+  left: 48px;
+  top: 258px;
+  width: 460px;
+  max-height: 108px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow);
+}
+
+.connection-validation-card h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+
+.connection-validation-card p,
+.validation-list p {
+  margin: 0 0 5px;
+  font-size: 12px;
+}
+
 .stage-preview {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr) auto;
@@ -483,6 +556,40 @@ button:disabled {
   color: var(--green);
 }
 
+.error-text {
+  color: var(--red);
+}
+
+.field-label {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.field-label input,
+.field-label select,
+.field-label textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  color: var(--text);
+  background: var(--surface);
+  font-size: 13px;
+}
+
+.json-editor {
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  line-height: 1.45;
+}
+
+.inline-action {
+  width: 100%;
+}
+
 .mini-metrics {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -499,16 +606,27 @@ button:disabled {
 
 .bottom-monitor {
   display: grid;
-  grid-template-columns: 470px minmax(0, 1fr);
+  grid-template-columns: 430px minmax(0, 1fr);
   border-top: 1px solid var(--border);
+}
+
+.monitor-tabs {
+  align-content: start;
+  align-items: start;
+  flex-wrap: wrap;
+  border-right: 1px solid var(--border);
+  padding: 14px;
+}
+
+.monitor-tabs button {
+  min-height: 30px;
 }
 
 .metric-strip {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, minmax(130px, 1fr));
   gap: 10px;
   padding: 14px;
-  border-right: 1px solid var(--border);
 }
 
 .metric-strip div {
@@ -531,18 +649,18 @@ button:disabled {
   font-size: 20px;
 }
 
-.log-panel {
+.monitor-panel {
   min-width: 0;
-  display: grid;
-  grid-template-rows: 56px minmax(0, 1fr);
+  min-height: 0;
+  overflow: auto;
 }
 
 .timeline {
+  width: 100%;
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  border-bottom: 1px solid var(--border);
-  padding: 12px;
+  padding-top: 8px;
 }
 
 .timeline-dot {
@@ -577,6 +695,25 @@ button:disabled {
 .log-list {
   overflow: auto;
   padding: 12px 16px;
+}
+
+.queue-list,
+.output-summary {
+  padding: 16px;
+}
+
+.queue-list p {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.output-summary h3 {
+  margin: 0 0 8px;
 }
 
 .log-list p {
