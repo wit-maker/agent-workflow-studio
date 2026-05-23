@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import {
   connectionKindLabels,
   evaluationStatusLabels,
@@ -29,12 +30,12 @@ function formatEvaluationStatus(status?: string): string {
 }
 
 function formatConnectionLabel(
-  template: SavedWorkflowTemplate,
+  nodeById: Map<string, WorkflowNode>,
   sourceNodeId: string,
   targetNodeId: string,
 ): string {
-  const sourceNode = template.snapshot.nodes.find((node) => node.id === sourceNodeId)
-  const targetNode = template.snapshot.nodes.find((node) => node.id === targetNodeId)
+  const sourceNode = nodeById.get(sourceNodeId)
+  const targetNode = nodeById.get(targetNodeId)
   return `${sourceNode?.title ?? sourceNodeId} → ${targetNode?.title ?? targetNodeId}`
 }
 
@@ -55,6 +56,11 @@ export function TemplatePreview({
   onCancelLoad,
   onDuplicateTemplate,
 }: TemplatePreviewProps) {
+  const nodeById = useMemo(
+    () => new Map((template?.snapshot.nodes ?? []).map((node) => [node.id, node])),
+    [template?.snapshot.nodes],
+  )
+
   if (!template) {
     return (
       <aside className="template-preview-panel">
@@ -167,7 +173,7 @@ export function TemplatePreview({
             <div key={connection.id} className="template-preview-row">
               <strong>
                 {formatConnectionLabel(
-                  template,
+                  nodeById,
                   connection.sourceNodeId,
                   connection.targetNodeId,
                 )}
