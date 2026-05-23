@@ -560,6 +560,20 @@ export function AppShell() {
       }
     }
 
+    const isDuplicate = workflow.connections.some(
+      (c) =>
+        c.sourceNodeId === draft.sourceNodeId &&
+        c.sourcePortId === draft.sourcePortId &&
+        c.targetNodeId === draft.targetNodeId &&
+        c.targetPortId === draft.targetPortId,
+    )
+    if (isDuplicate) {
+      return {
+        ok: false as const,
+        reason: '同じポート間の接続は既に存在します。',
+      }
+    }
+
     const srcNode = workflow.nodes.find((n) => n.id === draft.sourceNodeId)
     const srcPort = srcNode ? findPort(getOutputPorts(srcNode), draft.sourcePortId) : undefined
 
