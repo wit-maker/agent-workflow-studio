@@ -1,3 +1,5 @@
+@import '@xyflow/react/dist/style.css';
+
 :root {
   --bg: #f6f7f9;
   --surface: #ffffff;
@@ -259,6 +261,23 @@ button:disabled {
   font-size: 12px;
 }
 
+.segmented-control.compact {
+  margin-bottom: 0;
+  flex-wrap: nowrap;
+}
+
+.canvas-mode-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.canvas-mode-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .part-list {
   display: grid;
   gap: 8px;
@@ -326,6 +345,17 @@ button:disabled {
   font-weight: 800;
 }
 
+.canvas-toolbar-select {
+  min-width: 220px;
+  max-width: 320px;
+  min-height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0 10px;
+  background: var(--surface);
+  color: var(--text);
+}
+
 .canvas-toolbar .valid-count,
 .canvas-toolbar .invalid-count {
   border-radius: 999px;
@@ -344,6 +374,7 @@ button:disabled {
 }
 
 .canvas-scroll {
+  position: relative;
   overflow: auto;
   background:
     linear-gradient(90deg, rgba(23, 32, 42, 0.04) 1px, transparent 1px),
@@ -472,6 +503,171 @@ button:disabled {
   padding: 10px;
   background: rgba(255, 255, 255, 0.92);
   box-shadow: var(--shadow);
+}
+
+.react-flow-canvas-body {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.react-flow-canvas-root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.react-flow-canvas-root .react-flow {
+  width: 100%;
+  height: 100%;
+}
+
+.react-flow-validation-card {
+  left: auto;
+  right: 16px;
+  top: 16px;
+  width: 360px;
+  max-height: 140px;
+  z-index: 5;
+}
+
+.react-flow-canvas-root .react-flow__attribution {
+  display: none;
+}
+
+.react-flow-canvas-root .react-flow__controls {
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.react-flow-canvas-root .react-flow__edge-text {
+  fill: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.react-flow-canvas-root .react-flow__edge.selected path,
+.react-flow-canvas-root .react-flow__edge.selected .react-flow__edge-path {
+  stroke-width: 3.5;
+}
+
+.react-flow-node {
+  width: 260px;
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow);
+}
+
+.react-flow-node-header,
+.react-flow-node-meta,
+.react-flow-node-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+
+.react-flow-node-meta,
+.react-flow-node-footer {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.react-flow-node-body {
+  display: grid;
+  gap: 10px;
+}
+
+.react-flow-port-group {
+  display: grid;
+  gap: 8px;
+}
+
+.react-flow-port-title {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.react-flow-port-empty {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.react-flow-port-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+  min-height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: var(--surface-2);
+}
+
+.react-flow-port-row > div {
+  display: grid;
+  gap: 2px;
+}
+
+.react-flow-port-row strong {
+  font-size: 12px;
+}
+
+.react-flow-port-row span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.react-flow-port-row.connected {
+  border-color: rgba(24, 129, 90, 0.28);
+  background: var(--green-soft);
+}
+
+.react-flow-port-row.required-missing {
+  border-color: rgba(190, 63, 59, 0.28);
+  background: var(--red-soft);
+}
+
+.react-flow-port-connected,
+.react-flow-port-warning {
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.react-flow-port-connected {
+  color: var(--green);
+  background: rgba(24, 129, 90, 0.16);
+}
+
+.react-flow-port-warning {
+  color: var(--red);
+  background: rgba(190, 63, 59, 0.14);
+}
+
+.react-flow-handle {
+  width: 10px;
+  height: 10px;
+  border: 2px solid #ffffff;
+  background: var(--blue);
+}
+
+.react-flow-handle-target {
+  left: -7px;
+}
+
+.react-flow-handle-source {
+  right: -7px;
 }
 
 .connection-validation-card h3 {
