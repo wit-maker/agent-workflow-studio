@@ -1,3 +1,14 @@
+export type WorkflowPortDirection = 'input' | 'output'
+
+export type WorkflowPort = {
+  id: string
+  label: string
+  direction: WorkflowPortDirection
+  dataType: WorkflowDataType
+  required: boolean
+  description?: string
+}
+
 export type WorkflowDataType =
   | 'Trigger'
   | 'Text'
@@ -110,6 +121,8 @@ export type WorkflowNode = {
   agentRole?: AgentRole
   inputTypes: WorkflowDataType[]
   outputTypes: WorkflowDataType[]
+  inputPorts?: WorkflowPort[]
+  outputPorts?: WorkflowPort[]
   config: Record<string, unknown>
   position: { x: number; y: number }
   metrics?: {
@@ -132,8 +145,10 @@ export type WorkflowConnection = {
   id: string
   sourceNodeId: string
   sourcePort?: string
+  sourcePortId?: string
   targetNodeId: string
   targetPort?: string
+  targetPortId?: string
   kind: ConnectionKind
   carries: WorkflowDataType[]
   status: ConnectionStatus
@@ -173,6 +188,7 @@ export type WorkflowArtifact = {
 
 export type Workflow = {
   id: string
+  schemaVersion?: '1.0' | '1.1'
   name: string
   description: string
   version: number

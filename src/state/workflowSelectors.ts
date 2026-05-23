@@ -3,6 +3,7 @@ import {
   getConnectionError,
   isKnownConnectionKind,
 } from '../domain/connectionRules'
+import { findPort, getInputPorts, getOutputPorts } from '../domain/portRules'
 import type {
   ConnectionKind,
   Workflow,
@@ -22,9 +23,9 @@ export type ConnectionValidationResult = {
 
 export type ConnectionDraft = {
   sourceNodeId: string
-  sourcePort: WorkflowDataType
+  sourcePortId: string
   targetNodeId: string
-  targetPort: WorkflowDataType
+  targetPortId: string
   kind: ConnectionKind
 }
 
@@ -213,6 +214,49 @@ export function validateConnection(
     }
   }
 
+  if (connection.sourcePortId !== undefined) {
+    const srcPorts = getOutputPorts(source)
+    if (!findPort(srcPorts, connection.sourcePortId)) {
+      return {
+        connectionId: connection.id,
+        sourceLabel: source.title,
+        targetLabel: target.title,
+        valid: false,
+        reason: `接続元ポートID「${connection.sourcePortId}」が存在しません。`,
+        severity: 'error',
+      }
+    }
+  }
+
+  if (connection.targetPortId !== undefined) {
+    const tgtPorts = getInputPorts(target)
+    if (!findPort(tgtPorts, connection.targetPortId)) {
+      return {
+        connectionId: connection.id,
+        sourceLabel: source.title,
+        targetLabel: target.title,
+        valid: false,
+        reason: `接続先ポートID「${connection.targetPortId}」が存在しません。`,
+        severity: 'error',
+      }
+    }
+  }
+
+  if (connection.sourcePortId !== undefined && connection.targetPortId !== undefined) {
+    const srcPort = findPort(getOutputPorts(source), connection.sourcePortId)
+    const tgtPort = findPort(getInputPorts(target), connection.targetPortId)
+    if (srcPort && tgtPort && !canCarryToInput(srcPort.dataType, tgtPort.dataType)) {
+      return {
+        connectionId: connection.id,
+        sourceLabel: source.title,
+        targetLabel: target.title,
+        valid: false,
+        reason: `ポートのデータ型が接続できません: ${srcPort.dataType} → ${tgtPort.dataType}。`,
+        severity: 'error',
+      }
+    }
+  }
+
   const targetCannotReceive = connection.carries.filter((dataType) =>
     connection.targetPort
       ? !canCarryToInput(dataType, connection.targetPort as WorkflowDataType)
@@ -246,14 +290,23 @@ export function validateConnectionDraft(
   workflow: Workflow,
   draft: ConnectionDraft,
 ): ConnectionValidationResult {
+  const sourceNode = workflow.nodes.find((node) => node.id === draft.sourceNodeId)
+  const targetNode = workflow.nodes.find((node) => node.id === draft.targetNodeId)
+  const srcPorts = sourceNode ? getOutputPorts(sourceNode) : []
+  const tgtPorts = targetNode ? getInputPorts(targetNode) : []
+  const srcPort = findPort(srcPorts, draft.sourcePortId)
+  const tgtPort = findPort(tgtPorts, draft.targetPortId)
+
   return validateConnection(workflow, {
     id: 'draft',
     sourceNodeId: draft.sourceNodeId,
-    sourcePort: draft.sourcePort,
+    sourcePort: srcPort?.dataType,
+    sourcePortId: draft.sourcePortId,
     targetNodeId: draft.targetNodeId,
-    targetPort: draft.targetPort,
+    targetPort: tgtPort?.dataType,
+    targetPortId: draft.targetPortId,
     kind: draft.kind,
-    carries: [draft.sourcePort],
+    carries: srcPort ? [srcPort.dataType] : (sourceNode?.outputTypes.slice(0, 1) ?? []),
     status: 'inactive',
   })
 }

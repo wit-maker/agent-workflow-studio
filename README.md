@@ -13,6 +13,7 @@ Agent Workflow Studio は、AI 作業を型付きワークフローノードと�
 
 現在実装と画面設計の対応は `docs/implementation/SCREEN_SPEC_ALIGNMENT.md` で管理しています。
 Phase 3 の実行グラフMVPは `docs/implementation/EXECUTION_GRAPH_MVP.md` に整理しています。
+Phase 5 のポートモデルMVPは `docs/implementation/PORT_MODEL_MVP.md` に整理しています。
 
 ## 開始手順
 
@@ -25,7 +26,7 @@ npm run lint
 
 ## 現在フェーズ
 
-現在は Phase 4 の評価・再作成・Human Review 強化のMVPまで実装しています。
+現在は Phase 5 のポートモデルと接続検証強化のMVPまで実装しています。
 
 - `useReducer` ベースの workflow state
 - Inspector 編集
@@ -37,6 +38,9 @@ npm run lint
 - Human Review（承認 / 却下 / 修正依頼 / スキップ）
 - 再作成リクエストとモック実行
 - 成果物バージョン履歴
+- **ポートモデル**（id / direction / dataType / required / optional の明示的なポートオブジェクト）
+- **ポートベース接続検証**（ポートID存在チェック・型互換チェック）
+- 旧 inputTypes / outputTypes との後方互換
 - 日本語優先 UI / ドキュメント
 
 ## 現在のMVP範囲

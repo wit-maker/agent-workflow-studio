@@ -1,5 +1,6 @@
 import { useMemo, useReducer, useRef, useState } from 'react'
 import { calculateBottleneck } from '../domain/connectionRules'
+import { findPort, getOutputPorts } from '../domain/portRules'
 import type { ArtifactVersion, ReviewDecision } from '../domain/evaluation'
 import { runLocalEvaluation } from '../domain/evaluationRules'
 import type {
@@ -12,7 +13,6 @@ import type {
   AgentRole,
   ConnectionKind,
   WorkflowArtifact,
-  WorkflowDataType,
   WorkflowNode,
   WorkflowRunLog,
   WorkflowStatus,
@@ -527,16 +527,16 @@ export function AppShell() {
 
   function handleCreateConnection(draft: {
     sourceNodeId: string
-    sourcePort: string
+    sourcePortId: string
     targetNodeId: string
-    targetPort: string
+    targetPortId: string
     kind: ConnectionKind
   }) {
     const validation = validateConnectionDraft(workflow, {
       sourceNodeId: draft.sourceNodeId,
-      sourcePort: draft.sourcePort as WorkflowDataType,
+      sourcePortId: draft.sourcePortId,
       targetNodeId: draft.targetNodeId,
-      targetPort: draft.targetPort as WorkflowDataType,
+      targetPortId: draft.targetPortId,
       kind: draft.kind,
     })
 
@@ -553,16 +553,19 @@ export function AppShell() {
       return
     }
 
+    const srcNode = workflow.nodes.find((n) => n.id === draft.sourceNodeId)
+    const srcPort = srcNode ? findPort(getOutputPorts(srcNode), draft.sourcePortId) : undefined
+
     dispatch({
       type: 'createConnection',
       connection: {
         id: `edge-${Date.now()}`,
         sourceNodeId: draft.sourceNodeId,
-        sourcePort: draft.sourcePort,
+        sourcePortId: draft.sourcePortId,
         targetNodeId: draft.targetNodeId,
-        targetPort: draft.targetPort,
+        targetPortId: draft.targetPortId,
         kind: draft.kind,
-        carries: [draft.sourcePort as WorkflowDataType],
+        carries: srcPort ? [srcPort.dataType] : [],
         status: 'inactive',
       },
     })
