@@ -1,3 +1,4 @@
+import type { EvaluationStatus, ReviewDecision, RebuildStatus } from './evaluation'
 import type { ExecutionRouteKind, ExecutionStepStatus } from './executionGraph'
 import type {
   AgentRole,
@@ -156,4 +157,27 @@ export const logLevelLabels: Record<WorkflowRunLog['level'], string> = {
 
 export function formatDataTypeLabel(type: string): string {
   return dataTypeLabels[type as WorkflowDataType] ?? type
+}
+
+export const evaluationStatusLabels: Record<EvaluationStatus, string> = {
+  not_evaluated: '未評価',
+  evaluating: '評価中',
+  passed: '合格',
+  needs_review: '要確認',
+  failed: '不合格',
+}
+
+export const reviewDecisionLabels: Record<ReviewDecision, string> = {
+  pending: '判断待ち',
+  approved: '承認',
+  rejected: '却下',
+  revise_requested: '修正依頼',
+  skipped: 'スキップ',
+}
+
+export const rebuildStatusLabels: Record<RebuildStatus, string> = {
+  pending: '待機中',
+  running: '実行中',
+  completed: '完了',
+  cancelled: 'キャンセル',
 }

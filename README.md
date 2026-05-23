@@ -25,15 +25,18 @@ npm run lint
 
 ## 現在フェーズ
 
-現在は Phase 3 の実行グラフ・エラールート・リトライ経路のMVPまで実装しています。
+現在は Phase 4 の評価・再作成・Human Review 強化のMVPまで実装しています。
 
 - `useReducer` ベースの workflow state
 - Inspector 編集
 - JSON import / export
 - 接続検証と接続作成 / 削除
 - localStorage によるテンプレート保存と履歴保存
-- 実行グラフ
-- review / fail / retry のローカルモック導線
+- 実行グラフ（review / fail / retry のローカルモック導線）
+- ローカル評価エンジン（7基準・100点満点）
+- Human Review（承認 / 却下 / 修正依頼 / スキップ）
+- 再作成リクエストとモック実行
+- 成果物バージョン履歴
 - 日本語優先 UI / ドキュメント
 
 ## 現在のMVP範囲

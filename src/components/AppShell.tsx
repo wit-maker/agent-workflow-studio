@@ -1,5 +1,7 @@
 import { useMemo, useReducer, useRef, useState } from 'react'
 import { calculateBottleneck } from '../domain/connectionRules'
+import type { ArtifactVersion, ReviewDecision } from '../domain/evaluation'
+import { runLocalEvaluation } from '../domain/evaluationRules'
 import type {
   ExecutionRoute,
   ExecutionRouteKind,
@@ -154,7 +156,21 @@ export function AppShell() {
   )
   const runTokenRef = useRef(0)
   const runCountRef = useRef(0)
-  const { workflow, executionGraph, selectedNodeId, isRunning, checkOutcome, importError } = state
+  const [isEvaluating, setIsEvaluating] = useState(false)
+  const artifactVersionCountRef = useRef(0)
+  const {
+    workflow,
+    executionGraph,
+    selectedNodeId,
+    isRunning,
+    checkOutcome,
+    importError,
+    evaluation,
+    humanReview,
+    rebuildRequests,
+    artifactVersions,
+    selectedArtifactVersionId,
+  } = state
 
   const selectedNode = useMemo(
     () => selectSelectedNode(workflow, selectedNodeId),
@@ -836,6 +852,87 @@ export function AppShell() {
     })
   }
 
+  async function handleEvaluate() {
+    if (!executionGraph || isEvaluating) {
+      return
+    }
+    setIsEvaluating(true)
+    dispatch({ type: 'startEvaluation' })
+    await delay(800)
+    const result = runLocalEvaluation(workflow, executionGraph, executionGraph.runId)
+    dispatch({ type: 'setEvaluationResult', result })
+
+    artifactVersionCountRef.current += 1
+    const version: ArtifactVersion = {
+      id: `av-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      version: artifactVersionCountRef.current,
+      sourceRunId: executionGraph.runId,
+      content: workflow.artifact.content,
+      createdAt: new Date().toISOString(),
+      evaluationId: result.id,
+    }
+    dispatch({ type: 'addArtifactVersion', version })
+    setIsEvaluating(false)
+  }
+
+  function handleHumanReviewDecide(decision: ReviewDecision, note: string) {
+    dispatch({
+      type: 'setHumanReviewDecision',
+      decision,
+      reviewer: 'ローカルユーザー',
+      note: note || undefined,
+    })
+  }
+
+  function handleRequestRebuild(reason: string, instruction: string) {
+    const requestId = `rebuild-${Date.now()}-${Math.random().toString(16).slice(2)}`
+    dispatch({
+      type: 'requestRebuild',
+      request: {
+        id: requestId,
+        sourceArtifactId: evaluation?.artifactId,
+        reason,
+        instruction,
+        createdAt: new Date().toISOString(),
+        status: 'pending',
+      },
+    })
+  }
+
+  async function handleStartRebuild(requestId: string) {
+    dispatch({ type: 'startRebuild', requestId })
+    await delay(800)
+    dispatch({ type: 'completeRebuild', requestId })
+
+    artifactVersionCountRef.current += 1
+    const version: ArtifactVersion = {
+      id: `av-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      version: artifactVersionCountRef.current,
+      sourceRunId: executionGraph?.runId ?? `rebuild-${requestId}`,
+      content: `${workflow.artifact.content}\n\n---\n再作成バージョン v${artifactVersionCountRef.current} (${new Date().toLocaleString('ja-JP')})`,
+      createdAt: new Date().toISOString(),
+      rebuildRequestId: requestId,
+    }
+    dispatch({ type: 'addArtifactVersion', version })
+    dispatch({
+      type: 'appendLog',
+      log: makeLog(
+        executionGraph?.runId ?? `rebuild-${requestId}`,
+        `再作成が完了し、バージョン v${version.version} を保存しました。`,
+        undefined,
+        'info',
+      ),
+    })
+  }
+
+  function handleCancelRebuild(requestId: string) {
+    dispatch({ type: 'cancelRebuild', requestId })
+  }
+
+  function handleSelectArtifactVersion(versionId: string) {
+    dispatch({ type: 'selectArtifactVersion', versionId })
+  }
+
   function exportJson() {
     const blob = new Blob([JSON.stringify(workflow, null, 2)], {
       type: 'application/json',
@@ -912,6 +1009,8 @@ export function AppShell() {
             workflow={workflow}
             selectedNode={selectedNode}
             executionGraph={executionGraph}
+            evaluation={evaluation}
+            humanReview={humanReview}
           />
         </div>
         <Inspector
@@ -939,6 +1038,19 @@ export function AppShell() {
         onApproveReviewStep={handleApproveReviewStep}
         onReturnReviewStep={handleReturnReviewStep}
         onSkipReviewStep={handleSkipReviewStep}
+        evaluation={evaluation}
+        humanReview={humanReview}
+        rebuildRequests={rebuildRequests}
+        artifactVersions={artifactVersions}
+        selectedArtifactVersionId={selectedArtifactVersionId}
+        canEvaluate={!!executionGraph && !isRunning}
+        isEvaluating={isEvaluating}
+        onEvaluate={handleEvaluate}
+        onHumanReviewDecide={handleHumanReviewDecide}
+        onRequestRebuild={handleRequestRebuild}
+        onStartRebuild={handleStartRebuild}
+        onCancelRebuild={handleCancelRebuild}
+        onSelectArtifactVersion={handleSelectArtifactVersion}
       />
     </div>
   )
