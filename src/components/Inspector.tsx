@@ -182,14 +182,15 @@ function InspectorContent({
 
         <section className="inspector-section">
           <h3>ポート</h3>
-          {getUnconnectedRequiredInputPorts(selectedNode, connections).length > 0 && (
-            <p className="warning-text">
-              必須入力ポートが未接続です:{' '}
-              {getUnconnectedRequiredInputPorts(selectedNode, connections)
-                .map((p) => formatDataTypeLabel(p.dataType))
-                .join('、')}
-            </p>
-          )}
+          {(() => {
+            const unconnectedRequired = getUnconnectedRequiredInputPorts(selectedNode, connections)
+            return unconnectedRequired.length > 0 ? (
+              <p className="warning-text">
+                必須入力ポートが未接続です:{' '}
+                {unconnectedRequired.map((p) => formatDataTypeLabel(p.dataType)).join('、')}
+              </p>
+            ) : null
+          })()}
           <div className="port-list">
             <div>
               <strong>入力ポート</strong>

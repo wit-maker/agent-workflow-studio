@@ -199,18 +199,24 @@ export function ConnectionEditor({
                 {(connection.sourcePortId ?? connection.sourcePort) && (
                   <span className="port-meta">
                     出力: {formatDataTypeLabel(
-                      connection.sourcePortId
-                        ? connection.sourcePortId.replace(/-out$/, '')
-                        : (connection.sourcePort ?? ''),
+                      (() => {
+                        const port = connection.sourcePortId && source
+                          ? findPort(getOutputPorts(source), connection.sourcePortId)
+                          : undefined
+                        return port ? port.dataType : (connection.sourcePort ?? '')
+                      })()
                     )}
                   </span>
                 )}
                 {(connection.targetPortId ?? connection.targetPort) && (
                   <span className="port-meta">
                     入力: {formatDataTypeLabel(
-                      connection.targetPortId
-                        ? connection.targetPortId.replace(/-in$/, '')
-                        : (connection.targetPort ?? ''),
+                      (() => {
+                        const port = connection.targetPortId && target
+                          ? findPort(getInputPorts(target), connection.targetPortId)
+                          : undefined
+                        return port ? port.dataType : (connection.targetPort ?? '')
+                      })()
                     )}
                   </span>
                 )}

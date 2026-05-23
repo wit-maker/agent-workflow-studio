@@ -214,8 +214,10 @@ export function validateConnection(
     }
   }
 
+  const srcPorts = getOutputPorts(source)
+  const tgtPorts = getInputPorts(target)
+
   if (connection.sourcePortId !== undefined) {
-    const srcPorts = getOutputPorts(source)
     if (!findPort(srcPorts, connection.sourcePortId)) {
       return {
         connectionId: connection.id,
@@ -229,7 +231,6 @@ export function validateConnection(
   }
 
   if (connection.targetPortId !== undefined) {
-    const tgtPorts = getInputPorts(target)
     if (!findPort(tgtPorts, connection.targetPortId)) {
       return {
         connectionId: connection.id,
@@ -243,8 +244,8 @@ export function validateConnection(
   }
 
   if (connection.sourcePortId !== undefined && connection.targetPortId !== undefined) {
-    const srcPort = findPort(getOutputPorts(source), connection.sourcePortId)
-    const tgtPort = findPort(getInputPorts(target), connection.targetPortId)
+    const srcPort = findPort(srcPorts, connection.sourcePortId)
+    const tgtPort = findPort(tgtPorts, connection.targetPortId)
     if (srcPort && tgtPort && !canCarryToInput(srcPort.dataType, tgtPort.dataType)) {
       return {
         connectionId: connection.id,
