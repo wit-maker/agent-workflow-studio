@@ -3,14 +3,18 @@ import { getConnectionError } from '../domain/connectionRules'
 import {
   agentRoleLabels,
   statusLabels,
+  type ConnectionKind,
+  type WorkflowConnection,
   type AgentRole,
   type WorkflowNode,
 } from '../domain/workflow'
 import type { ConnectionValidationResult } from '../state/workflowSelectors'
+import { ConnectionEditor } from './ConnectionEditor'
 
 type InspectorProps = {
   selectedNode: WorkflowNode | undefined
   nodes: WorkflowNode[]
+  connections: WorkflowConnection[]
   connectionValidation: ConnectionValidationResult[]
   onSaveNode: (
     nodeId: string,
@@ -21,13 +25,24 @@ type InspectorProps = {
       config: Record<string, unknown>
     },
   ) => void
+  onCreateConnection: (draft: {
+    sourceNodeId: string
+    sourcePort: string
+    targetNodeId: string
+    targetPort: string
+    kind: ConnectionKind
+  }) => void
+  onDeleteConnection: (connectionId: string) => void
 }
 
 export function Inspector({
   selectedNode,
   nodes,
+  connections,
   connectionValidation,
   onSaveNode,
+  onCreateConnection,
+  onDeleteConnection,
 }: InspectorProps) {
   if (!selectedNode) {
     return (
@@ -46,8 +61,11 @@ export function Inspector({
       key={selectedNode.id}
       selectedNode={selectedNode}
       nodes={nodes}
+      connections={connections}
       connectionValidation={connectionValidation}
       onSaveNode={onSaveNode}
+      onCreateConnection={onCreateConnection}
+      onDeleteConnection={onDeleteConnection}
     />
   )
 }
@@ -59,8 +77,11 @@ type InspectorContentProps = Omit<InspectorProps, 'selectedNode'> & {
 function InspectorContent({
   selectedNode,
   nodes,
+  connections,
   connectionValidation,
   onSaveNode,
+  onCreateConnection,
+  onDeleteConnection,
 }: InspectorContentProps) {
   const [title, setTitle] = useState(selectedNode.title)
   const [description, setDescription] = useState(selectedNode.description)
@@ -143,6 +164,45 @@ function InspectorContent({
             </div>
           </dl>
           <section className="inspector-section">
+            <h3>Ports</h3>
+            <div className="port-list">
+              <div>
+                <strong>Input ports</strong>
+                {selectedNode.inputTypes.length === 0 ? (
+                  <span className="muted">Start node</span>
+                ) : (
+                  selectedNode.inputTypes.map((type) => {
+                    const connected = connections.some(
+                      (connection) =>
+                        connection.targetNodeId === selectedNode.id &&
+                        (connection.targetPort === type || connection.carries.includes(type)),
+                    )
+                    return (
+                      <span key={type} className={connected ? 'port-chip connected' : 'port-chip'}>
+                        {type} / {connected ? 'connected' : 'optional'}
+                      </span>
+                    )
+                  })
+                )}
+              </div>
+              <div>
+                <strong>Output ports</strong>
+                {selectedNode.outputTypes.map((type) => {
+                  const connected = connections.some(
+                    (connection) =>
+                      connection.sourceNodeId === selectedNode.id &&
+                      (connection.sourcePort === type || connection.carries.includes(type)),
+                  )
+                  return (
+                    <span key={type} className={connected ? 'port-chip connected' : 'port-chip'}>
+                      {type} / {connected ? 'connected' : 'optional'}
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
+          </section>
+          <section className="inspector-section">
             <h3>Edit Node</h3>
             <label className="field-label">
               Title
@@ -215,6 +275,38 @@ function InspectorContent({
               <span>{selectedNode.metrics?.estimatedLatencyMs ?? 0} ms</span>
             </div>
           </section>
+          <ConnectionEditor
+            workflow={{
+              id: 'inspector-workflow-view',
+              name: 'Inspector workflow view',
+              description: '',
+              version: 1,
+              status: 'ready',
+              nodes,
+              connections,
+              metrics: {
+                tokens: 0,
+                cost: 0,
+                latencyMs: 0,
+                successRate: 0,
+                queueCount: 0,
+                retryCount: 0,
+                bottleneckNodeId: null,
+              },
+              logs: [],
+              artifact: {
+                title: '',
+                format: 'Preview',
+                content: '',
+                status: 'draft',
+              },
+              createdAt: '',
+              updatedAt: '',
+            }}
+            connectionValidation={connectionValidation}
+            onCreateConnection={onCreateConnection}
+            onDeleteConnection={onDeleteConnection}
+          />
       </>
     </aside>
   )

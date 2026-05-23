@@ -4,7 +4,7 @@ Last updated: 2026-05-23
 
 ## Current Phase
 
-Phase 1 UI state and JSON foundation.
+Phase 2 connection, template, and local history foundation.
 
 ## Completed
 
@@ -28,6 +28,13 @@ Phase 1 UI state and JSON foundation.
 - Split BottomMonitor into Logs, Metrics, Queue, and Output tabs.
 - Split StagePreview into Preview, Markdown, and JSON tabs.
 - Added visible connection validation in Canvas and Inspector.
+- Added port-level connection visibility from node input/output types.
+- Added form-based connection creation and deletion without drag-and-drop.
+- Strengthened connection validation for missing nodes, same-node links, carries,
+  ports, unsupported targets, and unknown kinds.
+- Added localStorage-backed template save/load/delete mock.
+- Added localStorage-backed workflow snapshot save/load/delete history.
+- Strengthened import validation for connection endpoints and artifact content.
 
 ## Not Implemented Yet
 
@@ -35,26 +42,33 @@ Phase 1 UI state and JSON foundation.
 - Credential storage.
 - Tauri desktop wrapper.
 - Drag-and-drop node creation.
-- Port-level interactive connection editing.
-- Durable template-save mock storage.
+- Drag-and-drop connection editing.
+- Full port objects with required/optional metadata.
 - Automated tests beyond build and lint.
 
 ## Next Work
 
 1. Add drag connection affordances.
-2. Add port-level connection validation and editing.
-3. Add template-save mock persistence.
-4. Add local workflow JSON save/load history.
+2. Add explicit port objects with required/optional metadata.
+3. Add error routes and retry routes to the run simulator.
+4. Add template version naming and metadata editing.
 5. Revisit Zustand only if reducer state becomes hard to follow.
 
 ## Known Risks
 
-- Model gate is strict: if the model is not GPT-5.5 high or GPT-5.5 xhigh,
-  implementation must stop unless the user explicitly overrides.
+- Model gate is now cost/performance balanced: stop only when the available
+  model is insufficient for the actual task risk. User override must be recorded
+  before continuing with an otherwise insufficient model.
 - Vite generated current latest package versions, so future dependency changes
   should be reviewed before extending the app.
 - Git user identity was missing globally, so this repository uses a local
   `wit-maker` noreply identity for the bootstrap commit.
+
+## Screen Spec Alignment
+
+- Added `docs/implementation/SCREEN_SPEC_ALIGNMENT.md` to map UI-01, UI-02,
+  UI-05, UI-06, UI-08, UI-09, and UI-10 against current implementation files,
+  gaps, and next actions.
 
 ## Phase 1 Verification
 
@@ -64,3 +78,13 @@ Phase 1 UI state and JSON foundation.
 - `npm run lint`: success.
 - Browser QA: verified tabs, Inspector editing, local mock run, logs, metrics,
   artifact output, and connection validation display.
+
+## Phase 2 Verification
+
+- Model: GPT-5.5 high confirmed by user before implementation.
+- Branch: `feature/connection-template-local-history`.
+- `npm run build`: success.
+- `npm run lint`: success.
+- Browser QA: verified connection editor visibility, port visibility,
+  connection create/delete, template save UI, local history save UI, existing
+  Run behavior, metrics, and artifact output.

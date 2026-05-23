@@ -1,12 +1,34 @@
 import { useState } from 'react'
 import type { Workflow } from '../domain/workflow'
+import type { SavedWorkflowTemplate } from '../storage/localTemplates'
+import type { SavedWorkflowSnapshot } from '../storage/localWorkflowHistory'
 import { selectActiveQueueNodes, selectBottleneckNode } from '../state/workflowSelectors'
+import { TemplateLibrary } from './TemplateLibrary'
+import { WorkflowHistoryPanel } from './WorkflowHistoryPanel'
 
 type BottomMonitorProps = {
   workflow: Workflow
+  templates: SavedWorkflowTemplate[]
+  snapshots: SavedWorkflowSnapshot[]
+  onSaveTemplate: () => void
+  onLoadTemplate: (id: string) => void
+  onDeleteTemplate: (id: string) => void
+  onSaveSnapshot: () => void
+  onLoadSnapshot: (id: string) => void
+  onDeleteSnapshot: (id: string) => void
 }
 
-export function BottomMonitor({ workflow }: BottomMonitorProps) {
+export function BottomMonitor({
+  workflow,
+  templates,
+  snapshots,
+  onSaveTemplate,
+  onLoadTemplate,
+  onDeleteTemplate,
+  onSaveSnapshot,
+  onLoadSnapshot,
+  onDeleteSnapshot,
+}: BottomMonitorProps) {
   const [activeTab, setActiveTab] = useState<'Logs' | 'Metrics' | 'Queue' | 'Output'>('Logs')
   const bottleneck = selectBottleneckNode(workflow)
   const queueNodes = selectActiveQueueNodes(workflow)
@@ -95,6 +117,20 @@ export function BottomMonitor({ workflow }: BottomMonitorProps) {
             <p>Status: {workflow.artifact.status}</p>
             <p>Format: {workflow.artifact.format}</p>
             <p>{workflow.artifact.content.slice(0, 220)}</p>
+            <div className="library-grid">
+              <TemplateLibrary
+                templates={templates}
+                onSaveTemplate={onSaveTemplate}
+                onLoadTemplate={onLoadTemplate}
+                onDeleteTemplate={onDeleteTemplate}
+              />
+              <WorkflowHistoryPanel
+                snapshots={snapshots}
+                onSaveSnapshot={onSaveSnapshot}
+                onLoadSnapshot={onLoadSnapshot}
+                onDeleteSnapshot={onDeleteSnapshot}
+              />
+            </div>
           </div>
         ) : null}
       </section>

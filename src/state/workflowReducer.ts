@@ -79,6 +79,28 @@ export function workflowReducer(
         },
       }
 
+    case 'createConnection':
+      return {
+        ...state,
+        workflow: {
+          ...state.workflow,
+          connections: [...state.workflow.connections, action.connection],
+          updatedAt: new Date().toISOString(),
+        },
+      }
+
+    case 'deleteConnection':
+      return {
+        ...state,
+        workflow: {
+          ...state.workflow,
+          connections: state.workflow.connections.filter(
+            (connection) => connection.id !== action.connectionId,
+          ),
+          updatedAt: new Date().toISOString(),
+        },
+      }
+
     case 'runWorkflowStart':
       return {
         ...state,

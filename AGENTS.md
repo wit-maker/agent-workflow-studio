@@ -2,26 +2,42 @@
 
 ## Model Gate
 
-Before implementation work, confirm the active model and compare it with the
-recommended models:
+Before implementation work, confirm the active model and choose the lowest-cost
+model that is sufficient for the risk and scope of the task.
 
-- GPT-5.5 xhigh for architecture, risk, repository policy, and hard judgment.
-- GPT-5.5 high for normal implementation, UI skeletons, typed models, docs, and
-  review.
+- GPT-5.5 xhigh:
+  - Architecture changes.
+  - Specification contradiction adjudication.
+  - Security, Credential, or dangerous Git operations.
+  - Large refactor decisions.
+- GPT-5.5 high / GPT-5.4 high:
+  - Normal React/TypeScript implementation.
+  - State management.
+  - Type design.
+  - Specification alignment.
+  - Multi-file changes.
+- GPT-5.4 medium / GPT-5.4 high:
+  - UI component additions.
+  - Normal Inspector, Canvas, BottomMonitor, or StagePreview changes.
+  - localStorage mocks.
+  - JSON import/export improvements.
+- GPT-5.4 mini low / medium, or available GPT-5.2 / GPT-5.3 models:
+  - Documentation edits.
+  - Lint fixes.
+  - CSS fine tuning.
+  - Copy updates.
+  - Small display improvements.
 
-If the active model is not GPT-5.5 xhigh or GPT-5.5 high, or if the active
-model is unknown, do not start implementation work.
-
-Do not record the difference in `PROJECT_STATE.md` and continue. Stop and
-report:
+Do not stop only because the current model differs from the recommended model.
+Stop only when the model is insufficient for the actual task risk. If the model
+is insufficient, report:
 
 ```text
 モデル変更が必要です。
 ```
 
-The only exception is an explicit user instruction to continue with the current
-model. Without that explicit override, implementation must wait until the model
-is changed to GPT-5.5 xhigh or GPT-5.5 high.
+If the user explicitly permits continuing with an otherwise insufficient model,
+record that override in `PROJECT_STATE.md` before continuing.
 
 ## Repository Separation
 

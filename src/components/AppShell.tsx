@@ -1,10 +1,30 @@
-import { useMemo, useReducer, useRef } from 'react'
+import { useMemo, useReducer, useRef, useState } from 'react'
 import { calculateBottleneck } from '../domain/connectionRules'
 import { createSampleWorkflow } from '../domain/sampleWorkflow'
-import type { AgentRole, WorkflowRunLog } from '../domain/workflow'
+import type {
+  AgentRole,
+  ConnectionKind,
+  WorkflowDataType,
+  WorkflowRunLog,
+} from '../domain/workflow'
+import {
+  deleteWorkflowTemplate,
+  listWorkflowTemplates,
+  loadWorkflowTemplate,
+  saveWorkflowTemplate,
+  type SavedWorkflowTemplate,
+} from '../storage/localTemplates'
+import {
+  deleteWorkflowSnapshot,
+  listWorkflowSnapshots,
+  loadWorkflowSnapshot,
+  saveWorkflowSnapshot,
+  type SavedWorkflowSnapshot,
+} from '../storage/localWorkflowHistory'
 import { createWorkflowState, workflowReducer } from '../state/workflowReducer'
 import {
   selectSelectedNode,
+  validateConnectionDraft,
   validateConnections,
   validateWorkflowImport,
 } from '../state/workflowSelectors'
@@ -37,6 +57,12 @@ export function AppShell() {
   const [state, dispatch] = useReducer(
     workflowReducer,
     createWorkflowState(createSampleWorkflow()),
+  )
+  const [templates, setTemplates] = useState<SavedWorkflowTemplate[]>(() =>
+    listWorkflowTemplates(),
+  )
+  const [snapshots, setSnapshots] = useState<SavedWorkflowSnapshot[]>(() =>
+    listWorkflowSnapshots(),
   )
   const runTokenRef = useRef(0)
   const { workflow, selectedNodeId, isRunning, checkOutcome, importError } = state
@@ -176,6 +202,113 @@ export function AppShell() {
     dispatch({ type: 'updateNodeConfig', nodeId, updates })
   }
 
+  function handleCreateConnection(draft: {
+    sourceNodeId: string
+    sourcePort: string
+    targetNodeId: string
+    targetPort: string
+    kind: ConnectionKind
+  }) {
+    const validation = validateConnectionDraft(workflow, {
+      sourceNodeId: draft.sourceNodeId,
+      sourcePort: draft.sourcePort as WorkflowDataType,
+      targetNodeId: draft.targetNodeId,
+      targetPort: draft.targetPort as WorkflowDataType,
+      kind: draft.kind,
+    })
+
+    if (!validation.valid) {
+      dispatch({
+        type: 'appendLog',
+        log: makeLog(
+          `connection-${Date.now()}`,
+          `Connection rejected: ${validation.reason}`,
+          undefined,
+          'warn',
+        ),
+      })
+      return
+    }
+
+    dispatch({
+      type: 'createConnection',
+      connection: {
+        id: `edge-${Date.now()}`,
+        sourceNodeId: draft.sourceNodeId,
+        sourcePort: draft.sourcePort,
+        targetNodeId: draft.targetNodeId,
+        targetPort: draft.targetPort,
+        kind: draft.kind,
+        carries: [draft.sourcePort as WorkflowDataType],
+        status: 'inactive',
+      },
+    })
+    dispatch({
+      type: 'appendLog',
+      log: makeLog(`connection-${Date.now()}`, 'Connection created.', undefined, 'info'),
+    })
+  }
+
+  function handleDeleteConnection(connectionId: string) {
+    dispatch({ type: 'deleteConnection', connectionId })
+    dispatch({
+      type: 'appendLog',
+      log: makeLog(`connection-${Date.now()}`, 'Connection deleted.', undefined, 'warn'),
+    })
+  }
+
+  function handleSaveTemplate() {
+    const template = saveWorkflowTemplate(workflow)
+    setTemplates(listWorkflowTemplates())
+    dispatch({
+      type: 'appendLog',
+      log: makeLog(
+        `template-${Date.now()}`,
+        `Template saved: ${template.name}.`,
+        undefined,
+        'info',
+      ),
+    })
+  }
+
+  function handleLoadTemplate(id: string) {
+    const loaded = loadWorkflowTemplate(id)
+    if (!loaded) {
+      return
+    }
+    dispatch({ type: 'importWorkflow', workflow: loaded })
+  }
+
+  function handleDeleteTemplate(id: string) {
+    setTemplates(deleteWorkflowTemplate(id))
+  }
+
+  function handleSaveSnapshot() {
+    const snapshot = saveWorkflowSnapshot(workflow)
+    setSnapshots(listWorkflowSnapshots())
+    dispatch({
+      type: 'appendLog',
+      log: makeLog(
+        `snapshot-${Date.now()}`,
+        `Snapshot saved: ${snapshot.name}.`,
+        undefined,
+        'info',
+      ),
+    })
+  }
+
+  function handleLoadSnapshot(id: string) {
+    const loaded = loadWorkflowSnapshot(id)
+    if (!loaded) {
+      return
+    }
+    dispatch({ type: 'importWorkflow', workflow: loaded })
+  }
+
+  function handleDeleteSnapshot(id: string) {
+    setSnapshots(deleteWorkflowSnapshot(id))
+  }
+
   function exportJson() {
     const blob = new Blob([JSON.stringify(workflow, null, 2)], {
       type: 'application/json',
@@ -198,6 +331,15 @@ export function AppShell() {
         dispatch({
           type: 'setImportError',
           message: result.error ?? 'Imported workflow is invalid.',
+        })
+        dispatch({
+          type: 'appendLog',
+          log: makeLog(
+            `import-${Date.now()}`,
+            `Import rejected: ${result.error ?? 'invalid workflow'}.`,
+            undefined,
+            'warn',
+          ),
         })
         return
       }
@@ -247,11 +389,24 @@ export function AppShell() {
         <Inspector
           selectedNode={selectedNode}
           nodes={workflow.nodes}
+          connections={workflow.connections}
           connectionValidation={connectionValidation}
           onSaveNode={handleSaveNode}
+          onCreateConnection={handleCreateConnection}
+          onDeleteConnection={handleDeleteConnection}
         />
       </div>
-      <BottomMonitor workflow={workflow} />
+      <BottomMonitor
+        workflow={workflow}
+        templates={templates}
+        snapshots={snapshots}
+        onSaveTemplate={handleSaveTemplate}
+        onLoadTemplate={handleLoadTemplate}
+        onDeleteTemplate={handleDeleteTemplate}
+        onSaveSnapshot={handleSaveSnapshot}
+        onLoadSnapshot={handleLoadSnapshot}
+        onDeleteSnapshot={handleDeleteSnapshot}
+      />
     </div>
   )
 }

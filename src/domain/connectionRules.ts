@@ -1,4 +1,5 @@
-import type { WorkflowDataType, WorkflowNode } from './workflow'
+import type { ConnectionKind, WorkflowDataType, WorkflowNode } from './workflow'
+import { connectionKinds } from './workflow'
 
 const compatibleTypes: Partial<Record<WorkflowDataType, WorkflowDataType[]>> = {
   Trigger: ['Trigger'],
@@ -13,6 +14,23 @@ const compatibleTypes: Partial<Record<WorkflowDataType, WorkflowDataType[]>> = {
   Artifact: ['Artifact', 'Markdown', 'JSON'],
   Log: ['Log'],
   Metric: ['Metric'],
+}
+
+export function isKnownConnectionKind(kind: string): kind is ConnectionKind {
+  return connectionKinds.includes(kind as ConnectionKind)
+}
+
+export function getCompatibleTargetTypes(
+  outputType: WorkflowDataType,
+): WorkflowDataType[] {
+  return compatibleTypes[outputType] ?? [outputType]
+}
+
+export function canCarryToInput(
+  outputType: WorkflowDataType,
+  inputType: WorkflowDataType,
+): boolean {
+  return getCompatibleTargetTypes(outputType).includes(inputType)
 }
 
 const mvpAllowedPairs = new Set([
