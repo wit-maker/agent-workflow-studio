@@ -4,6 +4,30 @@ Last updated: 2026-05-24
 
 ## Current Phase
 
+feature/workflow-foundation-milestones — M0〜M4 連続実装中。
+
+## Latest Progress
+
+### Current Branch
+- feature/workflow-foundation-milestones
+
+### Completed Milestones
+- M0: main sync / build / lint 確認済み。ブランチ作成済み。
+
+### Verification
+- npm run build: pass
+- npm run lint: pass
+- Browser QA: 未実施（M0 はコードなし）
+
+### Notes
+- PR #15 は main に merge 済み確認。
+- 既存 stale ブランチなし。
+- 作業ブランチ feature/workflow-foundation-milestones を新規作成。
+
+---
+
+## Previous Phase
+
 Phase 7.4 Inspector ノード編集体験のハードニング。
 
 ## Completed
