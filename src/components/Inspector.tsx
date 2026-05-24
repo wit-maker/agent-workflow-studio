@@ -138,7 +138,7 @@ function InspectorContent({
 
   const canSave = isDirty && configValidation.valid && title.trim().length > 0
 
-  const nextNode = nodes.find((node) => node.position.x > selectedNode.position.x)
+  const nextNode = nodes.find((node) => (node.position?.x ?? 0) > (selectedNode.position?.x ?? 0))
   const connectionError = nextNode ? getConnectionError(selectedNode, nextNode) : null
 
   const selectedValidation = useMemo(

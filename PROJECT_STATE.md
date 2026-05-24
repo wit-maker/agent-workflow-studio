@@ -13,16 +13,20 @@ feature/workflow-foundation-milestones — M0〜M4 連続実装中。
 
 ### Completed Milestones
 - M0: main sync / build / lint 確認済み。ブランチ作成済み。
+- M1: Browser QA noise 調査・分類・防衛的修正を実施。
 
 ### Verification
 - npm run build: pass
 - npm run lint: pass
-- Browser QA: 未実施（M0 はコードなし）
+- Browser QA: 実施済み（初期ロード・ノードクリック・検索フィルタを確認）
 
 ### Notes
 - PR #15 は main に merge 済み確認。
 - 既存 stale ブランチなし。
 - 作業ブランチ feature/workflow-foundation-milestones を新規作成。
+- **PartsPalette key warning**: React 18 StrictMode の初期ダブルレンダリング時のみ発生。ファイバーツリーのキーは `node-1`〜`node-12` で正常。再レンダリング・ノードクリック・検索フィルタ時は発生しない。機能上の影響なし。production build では StrictMode が非アクティブのため警告なし。
+- **InspectorContent warning**: 同様に StrictMode 初期レンダリング時のみ発生。ノードクリックによる再マウント時は発生しない。
+- **修正**: `Inspector.tsx` の `node.position?.x` を防衛的アクセスに変更（import データに position がない場合の実行時クラッシュを防止）。
 
 ---
 
