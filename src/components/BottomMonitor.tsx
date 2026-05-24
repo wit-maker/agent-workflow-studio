@@ -16,6 +16,7 @@ import { ArtifactVersionHistory } from './ArtifactVersionHistory'
 import { ConnectorQueuePanel } from './ConnectorQueuePanel'
 import { CredentialBoundaryPanel } from './CredentialBoundaryPanel'
 import { PersistencePanel } from './PersistencePanel'
+import { StorageBoundaryPanel } from './StorageBoundaryPanel'
 import { EvaluationPanel } from './EvaluationPanel'
 import { ExecutionGraphPanel } from './ExecutionGraphPanel'
 import { HumanReviewPanel } from './HumanReviewPanel'
@@ -356,6 +357,7 @@ export function BottomMonitor({
 
         {activeTab === 'Storage' ? (
           <div className="storage-tab-panel">
+            <StorageBoundaryPanel />
             <PersistencePanel onResetStorage={onResetStorage} />
           </div>
         ) : null}

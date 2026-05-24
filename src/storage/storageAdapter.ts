@@ -8,7 +8,13 @@ import {
   type SaveWorkflowTemplateInput,
 } from './localTemplates'
 import { loadCurrentWorkflow, saveCurrentWorkflow, clearCurrentWorkflow } from './localWorkflowState'
-import { clearReactFlowPositions } from './localCanvasState'
+import {
+  readReactFlowPositions,
+  writeReactFlowPositions,
+  clearReactFlowPositions,
+  type SavedReactFlowPositions,
+} from './localCanvasState'
+import { getStorageHealth, type StorageHealth } from './storageValidation'
 
 /**
  * Storage adapter interface.
@@ -28,7 +34,10 @@ export interface IStorageAdapter {
   deleteTemplate(id: string): SavedWorkflowTemplate[]
   loadSettings(): AppSettings
   saveSettings(settings: Partial<AppSettings>): void
+  loadReactFlowPositions(): SavedReactFlowPositions
+  saveReactFlowPositions(positions: SavedReactFlowPositions): void
   clearAll(): void
+  getStorageHealth(): StorageHealth
 }
 
 /**
@@ -66,10 +75,22 @@ const localStorageAdapter: IStorageAdapter = {
     saveAppSettings(settings)
   },
 
+  loadReactFlowPositions() {
+    return readReactFlowPositions()
+  },
+
+  saveReactFlowPositions(positions) {
+    writeReactFlowPositions(positions)
+  },
+
   clearAll() {
     clearCurrentWorkflow()
     clearAppSettings()
     clearReactFlowPositions()
+  },
+
+  getStorageHealth() {
+    return getStorageHealth()
   },
 }
 
