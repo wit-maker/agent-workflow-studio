@@ -2,6 +2,7 @@ import {
   Background,
   Controls,
   ReactFlow,
+  applyNodeChanges,
   useStoreApi,
   type Connection,
   type Edge,
@@ -11,14 +12,20 @@ import {
 } from '@xyflow/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { connectionKindLabels, formatDataTypeLabel } from '../domain/displayLabels'
-import type { ConnectionKind, Workflow } from '../domain/workflow'
 import {
-  RF_X_SCALE,
-  RF_Y_SCALE,
+  scaleNodePosition,
   toReactFlowEdges,
   toReactFlowNodes,
   toWorkflowConnectionDraft,
+  type ReactFlowWorkflowNode,
 } from '../domain/reactFlowAdapter'
+import type { ConnectionKind, Workflow } from '../domain/workflow'
+import {
+  clearReactFlowPositions,
+  readReactFlowPositions,
+  writeReactFlowPositions,
+  type SavedReactFlowPositions,
+} from '../storage/localCanvasState'
 import {
   type ConnectionValidationResult,
   validateConnectionDraft,
@@ -43,23 +50,64 @@ type ReactFlowCanvasProps = {
     kind: ConnectionKind
   }) => CreateConnectionResult
   onDeleteConnection: (connectionId: string) => void
+  onResetPositions?: () => void
 }
 
 const nodeTypes = {
   workflowNode: ReactFlowNode,
 }
 
+type NodePositionMap = Record<string, XYPosition>
+
 const escapeCssSelectorValue = (value: string) =>
   typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
     ? CSS.escape(value)
     : value.replace(/["\\]/g, '\\$&')
 
+function buildNodePositions(
+  workflow: Workflow,
+  savedPositions: SavedReactFlowPositions,
+): NodePositionMap {
+  return Object.fromEntries(
+    workflow.nodes.map((node) => [
+      node.id,
+      savedPositions[node.id] ?? scaleNodePosition(node.position),
+    ]),
+  )
+}
+
+function buildFlowNodes(
+  workflow: Workflow,
+  savedPositions: SavedReactFlowPositions,
+  selectedNodeId: string,
+): ReactFlowWorkflowNode[] {
+  return toReactFlowNodes(workflow, buildNodePositions(workflow, savedPositions)).map((node) => ({
+    ...node,
+    selected: node.id === selectedNodeId,
+  }))
+}
+
+function pickWorkflowPositions(nodes: ReactFlowWorkflowNode[]): SavedReactFlowPositions {
+  return Object.fromEntries(
+    nodes.map((node) => [
+      node.id,
+      {
+        x: node.position.x,
+        y: node.position.y,
+      },
+    ]),
+  )
+}
+
 function NodeMeasurer({ nodeIds }: { nodeIds: string[] }) {
   const store = useStoreApi()
+
   useEffect(() => {
     if (nodeIds.length === 0) return
+
     const { domNode, updateNodeInternals } = store.getState()
     if (!domNode) return
+
     const updates = new Map(
       nodeIds.flatMap((id) => {
         const escapedId = escapeCssSelectorValue(id)
@@ -67,8 +115,12 @@ function NodeMeasurer({ nodeIds }: { nodeIds: string[] }) {
         return el ? [[id, { id, nodeElement: el as HTMLDivElement, force: true }]] : []
       }),
     )
-    if (updates.size > 0) updateNodeInternals(updates)
+
+    if (updates.size > 0) {
+      updateNodeInternals(updates)
+    }
   }, [nodeIds, store])
+
   return null
 }
 
@@ -79,63 +131,26 @@ export function ReactFlowCanvas({
   onSelectNode,
   onCreateConnection,
   onDeleteConnection,
+  onResetPositions,
 }: ReactFlowCanvasProps) {
   const invalidConnections = connectionValidation.filter((result) => !result.valid)
-  const [positions, setPositions] = useState<Record<string, XYPosition>>({})
+  const [nodes, setNodes] = useState<ReactFlowWorkflowNode[]>(() =>
+    buildFlowNodes(workflow, readReactFlowPositions(), selectedNodeId),
+  )
   const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null)
   const [connectMessage, setConnectMessage] = useState<CreateConnectionResult | null>(null)
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null)
-  const previousWorkflowPositionsRef = useRef<Record<string, XYPosition>>({})
+  const nodesRef = useRef(nodes)
   const effectiveSelectedConnectionId =
     workflow.connections.find((connection) => connection.id === selectedConnectionId)?.id ?? null
 
   useEffect(() => {
-    setPositions((current) => {
-      const next: Record<string, XYPosition> = {}
-      let changed = Object.keys(current).length !== workflow.nodes.length
+    const next = buildFlowNodes(workflow, readReactFlowPositions(), selectedNodeId)
+    nodesRef.current = next
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setNodes(next)
+  }, [selectedNodeId, workflow])
 
-      for (const node of workflow.nodes) {
-        const previousWorkflowPosition = previousWorkflowPositionsRef.current[node.id]
-        const incomingPosition = node.position
-        const cachedPosition = current[node.id]
-        const workflowPositionChanged =
-          !previousWorkflowPosition ||
-          previousWorkflowPosition.x !== incomingPosition.x ||
-          previousWorkflowPosition.y !== incomingPosition.y
-
-        const scaledIncoming = {
-          x: incomingPosition.x * RF_X_SCALE,
-          y: incomingPosition.y * RF_Y_SCALE,
-        }
-
-        const newPos = workflowPositionChanged ? scaledIncoming : cachedPosition ?? scaledIncoming
-        next[node.id] = newPos
-
-        if (!changed && (
-          !cachedPosition ||
-          cachedPosition.x !== newPos.x ||
-          cachedPosition.y !== newPos.y
-        )) {
-          changed = true
-        }
-      }
-
-      previousWorkflowPositionsRef.current = Object.fromEntries(
-        workflow.nodes.map((node) => [node.id, node.position]),
-      )
-
-      return changed ? next : current
-    })
-  }, [workflow.nodes])
-
-  const nodes = useMemo(
-    () =>
-      toReactFlowNodes(workflow, positions).map((node) => ({
-        ...node,
-        selected: node.id === selectedNodeId,
-      })),
-    [positions, selectedNodeId, workflow],
-  )
   const nodeIds = useMemo(() => workflow.nodes.map((node) => node.id), [workflow.nodes])
   const nodeTitleById = useMemo(
     () => new Map(workflow.nodes.map((node) => [node.id, node.title])),
@@ -163,6 +178,7 @@ export function ReactFlowCanvas({
 
   useEffect(() => {
     if (!connectMessage) return
+
     const timer = window.setTimeout(() => setConnectMessage(null), 5000)
     return () => window.clearTimeout(timer)
   }, [connectMessage])
@@ -173,18 +189,18 @@ export function ReactFlowCanvas({
   )
 
   const handleNodesChange = useCallback((changes: NodeChange[]) => {
-    setPositions((current) => {
-      const hasPositionChange = changes.some((c) => c.type === 'position' && c.position)
-      if (!hasPositionChange) return current
+    const safeChanges = changes.filter((change) => change.type !== 'remove')
+    const next = applyNodeChanges<ReactFlowWorkflowNode>(
+      safeChanges as NodeChange<ReactFlowWorkflowNode>[],
+      nodesRef.current,
+    )
 
-      const next = { ...current }
-      for (const change of changes) {
-        if (change.type === 'position' && change.id && change.position) {
-          next[change.id] = change.position
-        }
-      }
-      return next
-    })
+    nodesRef.current = next
+    setNodes(next)
+
+    if (safeChanges.some((change) => change.type === 'position' && change.position)) {
+      writeReactFlowPositions(pickWorkflowPositions(next))
+    }
   }, [])
 
   const handleEdgeClick = useCallback((_: React.MouseEvent, edge: Edge) => {
@@ -196,28 +212,47 @@ export function ReactFlowCanvas({
       const { source, target, sourceHandle, targetHandle } = connectionOrEdge
       if (!source || !target || !sourceHandle || !targetHandle) return false
       if (source === target) return false
+
       const draft = toWorkflowConnectionDraft(
         workflow,
         { source, target, sourceHandle, targetHandle },
         'data',
       )
       if (!draft) return false
+
       return validateConnectionDraft(workflow, draft).valid
     },
     [workflow],
   )
 
-  const handleConnect = useCallback((connection: Connection) => {
-    const draft = toWorkflowConnectionDraft(workflow, connection, 'data')
+  const handleConnect = useCallback(
+    (connection: Connection) => {
+      const draft = toWorkflowConnectionDraft(workflow, connection, 'data')
 
-    if (!draft) {
-      setConnectMessage({ ok: false, reason: 'ポート情報を解決できませんでした。' })
-      return
-    }
+      if (!draft) {
+        setConnectMessage({ ok: false, reason: 'ポート情報を解決できませんでした。' })
+        return
+      }
 
-    const result = onCreateConnection(draft)
-    setConnectMessage(result)
-  }, [onCreateConnection, workflow])
+      const result = onCreateConnection(draft)
+      setConnectMessage(result)
+    },
+    [onCreateConnection, workflow],
+  )
+
+  const handleResetPositions = useCallback(() => {
+    clearReactFlowPositions()
+
+    const next = buildFlowNodes(workflow, {}, selectedNodeId)
+    nodesRef.current = next
+    setNodes(next)
+    setSelectedConnectionId(null)
+    onResetPositions?.()
+
+    window.requestAnimationFrame(() => {
+      reactFlowInstance?.fitView({ padding: 0.12, duration: 250 })
+    })
+  }, [onResetPositions, reactFlowInstance, selectedNodeId, workflow])
 
   return (
     <main className="canvas-panel" aria-label="React Flowキャンバス">
@@ -229,6 +264,13 @@ export function ReactFlowCanvas({
           onClick={() => reactFlowInstance?.fitView({ padding: 0.12, duration: 250 })}
         >
           全体表示
+        </button>
+        <button
+          type="button"
+          className="icon-button"
+          onClick={handleResetPositions}
+        >
+          位置をリセット
         </button>
         <select
           className="canvas-toolbar-select"

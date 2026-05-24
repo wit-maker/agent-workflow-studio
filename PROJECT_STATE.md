@@ -1,10 +1,10 @@
 # Project State
 
-Last updated: 2026-05-23
+Last updated: 2026-05-24
 
 ## Current Phase
 
-Phase 7 React Flow Canvas MVP。
+Phase 7.1 React Flow Canvas 安定化MVP。
 
 ## Completed
 
@@ -36,6 +36,10 @@ Phase 7 React Flow Canvas MVP。
 - React Flow Canvas 上で Port Handle を表示し、Handle ドラッグで既存 reducer / validation を通して接続作成できるようにした。
 - React Flow Edge の選択削除導線と Inspector 選択連動を追加した。
 - `docs/implementation/REACT_FLOW_CANVAS_MVP.md` を追加した。
+- Phase 7.1 として Canvas 表示モードの localStorage 保存を追加した。
+- React Flow ノード位置の localStorage 保存と再表示時の復元を追加した。
+- React Flow Canvas に「位置をリセット」導線を追加した。
+- `docs/implementation/UNDO_REDO_POLICY.md` を追加し、本格 Undo / Redo はまだ入れず方針整理に留めることを明文化した。
 
 ## Phase 3 実装内容
 
@@ -111,7 +115,7 @@ Phase 7 React Flow Canvas MVP。
 
 ## Next Work
 
-1. Phase 8 として React Flow 側の位置永続化、ノード追加、エッジ詳細編集を検討する。
+1. Phase 7.2 として React Flow Canvas の操作性改善を進める。
 2. 評価結果と実行グラフを結びつけた差分表示を追加する。
 3. テンプレートの version / metadata 編集を追加する。
 4. localStorage MVP から永続ストレージへ進む条件を整理する。
@@ -122,6 +126,8 @@ Phase 7 React Flow Canvas MVP。
 - 実行グラフはMVPであり、本格的な非同期エンジンや分散実行はまだ扱っていない。
 - review / retry はローカルモックのため、セッションを跨いだ承認フローはない。
 - localStorage ベースの保存はブラウザローカルに閉じるため、共有や永続保証はまだない。
+- React Flow ノード位置保存は workflow 本体ではなく UI 補助状態として保存しているため、複数端末同期や共同編集はまだ考慮していない。
+- Undo / Redo は方針整理のみであり、workflow 全体置換系の巻き戻しは未対応。
 - テンプレート metadata は要約情報であり、ArtifactVersion 本体や評価履歴全文は保持しない。
 
 ## Screen Spec Alignment
@@ -130,6 +136,7 @@ Phase 7 React Flow Canvas MVP。
 - `docs/implementation/EXECUTION_GRAPH_MVP.md` に Phase 3 の実行グラフMVPを整理している。
 - `docs/implementation/TEMPLATE_REUSE_UX_MVP.md` に Phase 6 の再利用UX整理を記録している。
 - `docs/implementation/REACT_FLOW_CANVAS_MVP.md` に Phase 7 の Canvas MVP を整理している。
+- `docs/implementation/UNDO_REDO_POLICY.md` に Phase 7.1 の Undo / Redo 方針を整理している。
 
 ## Phase 7 実装内容
 
@@ -142,6 +149,16 @@ Phase 7 React Flow Canvas MVP。
 - Handle ドラッグ接続時に `validateConnectionDraft(...)` と既存 `createConnection` reducer を再利用
 - Edge 選択と「選択中の接続を削除」導線を追加
 - Inspector とのノード選択連動を維持
+
+## Phase 7.1 実装内容
+
+- Canvas 表示モードを localStorage に保存し、再表示時に `標準 / React Flow` を復元
+- 不正な Canvas mode 値は `standard` 扱いで安全にフォールバック
+- React Flow ノード位置を localStorage に保存し、保存済み位置を `workflow.node.position` より優先して復元
+- 存在しない node id の位置は無視し、JSON parse 失敗時も空扱いにする
+- React Flow Canvas に「位置をリセット」ボタンを追加し、保存位置削除と初期配置復元を行う
+- React Flow 側の node / connection lookup を軽く整理し、描画中の探索負荷を下げた
+- Undo / Redo は実装せず、危険な対象範囲と将来案を `docs/implementation/UNDO_REDO_POLICY.md` に整理
 
 ## Phase 6 実装内容
 
@@ -163,6 +180,15 @@ Phase 7 React Flow Canvas MVP。
 - `npm run lint`: success
 - Browser QA: 標準 / React Flow 切替、12ノード描画、Port Handle 描画、Inspector 選択連動、接続削除導線、最新ビルドの console error なしを確認
 - Browser QA note: in-app browser automation では Handle ドラッグを安定再現できず、接続作成 / 無効接続拒否はコード経路と DOM 構造中心で確認
+
+## Phase 7.1 Verification
+
+- Model: Codex
+- Branch: `feature/react-flow-canvas-stability`
+- `npm run build`: success
+- `npm run lint`: success
+- Browser QA: 初期表示、Canvas モード切替、React Flow 表示、モード再読込、ノード位置復元、位置リセット、位置リセット後の再読込、標準 Canvas 復帰、Run、評価実行を確認
+- Browser QA note: テンプレート保存 / プレビュー、JSON export / import は今回の Browser QA 対象外。console には今回の修正後に新規 error は出ていない
 
 ## Phase 1 Verification
 

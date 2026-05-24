@@ -60,6 +60,7 @@ button:disabled {
 
 .app-shell {
   min-height: 100vh;
+  height: 100vh;
   display: grid;
   grid-template-rows: 56px minmax(0, 1fr) 320px;
 }
@@ -196,6 +197,7 @@ button:disabled {
 
 .workspace-grid {
   min-height: 0;
+  height: 100%;
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr) 360px;
   background: var(--surface-2);
@@ -315,6 +317,7 @@ button:disabled {
 .center-stack {
   min-width: 0;
   min-height: 0;
+  height: 100%;
   display: grid;
   grid-template-rows: minmax(0, 1fr) 190px;
   gap: 10px;
@@ -324,6 +327,7 @@ button:disabled {
 .canvas-panel {
   min-width: 0;
   min-height: 0;
+  height: 100%;
   display: grid;
   grid-template-rows: 42px minmax(0, 1fr);
   border: 1px solid var(--border);
@@ -506,7 +510,8 @@ button:disabled {
 }
 
 .react-flow-canvas-body {
-  min-height: 360px;
+  min-height: 0;
+  height: 100%;
   overflow: hidden;
 }
 

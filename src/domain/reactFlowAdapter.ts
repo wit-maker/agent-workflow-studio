@@ -26,6 +26,7 @@ export type ReactFlowWorkflowNodeData = {
 export type ReactFlowWorkflowNode = Node<ReactFlowWorkflowNodeData, typeof reactFlowNodeType>
 
 type NodePositionMap = Record<string, XYPosition>
+type NodeLookup = Map<string, WorkflowNode>
 
 function getStatusColor(status: WorkflowConnection['status']): string {
   switch (status) {
@@ -96,15 +97,19 @@ function pickTargetPort(
   return inputPorts.find((port) => connection.carries.includes(port.dataType)) ?? inputPorts[0]
 }
 
-export function resolveConnectionHandles(
-  workflow: Workflow,
+function createNodeLookup(workflow: Workflow): NodeLookup {
+  return new Map(workflow.nodes.map((node) => [node.id, node]))
+}
+
+function resolveConnectionHandlesWithLookup(
+  nodeLookup: NodeLookup,
   connection: WorkflowConnection,
 ): {
   sourceHandle?: string
   targetHandle?: string
 } {
-  const sourceNode = workflow.nodes.find((node) => node.id === connection.sourceNodeId)
-  const targetNode = workflow.nodes.find((node) => node.id === connection.targetNodeId)
+  const sourceNode = nodeLookup.get(connection.sourceNodeId)
+  const targetNode = nodeLookup.get(connection.targetNodeId)
 
   if (!sourceNode || !targetNode) {
     return {}
@@ -119,6 +124,16 @@ export function resolveConnectionHandles(
   }
 }
 
+export function resolveConnectionHandles(
+  workflow: Workflow,
+  connection: WorkflowConnection,
+): {
+  sourceHandle?: string
+  targetHandle?: string
+} {
+  return resolveConnectionHandlesWithLookup(createNodeLookup(workflow), connection)
+}
+
 export const RF_X_SCALE = 1.35
 export const RF_Y_SCALE = 1.25
 
@@ -130,6 +145,41 @@ export function toReactFlowNodes(
   workflow: Workflow,
   positions: NodePositionMap = {},
 ): ReactFlowWorkflowNode[] {
+  const connectedInputPortIdsByNodeId = new Map<string, string[]>()
+  const connectedOutputPortIdsByNodeId = new Map<string, string[]>()
+  const connectionCountByNodeId = new Map<string, number>()
+  const nodeLookup = createNodeLookup(workflow)
+
+  for (const connection of workflow.connections) {
+    const { sourceHandle, targetHandle } = resolveConnectionHandlesWithLookup(
+      nodeLookup,
+      connection,
+    )
+
+    connectionCountByNodeId.set(
+      connection.sourceNodeId,
+      (connectionCountByNodeId.get(connection.sourceNodeId) ?? 0) + 1,
+    )
+    connectionCountByNodeId.set(
+      connection.targetNodeId,
+      (connectionCountByNodeId.get(connection.targetNodeId) ?? 0) + 1,
+    )
+
+    if (sourceHandle) {
+      connectedOutputPortIdsByNodeId.set(connection.sourceNodeId, [
+        ...(connectedOutputPortIdsByNodeId.get(connection.sourceNodeId) ?? []),
+        sourceHandle,
+      ])
+    }
+
+    if (targetHandle) {
+      connectedInputPortIdsByNodeId.set(connection.targetNodeId, [
+        ...(connectedInputPortIdsByNodeId.get(connection.targetNodeId) ?? []),
+        targetHandle,
+      ])
+    }
+  }
+
   return workflow.nodes.map((node) => {
     const inputPorts = getInputPorts(node)
     const outputPorts = getOutputPorts(node)
@@ -147,22 +197,9 @@ export function toReactFlowNodes(
           node,
           workflow.connections,
         ).map((port) => port.id),
-        connectedInputPortIds: workflow.connections
-          .filter((connection) => connection.targetNodeId === node.id)
-          .flatMap((connection) => {
-            const { targetHandle } = resolveConnectionHandles(workflow, connection)
-            return targetHandle ? [targetHandle] : []
-          }),
-        connectedOutputPortIds: workflow.connections
-          .filter((connection) => connection.sourceNodeId === node.id)
-          .flatMap((connection) => {
-            const { sourceHandle } = resolveConnectionHandles(workflow, connection)
-            return sourceHandle ? [sourceHandle] : []
-          }),
-        connectionCount: workflow.connections.filter(
-          (connection) =>
-            connection.sourceNodeId === node.id || connection.targetNodeId === node.id,
-        ).length,
+        connectedInputPortIds: connectedInputPortIdsByNodeId.get(node.id) ?? [],
+        connectedOutputPortIds: connectedOutputPortIdsByNodeId.get(node.id) ?? [],
+        connectionCount: connectionCountByNodeId.get(node.id) ?? 0,
       },
     }
   })
@@ -173,6 +210,7 @@ export function toReactFlowEdges(
   selectedConnectionId?: string,
 ): Edge[] {
   const nodeIds = new Set(workflow.nodes.map((node) => node.id))
+  const nodeLookup = createNodeLookup(workflow)
 
   return workflow.connections
     .filter(
@@ -180,38 +218,41 @@ export function toReactFlowEdges(
         nodeIds.has(connection.sourceNodeId) && nodeIds.has(connection.targetNodeId),
     )
     .map((connection) => {
-    const { sourceHandle, targetHandle } = resolveConnectionHandles(workflow, connection)
-    const stroke = getStatusColor(connection.status)
+      const { sourceHandle, targetHandle } = resolveConnectionHandlesWithLookup(
+        nodeLookup,
+        connection,
+      )
+      const stroke = getStatusColor(connection.status)
 
-    return {
-      id: connection.id,
-      source: connection.sourceNodeId,
-      target: connection.targetNodeId,
-      sourceHandle,
-      targetHandle,
-      selectable: true,
-      animated: connection.status === 'active',
-      selected: connection.id === selectedConnectionId,
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: stroke,
-      },
-      style: {
-        stroke,
-        strokeWidth: 2.5,
-      },
-      label: connectionKindLabels[connection.kind],
-      ariaLabel: [
-        `${connection.sourceNodeId} から ${connection.targetNodeId}`,
-        connectionKindLabels[connection.kind],
-        connection.carries.map((dataType) => formatDataTypeLabel(dataType)).join(', '),
-        connectionStatusLabels[connection.status],
-      ].join(' / '),
-      data: {
-        kind: connection.kind,
-        carries: connection.carries,
-      },
-    }
+      return {
+        id: connection.id,
+        source: connection.sourceNodeId,
+        target: connection.targetNodeId,
+        sourceHandle,
+        targetHandle,
+        selectable: true,
+        animated: connection.status === 'active',
+        selected: connection.id === selectedConnectionId,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: stroke,
+        },
+        style: {
+          stroke,
+          strokeWidth: 2.5,
+        },
+        label: connectionKindLabels[connection.kind],
+        ariaLabel: [
+          `${connection.sourceNodeId} から ${connection.targetNodeId}`,
+          connectionKindLabels[connection.kind],
+          connection.carries.map((dataType) => formatDataTypeLabel(dataType)).join(', '),
+          connectionStatusLabels[connection.status],
+        ].join(' / '),
+        data: {
+          kind: connection.kind,
+          carries: connection.carries,
+        },
+      }
     })
 }
 
@@ -224,8 +265,9 @@ export function toWorkflowConnectionDraft(
     return null
   }
 
-  const sourceNode = workflow.nodes.find((node) => node.id === connection.source)
-  const targetNode = workflow.nodes.find((node) => node.id === connection.target)
+  const nodeLookup = createNodeLookup(workflow)
+  const sourceNode = nodeLookup.get(connection.source)
+  const targetNode = nodeLookup.get(connection.target)
 
   if (!sourceNode || !targetNode) {
     return null
