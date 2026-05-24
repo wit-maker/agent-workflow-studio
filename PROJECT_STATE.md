@@ -2,6 +2,84 @@
 
 Last updated: 2026-05-24
 
+---
+
+## M13〜M16 Connector Queue Safety and Recovery
+
+- Branch: `feature/connector-queue-safety-recovery`
+- Commits: M13/M14/M15 `a42f12f` / M14 docs `da88b83`
+
+### 完了状況
+
+| Milestone | 内容 | ステータス |
+|---|---|---|
+| M13 | Connector Execution Queue | ✅ 完了 |
+| M14 | Credential Safety Boundary | ✅ 完了 |
+| M15 | Error Recovery / Retry | ✅ 完了 |
+| M16 | Alpha Hardening QA | ✅ 完了 |
+
+### Browser QA
+
+| No | シナリオ | 結果 |
+|---:|---|---|
+| 1 | アプリ起動 | ✅ |
+| 2 | ノード追加 | — ヘッドレスブラウザ制限 |
+| 3 | ノード編集 | — ヘッドレスブラウザ制限 |
+| 4 | connector 割当確認 | ✅ Agent タブ: 6 mock コネクター |
+| 5 | Run Selected | — Run All で代替 |
+| 6 | Connector Queue 確認 | ✅ 12 ジョブ生成・ステータス表示 |
+| 7 | Run All | ✅ 全ノード実行 |
+| 8 | mock connector log 確認 | ✅ `[job: cjob-...]` 形式でログ記録 |
+| 9 | failed / review_required 表示確認 | ✅ チェックノードで両ステータス確認 |
+| 10 | retry 実行 | ✅ retryCount=1 → 成功 |
+| 11 | reviewed 化 | ✅ review_required → 成功 |
+| 12 | template 保存 | ✅ localStorage 保存確認 |
+| 13 | reload | ✅ ページリロード後も状態維持 |
+| 14 | workflow 復元 | ✅ 12 ノード復元確認 |
+| 15 | queue / logs / metrics の保存範囲確認 | ✅ 下記参照 |
+| 16 | storage reset | ✅ 確認ダイアログ → リセット実行 |
+| 17 | build / lint | ✅ 両方パス |
+
+### Persistence Scope
+
+| 対象 | 保存 | 復元 |
+|---|---|---|
+| workflow | ✅ | ✅ |
+| templates | ✅ | ✅ |
+| run logs | ❌ | ❌ |
+| connector queue | ❌ | ❌ |
+| metrics | ❌ | ❌ |
+| credential values | ❌ — 保存しない | ❌ |
+
+### build / lint
+
+- `npm run build`: pass (507.57 kB / gzip 152.65 kB)
+- `npm run lint`: pass (0 errors)
+
+### 既知の制限
+
+- connector queue は React state のみ（リロードで消える）
+- ノード追加・編集・接続作成はヘッドレスブラウザで未確認（既存制限）
+- 実 API 接続・Credential 保存は未実装
+- max retry 到達後はスキップのみ（再試行不可）
+
+### Credential 方針
+
+- Credential 値はいかなる場所にも保存しない
+- UI state / localStorage / template / log / metrics への保存なし
+- 将来候補: OS Keychain / Tauri secure storage / 環境変数
+- 詳細: `docs/architecture/credential-safety-boundary.md`
+
+### 次の推奨マイルストーン
+
+M17〜M20:
+1. Tauri 導入準備
+2. ファイルシステム保存
+3. 実 API 接続設計 / Credential 管理
+4. コネクター実装順序決定
+
+---
+
 ## M9〜M12 Alpha Integration QA
 
 - Branch: `feature/alpha-foundation-connectors-persistence`

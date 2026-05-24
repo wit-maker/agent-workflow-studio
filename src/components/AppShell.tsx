@@ -14,6 +14,14 @@ import type {
 import { createSampleWorkflow } from '../domain/sampleWorkflow'
 import { createNodeFromPart } from '../domain/workflowAuthoring'
 import { buildConnectorLogMessage } from '../domain/agentExecution'
+import type { ConnectorJob } from '../domain/connectorQueue'
+import { buildConnectorJobs } from '../domain/connectorExecutionPlanner'
+import {
+  retryConnectorJob,
+  markJobReviewed,
+  skipConnectorJob,
+  cancelConnectorJob,
+} from '../domain/recoveryActions'
 import type {
   AgentRole,
   ConnectionKind,
@@ -217,6 +225,7 @@ export function AppShell() {
   )
   const runTokenRef = useRef(0)
   const runCountRef = useRef(0)
+  const [connectorJobs, setConnectorJobs] = useState<ConnectorJob[]>([])
   const [isEvaluating, setIsEvaluating] = useState(false)
   const [importSuccessMessage, setImportSuccessMessage] = useState<string | null>(null)
   const [canvasMode, setCanvasMode] = useState<CanvasMode>(() =>
@@ -555,6 +564,11 @@ export function AppShell() {
     const executedNodes: WorkflowNode[] = []
     const decisions: ReturnType<typeof executeMockNode>[] = []
 
+    // M13: build connector jobs for all planned nodes
+    const initialJobs = buildConnectorJobs(runId, plan.nodes)
+    const jobMap = new Map(initialJobs.map((j) => [j.nodeId, j]))
+    setConnectorJobs([...jobMap.values()])
+
     dispatch({
       type: 'runWorkflowStart',
       runId,
@@ -578,6 +592,18 @@ export function AppShell() {
       const node = plan.nodes[index]
       const decision = executeMockNode(node, outcome, mode)
       decisions.push(decision)
+
+      // M13: mark connector job as running
+      const currentJob = jobMap.get(node.id)
+      if (currentJob) {
+        const runningJob: ConnectorJob = {
+          ...currentJob,
+          status: 'running',
+          startedAt: new Date().toISOString(),
+        }
+        jobMap.set(node.id, runningJob)
+        setConnectorJobs([...jobMap.values()])
+      }
 
       if (index > 0) {
         const previousNode = plan.nodes[index - 1]
@@ -606,6 +632,37 @@ export function AppShell() {
         result: decision.result,
       })
       executedNodes.push(node)
+
+      // M13: update connector job status after execution
+      const jobAfterExec = jobMap.get(node.id)
+      if (jobAfterExec) {
+        const finalJobStatus: ConnectorJob['status'] =
+          decision.result === 'failed'
+            ? 'failed'
+            : decision.result === 'review_required'
+              ? 'review_required'
+              : decision.result === 'skipped'
+                ? 'skipped'
+                : 'success'
+        const finalJob: ConnectorJob = {
+          ...jobAfterExec,
+          status: finalJobStatus,
+          finishedAt: new Date().toISOString(),
+          outputSummary: `${decision.message} (mock)`,
+          error: decision.result === 'failed' ? 'ローカルモックでエラールートへ分岐しました。' : undefined,
+        }
+        jobMap.set(node.id, finalJob)
+        setConnectorJobs([...jobMap.values()])
+        dispatch({
+          type: 'appendLog',
+          log: makeLog(
+            runId,
+            `[job: …${finalJob.id.slice(-8)}] ${finalJob.connectorLabel} / ${finalJobStatus} — ${node.title}`,
+            node.id,
+            finalJobStatus === 'failed' ? 'error' : 'info',
+          ),
+        })
+      }
 
       if (decision.retryCandidate) {
         dispatch({
@@ -1173,6 +1230,83 @@ export function AppShell() {
     })
   }
 
+  function handleRetryConnectorJob(jobId: string) {
+    const job = connectorJobs.find((j) => j.id === jobId)
+    if (!job) return
+    const updated = retryConnectorJob(job)
+    if (!updated) return
+    setConnectorJobs(connectorJobs.map((j) => (j.id === jobId ? updated : j)))
+    const runId = executionGraph?.runId ?? `retry-${Date.now()}`
+    dispatch({
+      type: 'runNodeSuccess',
+      nodeId: job.nodeId,
+      log: makeLog(
+        runId,
+        `[job: …${jobId.slice(-8)}] ${job.connectorLabel} — 再試行 ${updated.retryCount} 回目で成功しました。(mock)`,
+        job.nodeId,
+        'info',
+      ),
+    })
+    dispatch({
+      type: 'updateMetrics',
+      metrics: { ...workflow.metrics, retryCount: workflow.metrics.retryCount + 1 },
+    })
+  }
+
+  function handleMarkConnectorJobReviewed(jobId: string) {
+    const job = connectorJobs.find((j) => j.id === jobId)
+    if (!job) return
+    const updated = markJobReviewed(job)
+    setConnectorJobs(connectorJobs.map((j) => (j.id === jobId ? updated : j)))
+    dispatch({
+      type: 'runNodeSuccess',
+      nodeId: job.nodeId,
+      log: makeLog(
+        executionGraph?.runId ?? `review-${Date.now()}`,
+        `[job: …${jobId.slice(-8)}] ${job.connectorLabel} — 確認済みにしました。(mock)`,
+        job.nodeId,
+        'approval',
+      ),
+    })
+  }
+
+  function handleSkipConnectorJob(jobId: string) {
+    const job = connectorJobs.find((j) => j.id === jobId)
+    if (!job) return
+    const updated = skipConnectorJob(job)
+    setConnectorJobs(connectorJobs.map((j) => (j.id === jobId ? updated : j)))
+    dispatch({
+      type: 'runNodeSuccess',
+      nodeId: job.nodeId,
+      status: 'skipped',
+      log: makeLog(
+        executionGraph?.runId ?? `skip-${Date.now()}`,
+        `[job: …${jobId.slice(-8)}] ${job.connectorLabel} — スキップしました。`,
+        job.nodeId,
+        'warn',
+      ),
+    })
+  }
+
+  function handleCancelConnectorJob(jobId: string) {
+    const job = connectorJobs.find((j) => j.id === jobId)
+    if (!job) return
+    const updated = cancelConnectorJob(job)
+    if (!updated) return
+    setConnectorJobs(connectorJobs.map((j) => (j.id === jobId ? updated : j)))
+    dispatch({
+      type: 'runNodeSuccess',
+      nodeId: job.nodeId,
+      status: 'skipped',
+      log: makeLog(
+        executionGraph?.runId ?? `cancel-${Date.now()}`,
+        `[job: …${jobId.slice(-8)}] ${job.connectorLabel} — キャンセルしました。`,
+        job.nodeId,
+        'warn',
+      ),
+    })
+  }
+
   async function handleEvaluate() {
     if (!executionGraph || isEvaluating) {
       return
@@ -1415,6 +1549,11 @@ export function AppShell() {
       <BottomMonitor
         workflow={workflow}
         executionGraph={executionGraph}
+        connectorJobs={connectorJobs}
+        onRetryConnectorJob={handleRetryConnectorJob}
+        onMarkConnectorJobReviewed={handleMarkConnectorJobReviewed}
+        onSkipConnectorJob={handleSkipConnectorJob}
+        onCancelConnectorJob={handleCancelConnectorJob}
         templates={templates}
         snapshots={snapshots}
         onSaveTemplate={handleSaveTemplate}
