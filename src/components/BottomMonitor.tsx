@@ -10,6 +10,7 @@ import type { Workflow } from '../domain/workflow'
 import type { SavedWorkflowTemplate } from '../storage/localTemplates'
 import type { SavedWorkflowSnapshot } from '../storage/localWorkflowHistory'
 import { selectActiveQueueNodes, selectBottleneckNode } from '../state/workflowSelectors'
+import { AgentConnectorPanel } from './AgentConnectorPanel'
 import { ArtifactVersionHistory } from './ArtifactVersionHistory'
 import { EvaluationPanel } from './EvaluationPanel'
 import { ExecutionGraphPanel } from './ExecutionGraphPanel'
@@ -85,7 +86,7 @@ export function BottomMonitor({
   onSelectArtifactVersion,
 }: BottomMonitorProps) {
   const [activeTab, setActiveTab] = useState<
-    'Logs' | 'Metrics' | 'Queue' | 'Output' | 'Execution' | 'Evaluation'
+    'Logs' | 'Metrics' | 'Queue' | 'Output' | 'Execution' | 'Evaluation' | 'Agent'
   >('Logs')
 
   const tabLabels = {
@@ -95,6 +96,7 @@ export function BottomMonitor({
     Output: '出力',
     Execution: '実行グラフ',
     Evaluation: '評価',
+    Agent: 'エージェント',
   } as const
 
   const bottleneck = selectBottleneckNode(workflow)
@@ -109,7 +111,7 @@ export function BottomMonitor({
   return (
     <footer className="bottom-monitor" aria-label="メトリクスとログ">
       <section className="monitor-tabs">
-        {(['Logs', 'Metrics', 'Queue', 'Output', 'Execution', 'Evaluation'] as const).map((tab) => (
+        {(['Logs', 'Metrics', 'Queue', 'Output', 'Execution', 'Evaluation', 'Agent'] as const).map((tab) => (
           <button
             key={tab}
             type="button"
@@ -314,6 +316,12 @@ export function BottomMonitor({
                 onSelectVersion={onSelectArtifactVersion}
               />
             </div>
+          </div>
+        ) : null}
+
+        {activeTab === 'Agent' ? (
+          <div className="agent-tab-panel">
+            <AgentConnectorPanel />
           </div>
         ) : null}
       </section>

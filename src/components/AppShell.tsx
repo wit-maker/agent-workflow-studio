@@ -13,6 +13,7 @@ import type {
 } from '../domain/executionGraph'
 import { createSampleWorkflow } from '../domain/sampleWorkflow'
 import { createNodeFromPart } from '../domain/workflowAuthoring'
+import { buildConnectorLogMessage } from '../domain/agentExecution'
 import type {
   AgentRole,
   ConnectionKind,
@@ -390,6 +391,15 @@ export function AppShell() {
       type: 'runNodeRunning',
       nodeId: options.node.id,
       log: makeLog(options.runId, `${options.node.title} を開始しました。`, options.node.id),
+    })
+    dispatch({
+      type: 'appendLog',
+      log: makeLog(
+        options.runId,
+        buildConnectorLogMessage(options.node),
+        options.node.id,
+        'info',
+      ),
     })
 
     await delay(Math.min(durationMs, 260))
