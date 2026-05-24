@@ -65,7 +65,7 @@ export function ReactFlowNode({
                         {required ? '*' : ''}
                       </strong>
                       <span className="react-flow-port-direction react-flow-port-direction-input">
-                        INPUT
+                        入力
                       </span>
                     </div>
                     <span>{formatDataTypeLabel(port.dataType)}</span>
@@ -102,15 +102,22 @@ export function ReactFlowNode({
               >
                 <div className="react-flow-port-copy">
                   <div className="react-flow-port-line">
-                    <strong>{port.label}</strong>
+                    <strong>
+                      {port.label}
+                      {port.required ? '*' : ''}
+                    </strong>
                     <span className="react-flow-port-direction react-flow-port-direction-output">
-                      OUTPUT
+                      出力
                     </span>
                   </div>
                   <span>{formatDataTypeLabel(port.dataType)}</span>
                 </div>
                 <div className="react-flow-port-badges">
-                  <span className="react-flow-port-required optional">任意</span>
+                  <span
+                    className={`react-flow-port-required ${port.required ? 'required' : 'optional'}`}
+                  >
+                    {port.required ? '必須' : '任意'}
+                  </span>
                   {connectedOutputPortIds.includes(port.id) ? (
                     <span className="react-flow-port-connected">接続済み</span>
                   ) : null}

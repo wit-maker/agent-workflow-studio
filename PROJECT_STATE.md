@@ -180,6 +180,7 @@ Phase 7.2 React Flow Canvas 操作性改善。
 - ReactFlowNode の Port / Handle 視認性を改善
 - Template 保存 / プレビュー / 読み込みの回帰確認を実施
 - `docs/implementation/REACT_FLOW_CANVAS_USABILITY.md` を追加
+- Review fix として、非推奨モデルの Codex で広範囲改修は避け、接続開始時の失敗理由リセット、Port 方向ラベル日本語化、出力 Port の required / optional 表示修正、Edge 選択中 Delete キー削除導線のみを追加
 
 ## Phase 7.2 Verification
 

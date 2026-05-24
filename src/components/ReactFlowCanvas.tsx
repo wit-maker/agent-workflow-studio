@@ -361,6 +361,11 @@ export function ReactFlowCanvas({
     [onCreateConnection, workflow],
   )
 
+  const handleConnectStart = useCallback(() => {
+    rejectedConnectionReasonRef.current = null
+    setConnectionNotice(null)
+  }, [])
+
   const handleConnectEnd = useCallback(
     (_event: MouseEvent | TouchEvent, connectionState: FinalConnectionState) => {
       if (connectionState.isValid) {
@@ -413,10 +418,16 @@ export function ReactFlowCanvas({
     }
 
     event.preventDefault()
+
+    if (effectiveSelectedConnectionId) {
+      handleDeleteSelectedConnection(effectiveSelectedConnectionId)
+      return
+    }
+
     setDeleteNotice(
       'ノード削除は現在未対応です。部品削除は今後のPhaseで実装します。接続は詳細カードから削除できます。',
     )
-  }, [])
+  }, [effectiveSelectedConnectionId, handleDeleteSelectedConnection])
 
   const handleResetPositions = useCallback(() => {
     clearReactFlowPositions()
@@ -488,6 +499,7 @@ export function ReactFlowCanvas({
             fitView
             onInit={setReactFlowInstance}
             onNodesChange={handleNodesChange}
+            onConnectStart={handleConnectStart}
             onConnect={handleConnect}
             onConnectEnd={handleConnectEnd}
             onEdgeClick={handleEdgeClick}
