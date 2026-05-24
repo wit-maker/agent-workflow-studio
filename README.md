@@ -30,7 +30,7 @@ npm run lint
 
 ## 現在フェーズ
 
-M9〜M12（Alpha Foundation — mock agent connectors / local persistence / Tauri readiness）まで実装しています。
+M13〜M16（Connector Queue Safety and Recovery — alpha hardening）まで実装しています。
 
 - `useReducer` ベースの workflow state
 - Inspector 編集
@@ -53,6 +53,9 @@ M9〜M12（Alpha Foundation — mock agent connectors / local persistence / Taur
 - **Mock Agent Connector Architecture**（Codex / Claude / Gemini / Hermes / Grok / Human Review の mock adapter、実行ログにコネクター名を記録）
 - **Local Persistence**（ワークフロー自動保存・復元、ストレージ管理UI、reset 導線）
 - **Tauri Readiness Design**（`IStorageAdapter` interface、localStorage adapter、移行設計ドキュメント）
+- **Connector Execution Queue**（`ConnectorJob` 型、ジョブ生成・ステータス追跡、ConnectorQueuePanel）
+- **Credential Safety Boundary**（CredentialBoundaryPanel、保存禁止方針の UI/docs 明記）
+- **Error Recovery Controls**（retry / markReviewed / skip / cancel、RetryPolicy、RecoveryPanel）
 - 旧 inputTypes / outputTypes との後方互換
 - 日本語優先 UI / ドキュメント
 
@@ -77,12 +80,19 @@ M9〜M12（Alpha Foundation — mock agent connectors / local persistence / Taur
 
 Human Review も現時点ではローカル状態だけで扱うモック導線です。承認や差し戻しの永続化は行っていません。
 
-## MVP外
+## Credential 安全方針
 
-- 実API呼び出し
-- Credential 保存
+Credential 値はいかなる場所にも保存しません。UI state / localStorage / template / log / metrics への保存は禁止です。
+将来候補: OS Keychain / Tauri secure storage / 環境変数。
+詳細: `docs/architecture/credential-safety-boundary.md`
+
+## MVP外（現時点で未対応）
+
+- 実 API 呼び出し（Codex / Hermes / Grok / Claude / Gemini live integration）
+- Credential 保存・入力欄の本格実装
 - Tauri、SQLite、本番DB
 - React Flow 全面移行
+- OS Keychain
 - 本格 Undo / Redo
 - ノード削除
 - 自動レイアウト、複雑なEdge編集、DnDノード追加
