@@ -22,12 +22,12 @@
 | `05_AIエージェント運用設計書_完全版.md` | AI役割、Git権限、モデル確認ゲート |
 | `06_QA_セキュリティ_受け入れ基準_完全版.md` | QA、安全ゲート、受け入れ条件 |
 | `07_実装ロードマップ_完全版.md` | 段階実装順序 |
-| `Codex_Task_Goal_Plan_v2_Source_Specs_Audit.md` | Codexへ渡す次作業指示 |
+| `Codex_Task_Goal_Plan_v2_Source_Specs_Audit.md` | Phase 0監査タスクの記録 |
 
 ## 次作業
 
-次にCodexへ渡す作業は以下。
+Phase 0 の Source of Truth 整備とMVP監査は完了済みである。次にCodexへ渡す作業は以下。
 
 ```text
-feat: audit current MVP against full Agent Workflow Studio goal
+feat: harden Workflow Domain Model (Phase 1)
 ```
