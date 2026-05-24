@@ -8,9 +8,13 @@ type TopBarProps = {
   status: WorkflowStatus
   isRunning: boolean
   canvasMode: CanvasMode
+  canUndo: boolean
+  canRedo: boolean
   onRun: () => void
   onStop: () => void
   onReset: () => void
+  onUndo: () => void
+  onRedo: () => void
   onExportJson: () => void
   onImportJson: (file: File) => void
   onChangeCanvasMode: (mode: CanvasMode) => void
@@ -21,9 +25,13 @@ export function TopBar({
   status,
   isRunning,
   canvasMode,
+  canUndo,
+  canRedo,
   onRun,
   onStop,
   onReset,
+  onUndo,
+  onRedo,
   onExportJson,
   onImportJson,
   onChangeCanvasMode,
@@ -70,6 +78,12 @@ export function TopBar({
         </button>
         <button type="button" className="icon-button" onClick={onReset} disabled={isRunning}>
           リセット
+        </button>
+        <button type="button" className="icon-button" onClick={onUndo} disabled={!canUndo || isRunning}>
+          Undo
+        </button>
+        <button type="button" className="icon-button" onClick={onRedo} disabled={!canRedo || isRunning}>
+          Redo
         </button>
         <button type="button" className="icon-button" onClick={onExportJson}>
           JSONを書き出し

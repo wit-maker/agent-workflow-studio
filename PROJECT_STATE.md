@@ -29,6 +29,35 @@ Last updated: 2026-05-24
   - PartsPalette currently uses workflow nodes as authoring parts, so newly added nodes also appear as reusable parts.
   - Native browser downloads are not available in the in-app Browser QA surface.
 
+## M6 Undo / Redo
+
+- Branch: `feature/workflow-authoring-and-run-engine`
+- Completed:
+  - Added edit history with `past` / `future` snapshots in reducer state.
+  - Added Undo / Redo actions and TopBar buttons.
+  - Added Ctrl+Z, Ctrl+Shift+Z, and Ctrl+Y shortcuts outside editable fields.
+  - History covers node add, node delete, node edit, connection add/delete reducer paths, node position updates, import workflow, and reset workflow.
+  - Run logs / metrics / artifacts are kept outside edit-history restoration.
+  - React Flow node movement now updates workflow positions; Inspector also exposes a stable move action for keyboard/browser QA.
+- Browser QA:
+  - Node add: Undo 13 -> 12, Redo 12 -> 13.
+  - Node delete: Undo restored deleted node, Redo deleted again.
+  - Node edit: title edit Undo / Redo restored Inspector and Canvas text.
+  - Node move: Inspector Move selected right changed position, Undo restored position, Redo reapplied position.
+  - Reset workflow: Undo restored pre-reset position state.
+  - Console runtime errors: none.
+- build / lint:
+  - `npm run build`: pass
+  - `npm run lint`: pass
+- Not implemented:
+  - Coalesced drag history entries for long continuous drags.
+  - Dedicated visual history panel.
+- Next candidates:
+  - M7 template save/load/reuse hardening against current workflow collisions.
+- Known risks:
+  - React Flow drag simulation remains unreliable in the Codex in-app browser; movement was verified through the same reducer action via Inspector.
+  - Connection add/delete history is implemented in reducer paths, but full browser manipulation of edge deletion still depends on the existing React Flow edge UI.
+
 ## Current Phase
 
 feature/workflow-foundation-milestones — M0〜M4 連続実装中。

@@ -44,6 +44,7 @@ type InspectorProps = {
   }) => void
   onDeleteConnection: (connectionId: string) => void
   onDeleteNode: (nodeId: string) => void
+  onMoveNode: (nodeId: string, position: WorkflowNode['position']) => void
 }
 
 export function Inspector({
@@ -55,6 +56,7 @@ export function Inspector({
   onCreateConnection,
   onDeleteConnection,
   onDeleteNode,
+  onMoveNode,
 }: InspectorProps) {
   if (!selectedNode) {
     return (
@@ -79,6 +81,7 @@ export function Inspector({
       onCreateConnection={onCreateConnection}
       onDeleteConnection={onDeleteConnection}
       onDeleteNode={onDeleteNode}
+      onMoveNode={onMoveNode}
     />
   )
 }
@@ -119,6 +122,7 @@ function InspectorContent({
   onCreateConnection,
   onDeleteConnection,
   onDeleteNode,
+  onMoveNode,
 }: InspectorContentProps) {
   const [title, setTitle] = useState(selectedNode.title)
   const [description, setDescription] = useState(selectedNode.description)
@@ -240,6 +244,18 @@ function InspectorContent({
           onClick={() => onDeleteNode(selectedNode.id)}
         >
           Delete selected node
+        </button>
+        <button
+          type="button"
+          className="icon-button inline-action"
+          onClick={() =>
+            onMoveNode(selectedNode.id, {
+              x: selectedNode.position.x + 40,
+              y: selectedNode.position.y,
+            })
+          }
+        >
+          Move selected right
         </button>
       </section>
 

@@ -35,9 +35,12 @@ import {
 } from '../storage/localWorkflowHistory'
 import {
   readCanvasModePreference,
+  readReactFlowPositions,
+  writeReactFlowPositions,
   writeCanvasModePreference,
   type SavedCanvasMode,
 } from '../storage/localCanvasState'
+import { scaleNodePosition, unscaleNodePosition } from '../domain/reactFlowAdapter'
 import { createWorkflowState, workflowReducer } from '../state/workflowReducer'
 import {
   selectSelectedNode,
@@ -61,6 +64,20 @@ function toCanvasMode(savedMode: SavedCanvasMode | null): CanvasMode {
 
 function toSavedCanvasMode(mode: CanvasMode): SavedCanvasMode {
   return mode === 'reactFlow' ? 'react-flow' : 'standard'
+}
+
+function createInitialWorkflow() {
+  const workflow = createSampleWorkflow()
+  const savedPositions = readReactFlowPositions()
+
+  return {
+    ...workflow,
+    nodes: workflow.nodes.map((node) =>
+      savedPositions[node.id]
+        ? { ...node, position: unscaleNodePosition(savedPositions[node.id]) }
+        : node,
+    ),
+  }
 }
 
 function makeLog(
@@ -177,7 +194,7 @@ function isEditableElement(target: EventTarget | null): boolean {
 export function AppShell() {
   const [state, dispatch] = useReducer(
     workflowReducer,
-    createWorkflowState(createSampleWorkflow()),
+    createWorkflowState(createInitialWorkflow()),
   )
   const [templates, setTemplates] = useState<SavedWorkflowTemplate[]>(() =>
     listWorkflowTemplates(),
@@ -208,6 +225,8 @@ export function AppShell() {
     artifactVersions,
     selectedArtifactVersionId,
   } = state
+  const canUndo = state.past.length > 0
+  const canRedo = state.future.length > 0
 
   const selectedNode = useMemo(
     () => selectSelectedNode(workflow, selectedNodeId),
@@ -243,6 +262,26 @@ export function AppShell() {
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.defaultPrevented) {
+        return
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+        if (isEditableElement(event.target)) {
+          return
+        }
+
+        event.preventDefault()
+        dispatch({ type: event.shiftKey ? 'redo' : 'undo' })
+        return
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') {
+        if (isEditableElement(event.target)) {
+          return
+        }
+
+        event.preventDefault()
+        dispatch({ type: 'redo' })
         return
       }
 
@@ -627,6 +666,16 @@ export function AppShell() {
     setPendingDeleteNodeId(nodeId)
   }
 
+  function handleMoveNode(nodeId: string, position: WorkflowNode['position']) {
+    dispatch({ type: 'updateNodePositions', positions: { [nodeId]: position } })
+    writeReactFlowPositions({
+      ...Object.fromEntries(
+        workflow.nodes.map((node) => [node.id, scaleNodePosition(node.position)]),
+      ),
+      [nodeId]: scaleNodePosition(position),
+    })
+  }
+
   function confirmDeleteNode() {
     if (!pendingDeleteNodeId) {
       return
@@ -835,6 +884,12 @@ export function AppShell() {
   }
 
   function handleResetReactFlowPositions() {
+    const sampleWorkflow = createSampleWorkflow()
+    const defaultPositions = Object.fromEntries(
+      sampleWorkflow.nodes.map((node) => [node.id, node.position]),
+    )
+
+    dispatch({ type: 'updateNodePositions', positions: defaultPositions })
     dispatch({
       type: 'appendLog',
       log: makeLog(
@@ -1206,9 +1261,13 @@ export function AppShell() {
           status={workflow.status as WorkflowStatus}
           isRunning={isRunning}
           canvasMode={canvasMode}
+          canUndo={canUndo}
+          canRedo={canRedo}
           onRun={runMockWorkflow}
           onStop={stopRun}
           onReset={handleReset}
+          onUndo={() => dispatch({ type: 'undo' })}
+          onRedo={() => dispatch({ type: 'redo' })}
           onExportJson={exportJson}
           onImportJson={importJson}
           onChangeCanvasMode={setCanvasMode}
@@ -1261,6 +1320,7 @@ export function AppShell() {
               onCreateConnection={createConnectionFromDraft}
               onDeleteConnection={handleDeleteConnection}
               onDeleteNode={handleDeleteNode}
+              onMoveNode={handleMoveNode}
               onResetPositions={handleResetReactFlowPositions}
             />
           )}
@@ -1283,6 +1343,7 @@ export function AppShell() {
           onCreateConnection={handleCreateConnection}
           onDeleteConnection={handleDeleteConnection}
           onDeleteNode={handleDeleteNode}
+          onMoveNode={handleMoveNode}
         />
       </div>
       <BottomMonitor

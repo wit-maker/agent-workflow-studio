@@ -71,6 +71,8 @@ button:disabled {
 }
 
 .top-bar {
+  position: relative;
+  z-index: 20;
   display: grid;
   grid-template-columns: minmax(320px, 1fr) auto auto;
   align-items: center;

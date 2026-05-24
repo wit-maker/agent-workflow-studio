@@ -20,6 +20,7 @@ export type WorkflowAction =
   | { type: 'selectNode'; nodeId: string }
   | { type: 'addNode'; node: WorkflowNode }
   | { type: 'deleteNode'; nodeId: string }
+  | { type: 'updateNodePositions'; positions: Record<string, WorkflowNode['position']> }
   | { type: 'updateNodeConfig'; nodeId: string; updates: NodeEditableFields }
   | { type: 'createConnection'; connection: WorkflowConnection }
   | { type: 'deleteConnection'; connectionId: string }
@@ -85,3 +86,5 @@ export type WorkflowAction =
   | { type: 'addArtifactVersion'; version: ArtifactVersion }
   | { type: 'selectArtifactVersion'; versionId: string }
   | { type: 'clearEvaluation' }
+  | { type: 'undo' }
+  | { type: 'redo' }
