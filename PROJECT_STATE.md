@@ -4,7 +4,7 @@ Last updated: 2026-05-24
 
 ## Current Phase
 
-Phase 7.2 React Flow Canvas 操作性改善。
+Phase 7.3 Workflow JSON import/export ブラウザ完走確認と最小修正。
 
 ## Completed
 
@@ -48,6 +48,11 @@ Phase 7.2 React Flow Canvas 操作性改善。
 - ReactFlowNode の Port 表示を入力 / 出力、必須 / 任意、dataType、左右の接続位置が見やすい形へ調整した。
 - Template 保存 / プレビュー / 読み込みの回帰確認を行った。
 - `docs/implementation/REACT_FLOW_CANVAS_USABILITY.md` を追加した。
+- Phase 7.3 として workflow JSON export / import のブラウザ完走確認を行い最小修正を実施した。
+- export ファイル名に日付サフィックスを追加した（例: `workflow-bootstrap-mvp_2026-05-24.json`）。
+- `revokeObjectURL` のタイミングを `setTimeout` で安全化した。
+- import 成功時の確認メッセージ（4秒後に自動消去）を追加した。
+- `.import-success` CSS クラスとグリッドレイアウト対応を追加した。
 
 ## Phase 3 実装内容
 
@@ -123,7 +128,7 @@ Phase 7.2 React Flow Canvas 操作性改善。
 
 ## Next Work
 
-1. Phase 7.3 候補として React Flow 側の接続編集拡張とノード追加導線を検討する。
+1. Phase 7.4 候補として React Flow 側の接続編集拡張とノード追加導線を検討する。
 2. 評価結果と実行グラフを結びつけた差分表示を追加する。
 3. テンプレートの version / metadata 編集を追加する。
 4. localStorage MVP から永続ストレージへ進む条件を整理する。
@@ -170,6 +175,28 @@ Phase 7.2 React Flow Canvas 操作性改善。
 - React Flow 側の node / connection lookup を軽く整理し、描画中の探索負荷を下げた
 - Undo / Redo は実装せず、危険な対象範囲と将来案を `docs/implementation/UNDO_REDO_POLICY.md` に整理
 
+## Phase 7.3 実装内容
+
+- Workflow JSON export / import のブラウザ完走確認を実施（Export・Import・不正JSON・React Flow 再表示・Run を確認）
+- export ファイル名に日付サフィックスを追加（`workflow-id_YYYY-MM-DD.json`）
+- `URL.revokeObjectURL` を `setTimeout(100ms)` で安全化（Firefox 互換）
+- import 成功時に緑バナーで確認メッセージを表示し、4秒後に自動消去
+- `.import-success` CSS クラスを追加、`:has(.import-success)` グリッドレイアウト対応
+
+## Phase 7.3 Verification
+
+- Model: claude-sonnet-4-6
+- Branch: `feature/json-import-export-browser-qa`
+- `npm run build`: success
+- `npm run lint`: success
+- Export JSON: `workflow-bootstrap-mvp_2026-05-24.json` が正しい JSON 構造でダウンロード確認
+- Import 有効 JSON: ワークフロー名変更・ノード復元・成功バナー表示を確認
+- Import 不正 JSON (parse error): `Expected property name...` エラーバナー表示を確認
+- Import 不正 JSON (schema error): `workflow.nodes は配列である必要があります。` エラーバナー表示を確認
+- React Flow Canvas after import: 1ノードのインポート後も React Flow が正常表示を確認
+- Run after import: import 後に Run が成功 (`成功` ステータス) を確認
+- Console error: なし
+
 ## Phase 7.2 実装内容
 
 - React Flow Canvas に操作ヘルプを追加
@@ -189,7 +216,7 @@ Phase 7.2 React Flow Canvas 操作性改善。
 - `npm run build`: success
 - `npm run lint`: success
 - Browser QA: 初期表示、標準 / React Flow 切替、操作ヘルプ、12ノード、13 edges、Edge 選択、接続詳細、Delete / Backspace 案内、Run、評価実行、Template 保存 / プレビュー / 読み込み、console error なしを確認
-- Browser QA note: 接続削除は確認導線まで含めて実ブラウザで動作した。JSON export / import は in-app browser の download / file input 制約により今回の Browser QA では完走していない
+- Browser QA note: 接続削除は確認導線まで含めて実ブラウザで動作した。JSON export / import は in-app browser の download / file input 制約により今回の Browser QA では完走していない（Phase 7.3 で完走確認済み）
 
 ## Phase 6 実装内容
 
