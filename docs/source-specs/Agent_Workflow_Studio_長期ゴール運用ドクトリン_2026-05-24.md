@@ -91,17 +91,18 @@ Planには最低限以下を含める。
 
 ## 9. 次の正しい一歩
 
-現在MVPから最大構想へ進む第一歩は、大規模実装ではなく棚卸しである。
+Phase 0 の Source of Truth 整備とMVP監査は完了済みである。次の正しい一歩は、完全版仕様に耐えるドメインモデルの強化である。
 
 ```text
-feat: audit current MVP against full Agent Workflow Studio goal
+feat: harden Workflow Domain Model (Phase 1)
 ```
 
-作成物:
+主な対象:
 
 ```text
-docs/audit/current-implementation-map.md
-docs/audit/spec-coverage-matrix.md
-docs/audit/missing-systems.md
-docs/audit/technical-debt.md
+WorkflowDocument
+category normalization
+RunState / RiskState / HudState
+migration placeholder
+durable run history / trace / audit log foundation
 ```
