@@ -2,6 +2,53 @@
 
 Last updated: 2026-05-24
 
+## M9〜M12 Alpha Integration QA
+
+- Branch: `feature/alpha-foundation-connectors-persistence`
+- Commits: M9 `9ffe53a` / M10 `f051be5` / M11 `209591e`
+
+### Browser QA — 実施済み
+
+| QA項目 | 結果 | 備考 |
+|---|---|---|
+| アプリ起動・初期表示 | ✅ | 12ノード正常表示 |
+| エージェントタブ表示 | ✅ | 8タブ（ログ/メトリクス/キュー/出力/実行グラフ/評価/エージェント/ストレージ） |
+| connector一覧表示 | ✅ | Codex Mock / Claude Mock / Gemini Mock / Hermes Mock / Grok/X Search Mock / Human Review |
+| mock接続中通知 | ✅ | 「⚠ モック接続中 — 実APIは未接続です」バナー表示 |
+| Run All実行 | ✅ | mode=all、ノード順次実行 |
+| mock connector log確認 | ✅ | `[Hermes Mock / mock] 正規化 を処理しました。（NousResearch — 実API未接続）` 等、全5種コネクターがログに記録 |
+| ストレージタブ表示 | ✅ | 保存済み/未保存の状態一覧・サイズ表示 |
+| workflow auto-save | ✅ | 起動後に `現在のワークフロー: 8.3 KB 保存済み` |
+| ストレージリセットボタン | ✅ | ボタン表示確認（実リセットはUI操作で要確認） |
+
+### Browser QA — 未実施
+
+| QA項目 | 理由 |
+|---|---|
+| node追加（PartsPalette） | headless browserでのUI操作未実施 |
+| node編集（Inspector） | 未実施 |
+| connection作成 | headless環境でのHandle DnD非対応（既存制限） |
+| React Flow上でのノード移動 | headless環境でのPointerEvent非対応（既存制限） |
+| Run Selected / Run From Selected | 未実施 |
+| template保存・読込 | 未実施 |
+| reload後のworkflow復元 | headless リロード操作未実施 |
+| reload後のtemplate復元 | 未実施 |
+| export JSON | headless環境ではfileダウンロード非対応（既存制限） |
+| import JSON | headless環境ではfileダウンロード非対応（既存制限） |
+| storage reset実行 | 未実施 |
+
+### build / lint
+
+- `npm run build`: pass (498.44 kB / gzip 150.59 kB)
+- `npm run lint`: pass (0 errors)
+
+### Console errors
+
+- React StrictMode HMR由来の `useEffect dependency array size changed` は既存の既知問題（pre-existing）
+- M9〜M12 由来の新規 runtime error なし
+
+---
+
 ## M5 Node Add / Delete
 
 - Branch: `feature/workflow-authoring-and-run-engine`
