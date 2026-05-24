@@ -89,7 +89,7 @@ type ConfigValidation =
   | { valid: false; error: string; value: null }
 
 function validateConfigText(text: string): ConfigValidation {
-  if (!text.trim()) {
+  if (typeof text !== 'string' || !text.trim()) {
     return { valid: false, error: 'Config JSON は空にできません。', value: null }
   }
   try {
@@ -119,15 +119,15 @@ function InspectorContent({
   const [title, setTitle] = useState(selectedNode.title)
   const [description, setDescription] = useState(selectedNode.description)
   const [agentRole, setAgentRole] = useState<AgentRole | ''>(selectedNode.agentRole ?? '')
-  const [configText, setConfigText] = useState(() => JSON.stringify(selectedNode.config, null, 2))
+  const [configText, setConfigText] = useState(() => JSON.stringify(selectedNode.config ?? {}, null, 2))
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
-  const [originalConfigJson] = useState(() => JSON.stringify(selectedNode.config))
+  const [originalConfigJson] = useState(() => JSON.stringify(selectedNode.config ?? {}))
 
   const configValidation = useMemo(() => validateConfigText(configText), [configText])
 
   const isDirty = useMemo(() => {
-    if (title !== selectedNode.title) return true
-    if (description !== selectedNode.description) return true
+    if (title.trim() !== selectedNode.title) return true
+    if (description.trim() !== selectedNode.description) return true
     if (agentRole !== (selectedNode.agentRole ?? '')) return true
     if (!configValidation.valid) return true
     return JSON.stringify(configValidation.value) !== originalConfigJson
@@ -155,7 +155,7 @@ function InspectorContent({
     setTitle(selectedNode.title)
     setDescription(selectedNode.description)
     setAgentRole(selectedNode.agentRole ?? '')
-    setConfigText(JSON.stringify(selectedNode.config, null, 2))
+    setConfigText(JSON.stringify(selectedNode.config ?? {}, null, 2))
     setSaveMessage(null)
   }
 
