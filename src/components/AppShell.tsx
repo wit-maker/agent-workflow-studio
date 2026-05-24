@@ -3,7 +3,7 @@ import { calculateBottleneck } from '../domain/connectionRules'
 import { findPort, getOutputPorts } from '../domain/portRules'
 import type { ArtifactVersion, ReviewDecision } from '../domain/evaluation'
 import { runLocalEvaluation } from '../domain/evaluationRules'
-import { buildRunArtifact, buildRunMetrics } from '../domain/runEngine'
+import { buildRunArtifact, buildRunMetrics, SUCCESS_RATE_BY_OUTCOME } from '../domain/runEngine'
 import { executeMockNode } from '../domain/nodeExecutors'
 import { planWorkflowRun, type RunMode } from '../domain/runPlanner'
 import type {
@@ -301,12 +301,14 @@ export function AppShell() {
       }
 
       event.preventDefault()
-      handleDeleteNode(selectedNodeId)
+      if (workflow.nodes.some((node) => node.id === selectedNodeId)) {
+        setPendingDeleteNodeId(selectedNodeId)
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  })
+  }, [selectedNodeId, workflow.nodes, dispatch])
 
   function calculateOutcomeByRunCount(): 'PASS' | 'REVIEW' | 'FAIL' {
     const currentCount = runCountRef.current
@@ -344,7 +346,7 @@ export function AppShell() {
         (total, node) => total + getStepDuration(node),
         0,
       ),
-      successRate: outcome === 'FAIL' ? 54 : outcome === 'REVIEW' ? 78 : 100,
+      successRate: SUCCESS_RATE_BY_OUTCOME[outcome] ?? SUCCESS_RATE_BY_OUTCOME.PASS,
       queueCount: Math.max(workflow.nodes.length - executedNodes.length, 0),
       retryCount,
       bottleneckNodeId: bottleneck?.id ?? null,
@@ -556,7 +558,19 @@ export function AppShell() {
         const previousNode = plan.nodes[index - 1]
         dispatch({
           type: 'addExecutionRoute',
-          route: createRoute(decision.route, previousNode.id, node.id, decision.message),
+          route: createRoute('main', previousNode.id, node.id, '通常実行フロー'),
+        })
+      }
+
+      if (decision.route !== 'main') {
+        dispatch({
+          type: 'addExecutionRoute',
+          route: createRoute(
+            decision.route,
+            node.id,
+            decision.route === 'review' ? plan.nodes[index + 1]?.id : undefined,
+            decision.message,
+          ),
         })
       }
 
@@ -630,129 +644,6 @@ export function AppShell() {
 
   async function runMockWorkflow(mode: RunMode = 'all') {
     await runPlannedWorkflow(mode)
-    return
-
-    const runToken = runTokenRef.current + 1
-    runTokenRef.current = runToken
-    const runId = `run-${new Date().toISOString()}`
-    const outcome = calculateOutcomeByRunCount()
-    const executedNodes: WorkflowNode[] = []
-
-    dispatch({
-      type: 'runWorkflowStart',
-      runId,
-      log: makeLog(runId, 'ローカルモック実行を開始しました。外部APIは呼び出しません。'),
-    })
-    dispatch({ type: 'setCheckOutcome', outcome })
-
-    for (let index = 0; index < workflow.nodes.length; index += 1) {
-      if (runTokenRef.current !== runToken) {
-        return
-      }
-
-      const node = workflow.nodes[index]
-
-      if (index > 0) {
-        const previousNode = workflow.nodes[index - 1]
-        dispatch({
-          type: 'addExecutionRoute',
-          route: createRoute('main', previousNode.id, node.id, '通常実行フロー'),
-        })
-      }
-
-      if (node.type === 'check') {
-        if (outcome === 'FAIL') {
-          const failedStep = await executeNodeStep({
-            runId,
-            node,
-            route: 'error',
-            result: 'failed',
-          })
-          executedNodes.push(node)
-          dispatch({
-            type: 'addExecutionRoute',
-            route: createRoute('error', node.id, undefined, '検査で失敗したため停止'),
-          })
-          dispatch({ type: 'setRetryCandidate', stepId: failedStep.id })
-          dispatch({ type: 'runNodeRetryReady', nodeId: node.id })
-          dispatch({
-            type: 'setArtifact',
-            artifact: buildArtifactContent({
-              outcome,
-              executedNodes,
-              retryCandidates: 1,
-              reviewPending: false,
-              failedNodeTitle: node.title,
-              note: '再試行ボタンから単体再試行できます。',
-            }),
-          })
-          dispatch({
-            type: 'updateMetrics',
-            metrics: buildMetrics(executedNodes, outcome, 1),
-          })
-          dispatch({ type: 'setRunning', isRunning: false })
-          return
-        }
-
-        if (outcome === 'REVIEW') {
-          const reviewStep = await executeNodeStep({
-            runId,
-            node,
-            route: 'review',
-            result: 'review_required',
-          })
-          executedNodes.push(node)
-          dispatch({
-            type: 'addExecutionRoute',
-            route: createRoute('review', node.id, workflow.nodes[index + 1]?.id, '人間確認待ち'),
-          })
-          dispatch({
-            type: 'setArtifact',
-            artifact: buildArtifactContent({
-              outcome,
-              executedNodes,
-              retryCandidates: 0,
-              reviewPending: true,
-              note: `確認対象: ${reviewStep.nodeTitle}`,
-            }),
-          })
-          dispatch({
-            type: 'updateMetrics',
-            metrics: buildMetrics(executedNodes, outcome, 0),
-          })
-          dispatch({ type: 'setRunning', isRunning: false })
-          return
-        }
-      }
-
-      await executeNodeStep({
-        runId,
-        node,
-        route: 'main',
-        result: 'success',
-      })
-      executedNodes.push(node)
-    }
-
-    dispatch({
-      type: 'setArtifact',
-      artifact: buildArtifactContent({
-        outcome,
-        executedNodes,
-        retryCandidates: 0,
-        reviewPending: false,
-      }),
-    })
-    dispatch({
-      type: 'updateMetrics',
-      metrics: buildMetrics(executedNodes, outcome, 0),
-    })
-    dispatch({ type: 'setWorkflowStatus', status: 'success' })
-    dispatch({
-      type: 'appendLog',
-      log: makeLog(runId, '実行グラフとメトリクスを更新しました。', undefined, 'metric'),
-    })
-    dispatch({ type: 'setRunning', isRunning: false })
   }
 
   function stopRun() {

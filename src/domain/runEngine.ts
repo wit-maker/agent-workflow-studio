@@ -3,6 +3,12 @@ import type { CheckOutcome, MockNodeExecution } from './nodeExecutors'
 import type { PlannedRun } from './runPlanner'
 import type { WorkflowArtifact, WorkflowMetric, WorkflowNode } from './workflow'
 
+export const SUCCESS_RATE_BY_OUTCOME = {
+  FAIL: 54,
+  REVIEW: 78,
+  PASS: 100,
+} as const
+
 export type RunEngineSummary = {
   artifact: WorkflowArtifact
   metrics: WorkflowMetric
@@ -34,7 +40,7 @@ export function buildRunMetrics(
       0,
     ),
     latencyMs: executedNodes.reduce((total, node) => total + getStepDuration(node), 0),
-    successRate: outcome === 'FAIL' ? 54 : outcome === 'REVIEW' ? 78 : 100,
+    successRate: SUCCESS_RATE_BY_OUTCOME[outcome] ?? SUCCESS_RATE_BY_OUTCOME.PASS,
     queueCount: Math.max(workflowNodeCount - executedNodes.length, 0),
     retryCount,
     bottleneckNodeId: bottleneck?.id ?? null,

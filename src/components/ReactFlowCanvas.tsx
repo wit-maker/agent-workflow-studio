@@ -194,7 +194,6 @@ export function ReactFlowCanvas({
   useEffect(() => {
     const next = buildFlowNodes(workflow, {}, selectedNodeId)
     nodesRef.current = next
-    writeReactFlowPositions(pickWorkflowPositions(next))
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setNodes(next)
   }, [selectedNodeId, workflow])
