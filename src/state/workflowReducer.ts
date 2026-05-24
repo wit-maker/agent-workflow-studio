@@ -236,7 +236,8 @@ export function workflowReducer(
           updatedAt: new Date().toISOString(),
         })
 
-    case 'runWorkflowStart':
+    case 'runWorkflowStart': {
+      const queuedNodeIds = action.nodeIds ? new Set(action.nodeIds) : null
       return {
         ...state,
         isRunning: true,
@@ -247,7 +248,10 @@ export function workflowReducer(
         workflow: {
           ...state.workflow,
           status: 'running',
-          nodes: state.workflow.nodes.map((node) => ({ ...node, status: 'queued' })),
+          nodes: state.workflow.nodes.map((node) => ({
+            ...node,
+            status: !queuedNodeIds || queuedNodeIds.has(node.id) ? 'queued' : 'idle',
+          })),
           connections: state.workflow.connections.map((connection) => ({
             ...connection,
             status: 'inactive',
@@ -262,6 +266,7 @@ export function workflowReducer(
           updatedAt: new Date().toISOString(),
         },
       }
+    }
 
     case 'clearExecutionGraph':
       return {

@@ -24,7 +24,7 @@ export type WorkflowAction =
   | { type: 'updateNodeConfig'; nodeId: string; updates: NodeEditableFields }
   | { type: 'createConnection'; connection: WorkflowConnection }
   | { type: 'deleteConnection'; connectionId: string }
-  | { type: 'runWorkflowStart'; runId: string; log: WorkflowRunLog }
+  | { type: 'runWorkflowStart'; runId: string; log: WorkflowRunLog; nodeIds?: string[] }
   | { type: 'clearExecutionGraph' }
   | { type: 'runNodeQueued'; nodeId: string }
   | { type: 'runNodeRunning'; nodeId: string; log: WorkflowRunLog }

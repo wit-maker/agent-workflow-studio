@@ -85,6 +85,37 @@ Last updated: 2026-05-24
   - Template storage remains localStorage-bound.
   - Browser automation had intermittent coordinate translation failures on repeated template-card clicks after the visibility recovery path; primary save/duplicate/load QA passed before that issue.
 
+## M8 Run Engine Strengthening
+
+- Branch: `feature/workflow-authoring-and-run-engine`
+- Completed:
+  - Added `src/domain/runPlanner.ts`, `src/domain/nodeExecutors.ts`, and `src/domain/runEngine.ts`.
+  - Added Run All, Run Selected, Run From Selected, and Dry Run buttons.
+  - Run planner selects target nodes and produces a local execution queue.
+  - Mock node executor handles PASS / REVIEW / FAIL for check nodes and skipped status for dry runs.
+  - Run engine updates artifact, metrics, logs, retry candidates, and review/failure statuses without real API calls.
+  - Added implementation note at `docs/implementation/LOCAL_RUN_ENGINE_M8.md`.
+- Browser QA:
+  - Run All FAIL: failed status, retry candidate, failed check node, artifact updated.
+  - Run All REVIEW: review_required status, review pending artifact, no console errors.
+  - Run Selected: selected node-only PASS run.
+  - Run From Selected: verified in Browser QA before final recheck; mode appears in artifact.
+  - Dry Run: validateOnly yes, skipped local execution, artifact/metrics updated.
+  - Metrics tab: tokens, cost, latencyMs, successRate, retryCount, bottleneck updated.
+  - Output tab: artifact summary updated and explicitly says no real API calls/adapters.
+- build / lint:
+  - `npm run build`: pass
+  - `npm run lint`: pass
+- Not implemented:
+  - Real adapter/API calls.
+  - Persistent queue storage or worker-based async engine.
+  - Adapter plugin registry.
+- Next candidates:
+  - M9-style persistence strategy review for local workflows/templates/runs.
+- Known risks:
+  - AppShell still contains legacy run helper code behind an early return; future cleanup should remove it once run-engine behavior settles.
+  - Dry run currently marks planned nodes as skipped after validating/planning rather than running a separate validation report object.
+
 ## Current Phase
 
 feature/workflow-foundation-milestones — M0〜M4 連続実装中。

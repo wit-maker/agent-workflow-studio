@@ -3,6 +3,9 @@ import { calculateBottleneck } from '../domain/connectionRules'
 import { findPort, getOutputPorts } from '../domain/portRules'
 import type { ArtifactVersion, ReviewDecision } from '../domain/evaluation'
 import { runLocalEvaluation } from '../domain/evaluationRules'
+import { buildRunArtifact, buildRunMetrics } from '../domain/runEngine'
+import { executeMockNode } from '../domain/nodeExecutors'
+import { planWorkflowRun, type RunMode } from '../domain/runPlanner'
 import type {
   ExecutionRoute,
   ExecutionRouteKind,
@@ -354,7 +357,7 @@ export function AppShell() {
     route: ExecutionRouteKind
     attempt?: number
     retryOfStepId?: string
-    result: 'success' | 'review_required' | 'failed'
+    result: 'success' | 'review_required' | 'failed' | 'skipped'
   }): Promise<ExecutionStep> {
     const durationMs = getStepDuration(options.node, options.attempt ?? 0)
     const step = createStep(
@@ -388,6 +391,28 @@ export function AppShell() {
     })
 
     await delay(Math.min(durationMs, 260))
+
+    if (options.result === 'skipped') {
+      dispatch({
+        type: 'runStepSuccess',
+        stepId: step.id,
+        finishedAt: new Date().toISOString(),
+        durationMs,
+        message: `${options.node.title} validated without local execution.`,
+      })
+      dispatch({
+        type: 'runNodeSuccess',
+        nodeId: options.node.id,
+        status: 'skipped',
+        log: makeLog(
+          options.runId,
+          `${options.node.title} was validated only and skipped.`,
+          options.node.id,
+          'info',
+        ),
+      })
+      return step
+    }
 
     if (options.result === 'failed') {
       dispatch({
@@ -493,7 +518,120 @@ export function AppShell() {
     return executedNodes
   }
 
-  async function runMockWorkflow() {
+  async function runPlannedWorkflow(mode: RunMode) {
+    const runToken = runTokenRef.current + 1
+    runTokenRef.current = runToken
+    const runId = `run-${new Date().toISOString()}`
+    const plan = planWorkflowRun(workflow, mode, selectedNodeId)
+    const plannedHasCheck = plan.nodes.some((node) => node.type === 'check')
+    const outcome = mode === 'dryRun' || !plannedHasCheck ? 'PASS' : calculateOutcomeByRunCount()
+    const executedNodes: WorkflowNode[] = []
+    const decisions: ReturnType<typeof executeMockNode>[] = []
+
+    dispatch({
+      type: 'runWorkflowStart',
+      runId,
+      nodeIds: plan.nodes.map((node) => node.id),
+      log: makeLog(
+        runId,
+        `Local mock run started. mode=${mode}. No real API calls are made.`,
+      ),
+    })
+    dispatch({ type: 'setCheckOutcome', outcome })
+
+    for (const warning of plan.warnings) {
+      dispatch({ type: 'appendLog', log: makeLog(runId, warning, undefined, 'warn') })
+    }
+
+    for (let index = 0; index < plan.nodes.length; index += 1) {
+      if (runTokenRef.current !== runToken) {
+        return
+      }
+
+      const node = plan.nodes[index]
+      const decision = executeMockNode(node, outcome, mode)
+      decisions.push(decision)
+
+      if (index > 0) {
+        const previousNode = plan.nodes[index - 1]
+        dispatch({
+          type: 'addExecutionRoute',
+          route: createRoute(decision.route, previousNode.id, node.id, decision.message),
+        })
+      }
+
+      const step = await executeNodeStep({
+        runId,
+        node,
+        route: decision.route,
+        result: decision.result,
+      })
+      executedNodes.push(node)
+
+      if (decision.retryCandidate) {
+        dispatch({
+          type: 'addExecutionRoute',
+          route: createRoute(
+            'retry',
+            node.id,
+            node.id,
+            'Retry candidate after local mock failure.',
+          ),
+        })
+        dispatch({ type: 'setRetryCandidate', stepId: step.id })
+        dispatch({ type: 'runNodeRetryReady', nodeId: node.id })
+      }
+
+      if (decision.result === 'failed' || decision.result === 'review_required') {
+        dispatch({
+          type: 'setArtifact',
+          artifact: buildRunArtifact({
+            plan,
+            outcome,
+            executedNodes,
+            decisions,
+            failedNodeTitle: decision.result === 'failed' ? node.title : undefined,
+          }),
+        })
+        dispatch({
+          type: 'updateMetrics',
+          metrics: buildRunMetrics(
+            workflow.nodes.length,
+            executedNodes,
+            outcome,
+            decisions.filter((item) => item.retryCandidate).length,
+          ),
+        })
+        dispatch({ type: 'setRunning', isRunning: false })
+        return
+      }
+    }
+
+    dispatch({
+      type: 'setArtifact',
+      artifact: buildRunArtifact({ plan, outcome, executedNodes, decisions }),
+    })
+    dispatch({
+      type: 'updateMetrics',
+      metrics: buildRunMetrics(
+        workflow.nodes.length,
+        executedNodes,
+        outcome,
+        decisions.filter((item) => item.retryCandidate).length,
+      ),
+    })
+    dispatch({ type: 'setWorkflowStatus', status: 'success' })
+    dispatch({
+      type: 'appendLog',
+      log: makeLog(runId, 'Local run engine updated artifact and metrics.', undefined, 'metric'),
+    })
+    dispatch({ type: 'setRunning', isRunning: false })
+  }
+
+  async function runMockWorkflow(mode: RunMode = 'all') {
+    await runPlannedWorkflow(mode)
+    return
+
     const runToken = runTokenRef.current + 1
     runTokenRef.current = runToken
     const runId = `run-${new Date().toISOString()}`
@@ -1265,6 +1403,9 @@ export function AppShell() {
           canUndo={canUndo}
           canRedo={canRedo}
           onRun={runMockWorkflow}
+          onRunSelected={() => runMockWorkflow('selected')}
+          onRunFromSelected={() => runMockWorkflow('fromSelected')}
+          onDryRun={() => runMockWorkflow('dryRun')}
           onStop={stopRun}
           onReset={handleReset}
           onUndo={() => dispatch({ type: 'undo' })}

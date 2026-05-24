@@ -11,6 +11,9 @@ type TopBarProps = {
   canUndo: boolean
   canRedo: boolean
   onRun: () => void
+  onRunSelected: () => void
+  onRunFromSelected: () => void
+  onDryRun: () => void
   onStop: () => void
   onReset: () => void
   onUndo: () => void
@@ -28,6 +31,9 @@ export function TopBar({
   canUndo,
   canRedo,
   onRun,
+  onRunSelected,
+  onRunFromSelected,
+  onDryRun,
   onStop,
   onReset,
   onUndo,
@@ -68,10 +74,19 @@ export function TopBar({
         <button
           type="button"
           className="primary-button"
-          onClick={onRun}
+          onClick={() => onRun()}
           disabled={isRunning}
         >
           実行
+        </button>
+        <button type="button" className="icon-button" onClick={onRunSelected} disabled={isRunning}>
+          Run selected
+        </button>
+        <button type="button" className="icon-button" onClick={onRunFromSelected} disabled={isRunning}>
+          Run from selected
+        </button>
+        <button type="button" className="icon-button" onClick={onDryRun} disabled={isRunning}>
+          Dry run
         </button>
         <button type="button" className="icon-button" onClick={onStop} disabled={!isRunning}>
           停止
