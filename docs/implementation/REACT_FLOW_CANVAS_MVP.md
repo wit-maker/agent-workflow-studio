@@ -10,6 +10,10 @@ Phase 7 の目的は、既存の `WorkflowCanvas` を壊さずに、React Flow �
 Phase 7.1 では大きな機能追加よりも、React Flow Canvas を「試せる状態」から「安定して使える状態」に近づけることを優先します。
 具体的には、Canvas 表示モード保存、ノード位置保存、位置リセット、軽微な安定化、Undo / Redo 方針整理を行います。
 
+Phase 7.2 では全面移行を行わず、React Flow Canvas を「人間が扱いやすい状態」に寄せるための操作性改善を追加します。
+操作ヘルプ、Edge 詳細、削除確認、無効接続理由表示、Delete キー案内、Port 視認性改善、Template / JSON 回帰QA は
+`docs/implementation/REACT_FLOW_CANVAS_USABILITY.md` に整理します。
+
 ## なぜ既存Canvasを残すのか
 
 - 既存 `WorkflowCanvas` は Phase 1 から Phase 6 までの確認基盤であり、静的な可視化として安定している。
@@ -117,7 +121,7 @@ Phase 7.1 では本格 Undo / Redo は実装しません。
 
 ## 次フェーズ候補
 
-- Phase 7.2 として React Flow Canvas の操作性改善
+- Phase 7.3 候補として接続編集拡張とノード追加導線を検討
 - ノード追加DnD
 - Edge 詳細編集UI
 - legacy 接続の port ID 補完または migration 戦略整理

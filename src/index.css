@@ -335,6 +335,11 @@ button:disabled {
   overflow: hidden;
 }
 
+.canvas-panel:focus-visible {
+  outline: 2px solid rgba(47, 111, 189, 0.45);
+  outline-offset: 0;
+}
+
 .canvas-toolbar {
   display: flex;
   align-items: center;
@@ -532,25 +537,76 @@ button:disabled {
   right: 16px;
   top: 16px;
   width: 360px;
-  max-height: 220px;
+  max-height: 320px;
   overflow-y: auto;
   z-index: 5;
 }
 
 .selected-connection-detail {
   border-top: 1px solid var(--border);
-  padding-top: 6px;
-  margin-top: 4px;
+  padding-top: 8px;
+  margin-top: 8px;
   display: grid;
-  gap: 2px;
+  gap: 8px;
   font-size: 11px;
   color: var(--muted);
 }
 
-.selected-connection-detail strong {
+.selected-connection-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+
+.selected-connection-detail > .selected-connection-header strong,
+.selected-connection-grid strong {
   color: var(--blue);
   font-size: 11px;
   font-weight: 800;
+}
+
+.selected-connection-grid {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 6px 8px;
+  align-items: start;
+}
+
+.selected-connection-grid span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.selected-connection-grid strong {
+  line-height: 1.45;
+}
+
+.react-flow-help-card {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  width: 280px;
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--shadow);
+  z-index: 5;
+}
+
+.react-flow-help-card h3 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.react-flow-help-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .react-flow-canvas-root .react-flow__attribution {
@@ -612,11 +668,24 @@ button:disabled {
   gap: 8px;
 }
 
+.react-flow-port-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+
 .react-flow-port-title {
   color: var(--muted);
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
+}
+
+.react-flow-port-side-hint {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
 }
 
 .react-flow-port-empty {
@@ -627,7 +696,7 @@ button:disabled {
 .react-flow-port-row {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
   min-height: 38px;
@@ -637,9 +706,27 @@ button:disabled {
   background: var(--surface-2);
 }
 
-.react-flow-port-row > div {
+.react-flow-port-row-input {
+  padding-left: 16px;
+  border-left: 3px solid rgba(169, 105, 18, 0.34);
+}
+
+.react-flow-port-row-output {
+  padding-right: 16px;
+  border-right: 3px solid rgba(47, 111, 189, 0.34);
+}
+
+.react-flow-port-copy,
+.react-flow-port-badges {
   display: grid;
-  gap: 2px;
+  gap: 4px;
+}
+
+.react-flow-port-line {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .react-flow-port-row strong {
@@ -661,12 +748,34 @@ button:disabled {
   background: var(--red-soft);
 }
 
+.react-flow-port-direction,
+.react-flow-port-required,
 .react-flow-port-connected,
 .react-flow-port-warning {
   border-radius: 999px;
   padding: 3px 8px;
   font-size: 10px;
   font-weight: 800;
+}
+
+.react-flow-port-direction-input {
+  color: var(--amber);
+  background: rgba(169, 105, 18, 0.12);
+}
+
+.react-flow-port-direction-output {
+  color: var(--blue);
+  background: rgba(47, 111, 189, 0.12);
+}
+
+.react-flow-port-required.required {
+  color: var(--red);
+  background: rgba(190, 63, 59, 0.12);
+}
+
+.react-flow-port-required.optional {
+  color: var(--muted);
+  background: rgba(103, 113, 126, 0.1);
 }
 
 .react-flow-port-connected {
@@ -680,18 +789,20 @@ button:disabled {
 }
 
 .react-flow-handle {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border: 2px solid #ffffff;
-  background: var(--blue);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.75);
 }
 
 .react-flow-handle-target {
-  left: -7px;
+  left: -8px;
+  background: var(--amber);
 }
 
 .react-flow-handle-source {
-  right: -7px;
+  right: -8px;
+  background: var(--blue);
 }
 
 .connection-validation-card h3 {

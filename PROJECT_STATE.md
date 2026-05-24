@@ -4,7 +4,7 @@ Last updated: 2026-05-24
 
 ## Current Phase
 
-Phase 7.1 React Flow Canvas 安定化MVP。
+Phase 7.2 React Flow Canvas 操作性改善。
 
 ## Completed
 
@@ -40,6 +40,14 @@ Phase 7.1 React Flow Canvas 安定化MVP。
 - React Flow ノード位置の localStorage 保存と再表示時の復元を追加した。
 - React Flow Canvas に「位置をリセット」導線を追加した。
 - `docs/implementation/UNDO_REDO_POLICY.md` を追加し、本格 Undo / Redo はまだ入れず方針整理に留めることを明文化した。
+- Phase 7.2 として React Flow Canvas に操作ヘルプを追加した。
+- Edge / Connection 選択時の詳細カードを追加し、接続元ノード名、接続元ポート名、接続先ノード名、接続先ポート名、carries、kind、validation result を表示できるようにした。
+- React Flow Canvas からの接続削除に確認導線を追加した。
+- 無効接続・重複接続・同一ノード接続・不明ポート接続の理由を Canvas 上に表示できるようにした。
+- Delete / Backspace でノード削除が未対応であることを Canvas 上に案内するようにした。
+- ReactFlowNode の Port 表示を入力 / 出力、必須 / 任意、dataType、左右の接続位置が見やすい形へ調整した。
+- Template 保存 / プレビュー / 読み込みの回帰確認を行った。
+- `docs/implementation/REACT_FLOW_CANVAS_USABILITY.md` を追加した。
 
 ## Phase 3 実装内容
 
@@ -115,7 +123,7 @@ Phase 7.1 React Flow Canvas 安定化MVP。
 
 ## Next Work
 
-1. Phase 7.2 として React Flow Canvas の操作性改善を進める。
+1. Phase 7.3 候補として React Flow 側の接続編集拡張とノード追加導線を検討する。
 2. 評価結果と実行グラフを結びつけた差分表示を追加する。
 3. テンプレートの version / metadata 編集を追加する。
 4. localStorage MVP から永続ストレージへ進む条件を整理する。
@@ -129,6 +137,7 @@ Phase 7.1 React Flow Canvas 安定化MVP。
 - React Flow ノード位置保存は workflow 本体ではなく UI 補助状態として保存しているため、複数端末同期や共同編集はまだ考慮していない。
 - Undo / Redo は方針整理のみであり、workflow 全体置換系の巻き戻しは未対応。
 - テンプレート metadata は要約情報であり、ArtifactVersion 本体や評価履歴全文は保持しない。
+- React Flow 上のノード削除は未対応であり、Delete / Backspace は説明メッセージのみ表示する。
 
 ## Screen Spec Alignment
 
@@ -136,6 +145,7 @@ Phase 7.1 React Flow Canvas 安定化MVP。
 - `docs/implementation/EXECUTION_GRAPH_MVP.md` に Phase 3 の実行グラフMVPを整理している。
 - `docs/implementation/TEMPLATE_REUSE_UX_MVP.md` に Phase 6 の再利用UX整理を記録している。
 - `docs/implementation/REACT_FLOW_CANVAS_MVP.md` に Phase 7 の Canvas MVP を整理している。
+- `docs/implementation/REACT_FLOW_CANVAS_USABILITY.md` に Phase 7.2 の操作性改善を整理している。
 - `docs/implementation/UNDO_REDO_POLICY.md` に Phase 7.1 の Undo / Redo 方針を整理している。
 
 ## Phase 7 実装内容
@@ -159,6 +169,27 @@ Phase 7.1 React Flow Canvas 安定化MVP。
 - React Flow Canvas に「位置をリセット」ボタンを追加し、保存位置削除と初期配置復元を行う
 - React Flow 側の node / connection lookup を軽く整理し、描画中の探索負荷を下げた
 - Undo / Redo は実装せず、危険な対象範囲と将来案を `docs/implementation/UNDO_REDO_POLICY.md` に整理
+
+## Phase 7.2 実装内容
+
+- React Flow Canvas に操作ヘルプを追加
+- 接続選択時の詳細カードを追加
+- 接続削除に確認導線を追加
+- 無効接続理由の Canvas 内表示を追加
+- Delete / Backspace でノード削除未対応メッセージを表示
+- ReactFlowNode の Port / Handle 視認性を改善
+- Template 保存 / プレビュー / 読み込みの回帰確認を実施
+- `docs/implementation/REACT_FLOW_CANVAS_USABILITY.md` を追加
+- Review fix として、GPT-5.5 xhigh で Gemini Code Assist の指摘を反映し、接続開始時の失敗理由リセット、Port 方向ラベル日本語化、出力 Port の required / optional 表示修正、Edge 選択中 Delete キー削除導線を追加
+
+## Phase 7.2 Verification
+
+- Model: GPT-5.5 xhigh
+- Branch: `feature/react-flow-canvas-usability`
+- `npm run build`: success
+- `npm run lint`: success
+- Browser QA: 初期表示、標準 / React Flow 切替、操作ヘルプ、12ノード、13 edges、Edge 選択、接続詳細、Delete / Backspace 案内、Run、評価実行、Template 保存 / プレビュー / 読み込み、console error なしを確認
+- Browser QA note: 接続削除は確認導線まで含めて実ブラウザで動作した。JSON export / import は in-app browser の download / file input 制約により今回の Browser QA では完走していない
 
 ## Phase 6 実装内容
 
@@ -231,3 +262,11 @@ Phase 7.1 React Flow Canvas 安定化MVP。
   - BottomMonitor「実行グラフ」タブ: Run ID・再試行候補・経路一覧が表示される: OK
   - StagePreview executionGraph summary: 最終判定・確認待ち・失敗ノード・再試行候補が表示される: OK
   - ログ文言: 日本語で全ノードのログが記録される: OK
+
+## Phase 7.2 マージ前最終修正
+
+- Branch: `feature/react-flow-canvas-usability`
+- `handleConnectEnd` で `isValid !== false` を no-op に変更（`true` / `null` は何もしない、`false` のみエラー表示）
+- 接続キャンセル / 空白ドロップ時の不要なエラー表示を抑制
+- `npm run build`: success
+- `npm run lint`: success
