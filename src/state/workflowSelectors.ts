@@ -4,6 +4,7 @@ import {
   isKnownConnectionKind,
 } from '../domain/connectionRules'
 import { findPort, getInputPorts, getOutputPorts } from '../domain/portRules'
+import { connectionKinds } from '../domain/workflow'
 import type {
   ConnectionKind,
   Workflow,
@@ -53,6 +54,177 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+const workflowNodeStatuses = [
+  'idle',
+  'queued',
+  'running',
+  'success',
+  'failed',
+  'retry_ready',
+  'skipped',
+  'review_required',
+  'blocked',
+] as const satisfies WorkflowNode['status'][]
+
+const workflowStatuses = [
+  'draft',
+  'ready',
+  'invalid',
+  'running',
+  'paused',
+  'success',
+  'failed',
+  'review_required',
+  'archived',
+] as const satisfies Workflow['status'][]
+
+const connectionStatuses = [
+  'inactive',
+  'active',
+  'success',
+  'failed',
+  'invalid',
+  'throttled',
+] as const satisfies WorkflowConnection['status'][]
+
+const artifactFormats = ['Markdown', 'JSON', 'Diff', 'Preview'] as const satisfies Workflow['artifact']['format'][]
+
+const artifactStatuses = [
+  'draft',
+  'checked',
+  'review_required',
+  'approved',
+  'failed',
+] as const satisfies Workflow['artifact']['status'][]
+
+const logLevels = [
+  'info',
+  'warn',
+  'error',
+  'security',
+  'approval',
+  'metric',
+] as const satisfies Workflow['logs'][number]['level'][]
+
+function isOneOf<T extends string>(values: readonly T[], value: unknown): value is T {
+  return typeof value === 'string' && values.includes(value as T)
+}
+
+function finiteNumberOr(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
+}
+
+function optionalFiniteNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined
+}
+
+function isWorkflowNodeStatus(value: unknown): value is WorkflowNode['status'] {
+  return isOneOf(workflowNodeStatuses, value)
+}
+
+function isWorkflowStatus(value: unknown): value is Workflow['status'] {
+  return isOneOf(workflowStatuses, value)
+}
+
+function isConnectionKind(value: unknown): value is WorkflowConnection['kind'] {
+  return isOneOf(connectionKinds, value)
+}
+
+function isConnectionStatus(value: unknown): value is WorkflowConnection['status'] {
+  return isOneOf(connectionStatuses, value)
+}
+
+function normalizePosition(value: unknown): { x: number; y: number } {
+  if (
+    isRecord(value) &&
+    typeof value.x === 'number' &&
+    Number.isFinite(value.x) &&
+    typeof value.y === 'number' &&
+    Number.isFinite(value.y)
+  ) {
+    return { x: value.x, y: value.y }
+  }
+
+  return { x: 0, y: 0 }
+}
+
+function normalizeWorkflowMetric(value: unknown): Workflow['metrics'] {
+  const raw = isRecord(value) ? value : {}
+
+  return {
+    tokens: finiteNumberOr(raw.tokens, 0),
+    cost: finiteNumberOr(raw.cost, 0),
+    latencyMs: finiteNumberOr(raw.latencyMs, 0),
+    successRate: finiteNumberOr(raw.successRate, 0),
+    queueCount: finiteNumberOr(raw.queueCount, 0),
+    retryCount: finiteNumberOr(raw.retryCount, 0),
+    bottleneckNodeId: typeof raw.bottleneckNodeId === 'string' ? raw.bottleneckNodeId : null,
+  }
+}
+
+function normalizeArtifact(value: unknown): Workflow['artifact'] {
+  const raw = isRecord(value) ? value : {}
+
+  return {
+    title: typeof raw.title === 'string' ? raw.title : 'Imported Artifact',
+    format: isOneOf(artifactFormats, raw.format) ? raw.format : 'Markdown',
+    content: typeof raw.content === 'string' ? raw.content : '',
+    status: isOneOf(artifactStatuses, raw.status) ? raw.status : 'draft',
+  }
+}
+
+function normalizeLogs(value: unknown): Workflow['logs'] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value.map((item, index): Workflow['logs'][number] => {
+    const raw = isRecord(item) ? item : {}
+
+    return {
+      id: typeof raw.id === 'string' && raw.id.trim() ? raw.id : `log-imported-${index}`,
+      runId: typeof raw.runId === 'string' && raw.runId.trim() ? raw.runId : 'imported-run',
+      timestamp: typeof raw.timestamp === 'string' ? raw.timestamp : new Date().toISOString(),
+      nodeId: typeof raw.nodeId === 'string' ? raw.nodeId : undefined,
+      level: isOneOf(logLevels, raw.level) ? raw.level : 'info',
+      message: typeof raw.message === 'string' ? raw.message : 'Imported log',
+      payload: raw.payload,
+    }
+  })
+}
+
+function normalizeConnectionMetrics(value: unknown): WorkflowConnection['metrics'] {
+  if (!isRecord(value)) return undefined
+
+  return {
+    flowRate: optionalFiniteNumber(value.flowRate),
+    tokens: optionalFiniteNumber(value.tokens),
+    latencyMs: optionalFiniteNumber(value.latencyMs),
+  }
+}
+
+function createUniqueConnectionId(
+  rawId: unknown,
+  index: number,
+  usedIds: Set<string>,
+): string {
+  const base =
+    typeof rawId === 'string' && rawId.trim()
+      ? rawId.trim()
+      : `conn-imported-${index}`
+
+  let candidate = base
+  let suffix = 1
+
+  while (usedIds.has(candidate)) {
+    candidate = `${base}-${suffix}`
+    suffix += 1
+  }
+
+  usedIds.add(candidate)
+  return candidate
+}
+
 export function selectSelectedNode(
   workflow: Workflow,
   selectedNodeId: string,
@@ -98,14 +270,6 @@ export function validateWorkflowImport(value: unknown): {
     return { valid: false, error: 'workflow.connections は配列である必要があります。' }
   }
 
-  if (!isRecord(value.metrics)) {
-    return { valid: false, error: 'workflow.metrics がありません。' }
-  }
-
-  if (!isRecord(value.artifact) || typeof value.artifact.content !== 'string') {
-    return { valid: false, error: 'workflow.artifact.content がありません。' }
-  }
-
   const hasInvalidNode = rawNodes.some(
     (node) =>
       !isRecord(node) ||
@@ -128,18 +292,14 @@ export function validateWorkflowImport(value: unknown): {
     title: raw.title as string,
     category: typeof raw.category === 'string' ? raw.category : 'その他',
     description: typeof raw.description === 'string' ? raw.description : '',
-    status: (['idle', 'queued', 'running', 'complete', 'failed', 'review_required', 'skipped', 'retry_ready'].includes(raw.status as string)
-      ? raw.status
-      : 'idle') as WorkflowNode['status'],
+    status: isWorkflowNodeStatus(raw.status) ? raw.status : 'idle',
     agentRole: raw.agentRole as WorkflowNode['agentRole'],
     inputTypes: raw.inputTypes as WorkflowDataType[],
     outputTypes: raw.outputTypes as WorkflowDataType[],
     inputPorts: Array.isArray(raw.inputPorts) ? (raw.inputPorts as WorkflowNode['inputPorts']) : undefined,
     outputPorts: Array.isArray(raw.outputPorts) ? (raw.outputPorts as WorkflowNode['outputPorts']) : undefined,
     config: isRecord(raw.config) ? (raw.config as Record<string, unknown>) : {},
-    position: isRecord(raw.position) && typeof (raw.position as Record<string, unknown>).x === 'number'
-      ? (raw.position as { x: number; y: number })
-      : { x: 0, y: 0 },
+    position: normalizePosition(raw.position),
     metrics: isRecord(raw.metrics) ? (raw.metrics as WorkflowNode['metrics']) : undefined,
     lastRun: isRecord(raw.lastRun) ? (raw.lastRun as WorkflowNode['lastRun']) : undefined,
   }))
@@ -154,26 +314,47 @@ export function validateWorkflowImport(value: unknown): {
       nodeIds.has(conn.targetNodeId as string),
   )
 
+  const usedConnectionIds = new Set<string>()
+
   const connections = validConnections.map((raw: Record<string, unknown>, index): WorkflowConnection => ({
-    id: typeof raw.id === 'string' ? raw.id : `conn-imported-${index}`,
+    id: createUniqueConnectionId(raw.id, index, usedConnectionIds),
     sourceNodeId: raw.sourceNodeId as string,
     sourcePort: raw.sourcePort as string | undefined,
     sourcePortId: raw.sourcePortId as string | undefined,
     targetNodeId: raw.targetNodeId as string,
     targetPort: raw.targetPort as string | undefined,
     targetPortId: raw.targetPortId as string | undefined,
-    kind: (['data', 'instruction', 'decision', 'result', 'evidence', 'log', 'template'].includes(raw.kind as string)
-      ? raw.kind
-      : 'data') as WorkflowConnection['kind'],
-    carries: Array.isArray(raw.carries) ? (raw.carries as WorkflowDataType[]) : [],
-    status: (['inactive', 'active', 'error'].includes(raw.status as string) ? raw.status : 'inactive') as WorkflowConnection['status'],
+    kind: isConnectionKind(raw.kind) ? raw.kind : 'data',
+    carries: Array.isArray(raw.carries)
+      ? raw.carries.filter((item): item is WorkflowDataType => typeof item === 'string')
+      : [],
+    status: isConnectionStatus(raw.status) ? raw.status : 'inactive',
+    metrics: normalizeConnectionMetrics(raw.metrics),
   }))
 
+  const now = new Date().toISOString()
+
   const workflow: Workflow = {
-    ...(value as Record<string, unknown>),
+    id: value.id.trim(),
+    schemaVersion:
+      value.schemaVersion === '1.0' || value.schemaVersion === '1.1'
+        ? value.schemaVersion
+        : '1.0',
+    name: value.name.trim(),
+    description: typeof value.description === 'string' ? value.description : '',
+    version:
+      typeof value.version === 'number' && Number.isFinite(value.version)
+        ? value.version
+        : 1,
+    status: isWorkflowStatus(value.status) ? value.status : 'draft',
     nodes,
     connections,
-  } as Workflow
+    metrics: normalizeWorkflowMetric(value.metrics),
+    logs: normalizeLogs(value.logs),
+    artifact: normalizeArtifact(value.artifact),
+    createdAt: typeof value.createdAt === 'string' ? value.createdAt : now,
+    updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : now,
+  }
 
   return { valid: true, workflow }
 }

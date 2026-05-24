@@ -374,3 +374,14 @@ Phase 7.4 Inspector ノード編集体験のハードニング。
 - 接続キャンセル / 空白ドロップ時の不要なエラー表示を抑制
 - `npm run build`: success
 - `npm run lint`: success
+
+## PR #16 review fix
+
+- `validateWorkflowImport` の enum 整合を domain 型に合わせて修正
+- `Workflow` の unsafe spread を廃止し、全フィールドを明示マッピング
+- `position.x` / `position.y` の finite number validation を追加
+- connection id 欠損時の collision-free 生成を追加
+- `connection.metrics` の import preservation を追加
+- `npm run build`: success
+- `npm run lint`: success
+- Browser QA: not run（review fix が import normalization 限定のため）
