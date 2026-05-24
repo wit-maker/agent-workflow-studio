@@ -121,7 +121,10 @@ function InspectorContent({
   const [agentRole, setAgentRole] = useState<AgentRole | ''>(selectedNode.agentRole ?? '')
   const [configText, setConfigText] = useState(() => JSON.stringify(selectedNode.config ?? {}, null, 2))
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
-  const [originalConfigJson] = useState(() => JSON.stringify(selectedNode.config ?? {}))
+  const originalConfigJson = useMemo(
+    () => JSON.stringify(selectedNode.config ?? {}),
+    [selectedNode.config],
+  )
 
   const configValidation = useMemo(() => validateConfigText(configText), [configText])
 
@@ -169,12 +172,20 @@ function InspectorContent({
     if (!configValidation.valid || !configValidation.value || !title.trim()) {
       return
     }
+
+    const trimmedTitle = title.trim()
+    const trimmedDescription = description.trim()
+
     onSaveNode(selectedNode.id, {
-      title: title.trim(),
-      description: description.trim(),
+      title: trimmedTitle,
+      description: trimmedDescription,
       agentRole: agentRole || undefined,
       config: configValidation.value,
     })
+
+    setTitle(trimmedTitle)
+    setDescription(trimmedDescription)
+    setConfigText(JSON.stringify(configValidation.value, null, 2))
     setSaveMessage('ワークフロー状態へ保存しました。')
   }
 

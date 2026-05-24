@@ -139,6 +139,11 @@ Phase 7.4 Inspector ノード編集体験のハードニング。
 - `key={selectedNode.id}` により別ノード選択時は InspectorContent を remount
 - dirty 判定はセマンティック JSON 比較（整形差異では dirty にならない）
 
+## Phase 7.4 追加修正（マージ前）
+
+- `originalConfigJson` を `useState` 初期化から `useMemo([selectedNode.config])` に変更し、保存後に stale baseline が残らないようにした
+- `saveChanges()` で `setTitle` / `setDescription` / `setConfigText` を保存後に正規化し、保存直後に dirty が残らないようにした
+
 ## Phase 7.4 Verification
 
 - Model: claude-sonnet-4-6
