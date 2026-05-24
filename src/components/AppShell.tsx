@@ -48,15 +48,13 @@ import {
   readReactFlowPositions,
   writeReactFlowPositions,
   writeCanvasModePreference,
-  clearReactFlowPositions,
   type SavedCanvasMode,
 } from '../storage/localCanvasState'
 import {
   saveCurrentWorkflow,
   loadCurrentWorkflow,
-  clearCurrentWorkflow,
 } from '../storage/localWorkflowState'
-import type { AppSettings } from '../storage/localAppSettings'
+import { DEFAULT_APP_SETTINGS, type AppSettings } from '../storage/localAppSettings'
 import { scaleNodePosition, unscaleNodePosition } from '../domain/reactFlowAdapter'
 import { createWorkflowState, workflowReducer } from '../state/workflowReducer'
 import {
@@ -754,11 +752,12 @@ export function AppShell() {
   }
 
   function handleResetStorage() {
-    clearCurrentWorkflow()
-    clearReactFlowPositions()
+    storageAdapter.clearAll()
     runTokenRef.current += 1
     artifactVersionCountRef.current = 0
-    setAppSettings(storageAdapter.loadSettings())
+    // Reset in-memory UI state to defaults after clearing persisted storage
+    setAppSettings(DEFAULT_APP_SETTINGS)
+    setCanvasMode(toCanvasMode(null))
     dispatch({ type: 'resetWorkflow', workflow: createSampleWorkflow() })
   }
 

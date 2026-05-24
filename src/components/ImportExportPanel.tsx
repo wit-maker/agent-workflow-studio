@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useCallback } from 'react'
 import type { Workflow } from '../domain/workflow'
 import type { SavedWorkflowTemplate } from '../storage/localTemplates'
 import type { AppSettings } from '../storage/localAppSettings'
@@ -32,6 +32,8 @@ export function ImportExportPanel({
   onImportBundle,
 }: ImportExportPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  // Counter to detect stale async reads when the user selects a new file before the previous one finishes.
+  const fileSelectionCountRef = useRef(0)
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
   const [pendingImport, setPendingImport] = useState<{
     workflow: Workflow
@@ -54,7 +56,7 @@ export function ImportExportPanel({
     fileInputRef.current?.click()
   }
 
-  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+  const handleFileSelected = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
@@ -62,7 +64,16 @@ export function ImportExportPanel({
     setImportResult(null)
     setPendingImport(null)
 
+    // Capture current selection counter. If the user selects another file before
+    // this async read finishes, the counter will have advanced and we discard this result.
+    const selectionId = ++fileSelectionCountRef.current
+
     const result = await readBundleFromFile(file)
+
+    if (selectionId !== fileSelectionCountRef.current) {
+      // A newer file was selected — discard this stale result.
+      return
+    }
 
     if (!result.valid) {
       setImportResult({ status: 'error', error: result.error, warnings: result.warnings })
@@ -75,7 +86,7 @@ export function ImportExportPanel({
       settings: result.bundle.settings,
       warnings: result.warnings,
     })
-  }
+  }, [])
 
   function confirmImport() {
     if (!pendingImport) return
