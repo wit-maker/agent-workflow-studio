@@ -32,7 +32,8 @@ export function ImportExportPanel({
   onImportBundle,
 }: ImportExportPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  // Counter to detect stale async reads when the user selects a new file before the previous one finishes.
+  // Counter to detect stale async reads. Incremented on every file-picker event (including cancel)
+  // so that closing the picker without selecting a file also invalidates any in-flight read.
   const fileSelectionCountRef = useRef(0)
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
   const [pendingImport, setPendingImport] = useState<{
@@ -58,15 +59,15 @@ export function ImportExportPanel({
 
   const handleFileSelected = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
+    // Increment before the early return: canceling the file picker (no file) also
+    // advances the counter and invalidates any in-flight read from the previous selection.
+    const selectionId = ++fileSelectionCountRef.current
+
     if (!file) return
 
     e.target.value = ''
     setImportResult(null)
     setPendingImport(null)
-
-    // Capture current selection counter. If the user selects another file before
-    // this async read finishes, the counter will have advanced and we discard this result.
-    const selectionId = ++fileSelectionCountRef.current
 
     const result = await readBundleFromFile(file)
 

@@ -143,15 +143,16 @@ Last updated: 2026-05-25
   - Full bundle export now includes `settings`.
   - Import preview now explains merge vs replace behavior explicitly.
   - Full bundle import path passes `settings` through to the app shell.
+  - Fixed stale bundle read race: `fileSelectionCountRef` is now incremented before the `if (!file) return` early-exit, so canceling the file picker (no file selected) also advances the counter and invalidates any in-flight read from the previous selection.
 - `src/components/BottomMonitor.tsx`
   - Reads persisted active tab from settings and forwards settings into full bundle export.
 - `src/domain/connectorReadiness.ts`
   - Mock-only connectors are now reported as `mock` instead of `not-configured`.
 
-#### Validation detail
+#### Validation detail (latest pass — 2026-05-25)
 
 - `npm run typecheck`: pass
-- `npm run build`: pass
+- `npm run build`: pass (530.05 kB / gzip 158.67 kB; chunk size warning is pre-existing)
 - `npm run lint`: pass
 - Module-level validation:
   - valid full bundle import: pass (`settings` restored as `react-flow` / `Roadmap`)
@@ -162,9 +163,9 @@ Last updated: 2026-05-25
   - storage health with corrupted workflow JSON only: correctly flags only the workflow key
   - connector readiness: `human-review` and `local-mock` now report `mock`
 
-#### Browser QA detail
+#### Browser QA detail (latest pass — 2026-05-25)
 
-- Dev server: `http://127.0.0.1:4174/`
+- Dev server: `http://127.0.0.1:5173/`
 - Initial workflow visible: pass (`有効な接続 13 件`)
 - Storage health panel: pass (`.storage-boundary-panel` visible)
 - Export Current Workflow button: visible and reachable
@@ -174,7 +175,7 @@ Last updated: 2026-05-25
 - Connector readiness panel: pass (7 readiness cards shown)
 - Connector roadmap panel: pass (8 roadmap rows shown)
 - Agent connector panel: pass (6 mock connector cards shown)
-- Run All: pass (33 log entries observed after run)
+- Run All: pass (34 log entries observed after run)
 - Console errors: none
 - In-app browser limitation:
   - Download events are unsupported, so Browser QA could not directly capture exported files.
