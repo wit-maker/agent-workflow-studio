@@ -75,7 +75,7 @@ export function ConnectorQueuePanel({
               ) : null}
             </div>
             <div className="cq-job-meta">
-              <span className="cq-job-id" title={job.id}>{job.id.slice(0, 24)}…</span>
+              <span className="cq-job-id" title={job.id}>…{job.id.slice(-12)}</span>
               {job.outputSummary ? (
                 <span className="cq-output">{job.outputSummary}</span>
               ) : null}

@@ -226,7 +226,6 @@ export function AppShell() {
   const runTokenRef = useRef(0)
   const runCountRef = useRef(0)
   const [connectorJobs, setConnectorJobs] = useState<ConnectorJob[]>([])
-  const connectorJobMapRef = useRef<Map<string, ConnectorJob>>(new Map())
   const [isEvaluating, setIsEvaluating] = useState(false)
   const [importSuccessMessage, setImportSuccessMessage] = useState<string | null>(null)
   const [canvasMode, setCanvasMode] = useState<CanvasMode>(() =>
@@ -568,7 +567,6 @@ export function AppShell() {
     // M13: build connector jobs for all planned nodes
     const initialJobs = buildConnectorJobs(runId, plan.nodes)
     const jobMap = new Map(initialJobs.map((j) => [j.nodeId, j]))
-    connectorJobMapRef.current = jobMap
     setConnectorJobs([...jobMap.values()])
 
     dispatch({
@@ -659,7 +657,7 @@ export function AppShell() {
           type: 'appendLog',
           log: makeLog(
             runId,
-            `[job: ${finalJob.id.slice(0, 20)}] ${finalJob.connectorLabel} / ${finalJobStatus} — ${node.title}`,
+            `[job: …${finalJob.id.slice(-8)}] ${finalJob.connectorLabel} / ${finalJobStatus} — ${node.title}`,
             node.id,
             finalJobStatus === 'failed' ? 'error' : 'info',
           ),
@@ -1237,20 +1235,21 @@ export function AppShell() {
     if (!job) return
     const updated = retryConnectorJob(job)
     if (!updated) return
-    const newJobs = connectorJobs.map((j) => (j.id === jobId ? updated : j))
-    setConnectorJobs(newJobs)
+    setConnectorJobs(connectorJobs.map((j) => (j.id === jobId ? updated : j)))
+    const runId = executionGraph?.runId ?? `retry-${Date.now()}`
     dispatch({
-      type: 'updateMetrics',
-      metrics: { ...workflow.metrics, retryCount: workflow.metrics.retryCount + 1 },
-    })
-    dispatch({
-      type: 'appendLog',
+      type: 'runNodeSuccess',
+      nodeId: job.nodeId,
       log: makeLog(
-        executionGraph?.runId ?? `retry-${Date.now()}`,
-        `[job: ${jobId.slice(0, 20)}] ${job.connectorLabel} — 再試行 ${updated.retryCount} 回目で成功しました。(mock)`,
+        runId,
+        `[job: …${jobId.slice(-8)}] ${job.connectorLabel} — 再試行 ${updated.retryCount} 回目で成功しました。(mock)`,
         job.nodeId,
         'info',
       ),
+    })
+    dispatch({
+      type: 'updateMetrics',
+      metrics: { ...workflow.metrics, retryCount: workflow.metrics.retryCount + 1 },
     })
   }
 
@@ -1260,10 +1259,11 @@ export function AppShell() {
     const updated = markJobReviewed(job)
     setConnectorJobs(connectorJobs.map((j) => (j.id === jobId ? updated : j)))
     dispatch({
-      type: 'appendLog',
+      type: 'runNodeSuccess',
+      nodeId: job.nodeId,
       log: makeLog(
         executionGraph?.runId ?? `review-${Date.now()}`,
-        `[job: ${jobId.slice(0, 20)}] ${job.connectorLabel} — 確認済みにしました。(mock)`,
+        `[job: …${jobId.slice(-8)}] ${job.connectorLabel} — 確認済みにしました。(mock)`,
         job.nodeId,
         'approval',
       ),
@@ -1276,10 +1276,12 @@ export function AppShell() {
     const updated = skipConnectorJob(job)
     setConnectorJobs(connectorJobs.map((j) => (j.id === jobId ? updated : j)))
     dispatch({
-      type: 'appendLog',
+      type: 'runNodeSuccess',
+      nodeId: job.nodeId,
+      status: 'skipped',
       log: makeLog(
         executionGraph?.runId ?? `skip-${Date.now()}`,
-        `[job: ${jobId.slice(0, 20)}] ${job.connectorLabel} — スキップしました。`,
+        `[job: …${jobId.slice(-8)}] ${job.connectorLabel} — スキップしました。`,
         job.nodeId,
         'warn',
       ),
@@ -1293,10 +1295,12 @@ export function AppShell() {
     if (!updated) return
     setConnectorJobs(connectorJobs.map((j) => (j.id === jobId ? updated : j)))
     dispatch({
-      type: 'appendLog',
+      type: 'runNodeSuccess',
+      nodeId: job.nodeId,
+      status: 'skipped',
       log: makeLog(
         executionGraph?.runId ?? `cancel-${Date.now()}`,
-        `[job: ${jobId.slice(0, 20)}] ${job.connectorLabel} — キャンセルしました。`,
+        `[job: …${jobId.slice(-8)}] ${job.connectorLabel} — キャンセルしました。`,
         job.nodeId,
         'warn',
       ),
