@@ -4,6 +4,47 @@ Last updated: 2026-05-24
 
 ## Current Phase
 
+feature/workflow-foundation-milestones — M0〜M4 連続実装中。
+
+## Latest Progress
+
+### Current Branch
+- feature/workflow-foundation-milestones
+
+### Completed Milestones
+- M0: main sync / build / lint 確認済み。ブランチ作成済み。
+- M1: Browser QA noise 調査・分類・防衛的修正を実施。
+- M2: Workflow JSON import/export の信頼性強化を実施。
+- M3: Inspector 編集フロー（dirty/保存/破棄/validation）の Browser QA 完走確認。
+- M4: React Flow Canvas 操作結果の保存・復元・追従 Browser QA 完走確認。
+
+### Verification
+- npm run build: pass (476.65 kB / gzip 144.79 kB)
+- npm run lint: pass (clean)
+- Browser QA M4: 実施済み（下記 Notes 参照）
+
+### Notes
+- PR #15 は main に merge 済み確認。
+- 既存 stale ブランチなし。
+- 作業ブランチ feature/workflow-foundation-milestones を新規作成。
+- **PartsPalette key warning**: React 18 StrictMode の初期ダブルレンダリング時のみ発生。ファイバーツリーのキーは `node-1`〜`node-12` で正常。再レンダリング・ノードクリック・検索フィルタ時は発生しない。機能上の影響なし。production build では StrictMode が非アクティブのため警告なし。
+- **InspectorContent warning**: 同様に StrictMode 初期レンダリング時のみ発生。ノードクリックによる再マウント時は発生しない。
+- **修正**: `Inspector.tsx` の `node.position?.x` を防衛的アクセスに変更（import データに position がない場合の実行時クラッシュを防止）。
+- **M2 実装**: `validateWorkflowImport` を強化。`node.config`欠落→`{}`、`node.description`欠落→`''`、`node.position`欠落→`{x:0,y:0}`、`node.status`欠落→`'idle'`、`node.category`欠落→`'その他'` として補完。接続の source/target node 存在確認を追加し、不正な接続を安全に除外。`connection.id`欠落時は自動生成。
+- **M2 Browser QA**: 欠損フィールドのある JSON import 成功・不正 JSON エラー表示・schema エラー表示・export→reimport→run のサイクルを確認。
+- **M3 Browser QA**: title 編集→dirty バナー表示・保存ボタン有効化・保存→全UI反映（Inspector/Palette/Timeline/ReactFlow Canvas）・破棄→保存済み値へ復元・空 title 保存不可・invalid JSON 保存不可（赤ボーダー・整形 disabled）・保存後 dirty なしをすべて確認。
+- **M4 Browser QA**:
+  - 位置保存→リロード復元: localStorage(`agent-workflow-studio:react-flow-positions`)に{node-1:(111,222), node-5:(555,333), node-12:(999,444)}を書き込みリロード後、全ノードのtransformが一致することを確認。
+  - Export JSON内容確認: 12ノード(各positionフィールドあり) / 13接続(sourceNodeId/targetNodeId/kind/carries/status)すべて含まれることを確認。
+  - Import→state復元: 2ノード・1接続のテスト用JSONをimportし、ノード数・接続数・ワークフロータイトルが正確に復元されることを確認。
+  - Import後Run: import直後にRunを実行しても接続が消えないことを確認（接続数1件維持）。
+  - Console error: StrictMode初期ダブルレンダリングのキー警告のみ（既知・機能影響なし）。Runtime errorなし。
+  - ノード移動→edge追従: headlessブラウザでのPointerEventシミュレーションが非対応のため実機確認推奨。コード上はonNodesChangeでposition changeを検出しwriteReactFlowPositionsを呼ぶ実装は確認済み。
+
+---
+
+## Previous Phase
+
 Phase 7.4 Inspector ノード編集体験のハードニング。
 
 ## Completed
@@ -333,3 +374,14 @@ Phase 7.4 Inspector ノード編集体験のハードニング。
 - 接続キャンセル / 空白ドロップ時の不要なエラー表示を抑制
 - `npm run build`: success
 - `npm run lint`: success
+
+## PR #16 review fix
+
+- `validateWorkflowImport` の enum 整合を domain 型に合わせて修正
+- `Workflow` の unsafe spread を廃止し、全フィールドを明示マッピング
+- `position.x` / `position.y` の finite number validation を追加
+- connection id 欠損時の collision-free 生成を追加
+- `connection.metrics` の import preservation を追加
+- `npm run build`: success
+- `npm run lint`: success
+- Browser QA: not run（review fix が import normalization 限定のため）
