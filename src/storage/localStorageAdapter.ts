@@ -11,6 +11,7 @@ import {
 import {
   deleteWorkflowTemplate,
   listWorkflowTemplates,
+  replaceWorkflowTemplates,
   saveWorkflowTemplate,
 } from './localTemplates'
 import { clearCurrentWorkflow, loadCurrentWorkflow, saveCurrentWorkflow } from './localWorkflowState'
@@ -38,6 +39,10 @@ export const localStorageAdapter: IStorageAdapter = {
 
   saveTemplate(input) {
     return saveWorkflowTemplate(input)
+  },
+
+  replaceTemplates(templates) {
+    return replaceWorkflowTemplates(templates)
   },
 
   deleteTemplate(id) {

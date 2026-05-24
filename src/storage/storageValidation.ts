@@ -25,6 +25,15 @@ const KEY_LABELS: Record<string, string> = {
   [STORAGE_KEYS.APP_SETTINGS]: 'アプリ設定',
 }
 
+const KEY_FORMATS: Record<string, 'json' | 'plain-string'> = {
+  [STORAGE_KEYS.CURRENT_WORKFLOW]: 'json',
+  [STORAGE_KEYS.TEMPLATES]: 'json',
+  [STORAGE_KEYS.SNAPSHOTS]: 'json',
+  [STORAGE_KEYS.CANVAS_MODE]: 'plain-string',
+  [STORAGE_KEYS.REACT_FLOW_POSITIONS]: 'json',
+  [STORAGE_KEYS.APP_SETTINGS]: 'json',
+}
+
 function isLocalStorageAvailable(): boolean {
   try {
     const testKey = '__aws_test__'
@@ -44,14 +53,16 @@ function checkEntry(key: string): StorageEntryHealth {
       return { key, label, present: false, sizeBytes: 0, valid: true }
     }
     const sizeBytes = new TextEncoder().encode(raw).length
-    JSON.parse(raw)
+    if ((KEY_FORMATS[key] ?? 'json') === 'json') {
+      JSON.parse(raw)
+    }
     return { key, label, present: true, sizeBytes, valid: true }
   } catch (e) {
     return {
       key,
       label,
       present: true,
-      sizeBytes: 0,
+      sizeBytes: new TextEncoder().encode(window.localStorage.getItem(key) ?? '').length,
       valid: false,
       error: e instanceof Error ? e.message : '解析エラー',
     }

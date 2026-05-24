@@ -107,17 +107,91 @@ Last updated: 2026-05-25
 
 ### Verification
 
+- `npm run typecheck`: pass
 - `npm run build`: pass
 - `npm run lint`: pass
 - Browser QA: app launch pass
 - Browser QA: Storage tab and storage health pass
-- Browser QA: Export Current Workflow button path pass
-- Browser QA: Export Full Bundle button path pass
-- Browser QA: Import valid/invalid bundle file picker not fully automated in the in-app browser; UI route and validation implementation are present
 - Browser QA: Connector readiness snapshot pass
 - Browser QA: Connector roadmap pass
 - Browser QA: Run All pass
 - Browser QA: console errors none observed
+
+### PR #20 review fix after PR #21 merge
+
+- PR #21 `docs/source-specs-goal-plan-v2` is already merged into `main`.
+- PR #20 branch `feature/storage-adapter-and-real-connector-design` is rebased on latest `main` and remained clean before this fix pass.
+- Scope remained inside M17-M20 hardening only. No Tauri, SQLite, Zustand, real API, credential storage, or Source of Truth redesign work was added.
+
+#### Fixed review findings
+
+- `src/domain/importValidation.ts`
+  - Removed unsafe shallow `Workflow` casting.
+  - Validates `workflow` through `validateWorkflowImport(...)`.
+  - Rejects malformed template entries and duplicate template ids.
+  - Normalizes and validates optional `settings` safely.
+- `src/storage/storageValidation.ts`
+  - Distinguishes JSON-backed keys from plain string keys.
+  - Treats `agent-workflow-studio:canvas-mode` as valid plain text instead of corrupted JSON.
+  - Reports corruption only for actually broken JSON entries.
+- `src/components/AppShell.tsx`
+  - Replaced direct template save/list/delete calls with `storageAdapter` entry points.
+  - Full bundle import now restores `settings` and replaces template storage intentionally.
+  - Workflow-only bundle import keeps merge-by-id behavior for templates.
+  - BottomMonitor active tab and canvas mode persistence now flow through saved settings.
+- `src/components/ImportExportPanel.tsx`
+  - Full bundle export now includes `settings`.
+  - Import preview now explains merge vs replace behavior explicitly.
+  - Full bundle import path passes `settings` through to the app shell.
+- `src/components/BottomMonitor.tsx`
+  - Reads persisted active tab from settings and forwards settings into full bundle export.
+- `src/domain/connectorReadiness.ts`
+  - Mock-only connectors are now reported as `mock` instead of `not-configured`.
+
+#### Validation detail
+
+- `npm run typecheck`: pass
+- `npm run build`: pass
+- `npm run lint`: pass
+- Module-level validation:
+  - valid full bundle import: pass (`settings` restored as `react-flow` / `Roadmap`)
+  - malformed workflow import: rejected safely
+  - malformed template entry import: rejected safely
+  - duplicate template id import: rejected safely
+  - storage health with plain string canvas mode: pass
+  - storage health with corrupted workflow JSON only: correctly flags only the workflow key
+  - connector readiness: `human-review` and `local-mock` now report `mock`
+
+#### Browser QA detail
+
+- Dev server: `http://127.0.0.1:4174/`
+- Initial workflow visible: pass (`有効な接続 13 件`)
+- Storage health panel: pass (`.storage-boundary-panel` visible)
+- Export Current Workflow button: visible and reachable
+- Export Full Bundle button: visible and reachable
+- Active monitor tab persistence: pass (`Roadmap` stayed active after reload)
+- Canvas mode persistence: pass (`React Flow` stayed active after reload)
+- Connector readiness panel: pass (7 readiness cards shown)
+- Connector roadmap panel: pass (8 roadmap rows shown)
+- Agent connector panel: pass (6 mock connector cards shown)
+- Run All: pass (33 log entries observed after run)
+- Console errors: none
+- In-app browser limitation:
+  - Download events are unsupported, so Browser QA could not directly capture exported files.
+  - File picker automation is unsupported, so Browser QA could not drive bundle file selection.
+  - Import/export content safety was verified through direct module execution against the same validation code paths.
+
+#### Remaining risks
+
+- `handleImportBundle(...)` replace/merge policy lives inside `AppShell.tsx` rather than a shared import service.
+- Full bundle import restores app settings and template storage, but snapshots/run-history remain outside bundle scope.
+- Browser QA still depends on supplemental module checks for file-based import/export because the in-app browser cannot automate downloads or file pickers.
+
+#### Next recommended work
+
+1. Extract bundle import policy into a small domain/storage service so merge/replace rules stop living in `AppShell.tsx`.
+2. Add a lightweight automated import/export regression script around `validateImportBundle(...)` and storage health checks.
+3. Keep Phase 1 domain model hardening separate from this PR unless a new review finding forces that escalation.
 
 ### Not Included
 

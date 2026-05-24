@@ -21,6 +21,7 @@ type ImportExportPanelProps = {
   onImportBundle: (bundle: {
     workflow: Workflow
     templates: SavedWorkflowTemplate[]
+    settings?: AppSettings
   }) => void
 }
 
@@ -35,6 +36,7 @@ export function ImportExportPanel({
   const [pendingImport, setPendingImport] = useState<{
     workflow: Workflow
     templates: SavedWorkflowTemplate[]
+    settings?: AppSettings
     warnings: string[]
   } | null>(null)
 
@@ -70,6 +72,7 @@ export function ImportExportPanel({
     setPendingImport({
       workflow: result.bundle.workflow,
       templates: result.bundle.templates,
+      settings: result.bundle.settings,
       warnings: result.warnings,
     })
   }
@@ -79,6 +82,7 @@ export function ImportExportPanel({
     onImportBundle({
       workflow: pendingImport.workflow,
       templates: pendingImport.templates,
+      settings: pendingImport.settings,
     })
     setImportResult({
       status: 'success',
@@ -108,7 +112,7 @@ export function ImportExportPanel({
             現在のワークフローを保存
           </button>
           <button type="button" className="icon-button" onClick={handleExportFullBundle}>
-            フルバンドルを保存（ワークフロー＋テンプレート）
+            フルバンドルを保存（ワークフロー＋テンプレート＋設定）
           </button>
         </div>
 
@@ -135,7 +139,13 @@ export function ImportExportPanel({
           <p>
             ワークフロー: <strong>{pendingImport.workflow.name}</strong>
           </p>
-          <p>テンプレート: {pendingImport.templates.length} 件</p>
+          <p>
+            テンプレート: {pendingImport.templates.length} 件
+            {pendingImport.settings ? '（このバンドルで置き換えます）' : '（現在の保存内容を維持します）'}
+          </p>
+          <p>
+            設定: {pendingImport.settings ? '復元します' : 'このバンドルには含まれていません'}
+          </p>
           {pendingImport.warnings.length > 0 ? (
             <ul className="import-warnings">
               {pendingImport.warnings.map((w, i) => (
@@ -145,7 +155,9 @@ export function ImportExportPanel({
               ))}
             </ul>
           ) : null}
-          <p className="muted">現在のワークフローは置き換えられます。よろしいですか？</p>
+          <p className="muted">
+            現在のワークフローは置き換えられます。settings を含むフルバンドルでは、テンプレートとアプリ設定もこのバンドルの内容で復元します。
+          </p>
           <div className="import-confirm-actions">
             <button type="button" className="primary-button" onClick={confirmImport}>
               インポートする

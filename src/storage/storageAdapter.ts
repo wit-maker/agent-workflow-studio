@@ -1,4 +1,4 @@
-import type { Workflow, WorkflowTemplateMetadata } from '../domain/workflow'
+import type { Workflow } from '../domain/workflow'
 import type { AppSettings } from './localAppSettings'
 import type { SavedReactFlowPositions } from './localCanvasState'
 import { localStorageAdapter } from './localStorageAdapter'
@@ -22,7 +22,8 @@ export interface IStorageAdapter {
   loadWorkflow(): Workflow | null
   saveWorkflow(workflow: Workflow): void
   loadTemplates(): SavedWorkflowTemplate[]
-  saveTemplate(input: SaveWorkflowTemplateInput & { metadata: WorkflowTemplateMetadata }): SavedWorkflowTemplate
+  saveTemplate(input: SaveWorkflowTemplateInput): SavedWorkflowTemplate
+  replaceTemplates(templates: SavedWorkflowTemplate[]): SavedWorkflowTemplate[]
   deleteTemplate(id: string): SavedWorkflowTemplate[]
   loadSettings(): AppSettings
   saveSettings(settings: Partial<AppSettings>): void

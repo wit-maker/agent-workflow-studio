@@ -147,9 +147,12 @@ export const KNOWN_CONNECTOR_PROFILES: ConnectorProfile[] = [
 // Returns mock readiness for all connectors (real connections not yet implemented).
 export function getAllConnectorReadiness(): ConnectorReadiness[] {
   return KNOWN_CONNECTOR_PROFILES.map((profile) =>
-    buildNotConfiguredReadiness(profile.connectorId, [
-      profile.requiresApiKey ? 'APIキーが設定されていません。' : '',
-      profile.requiresLocalCli ? 'ローカルCLIがインストールされていません。' : '',
-    ].filter(Boolean)),
+    !profile.requiresApiKey && !profile.requiresLocalCli && !profile.requiresBrowserAutomation
+      ? buildMockReadiness(profile.connectorId)
+      : buildNotConfiguredReadiness(profile.connectorId, [
+          profile.requiresApiKey ? 'APIキーが設定されていません。' : '',
+          profile.requiresLocalCli ? 'ローカルCLIがインストールされていません。' : '',
+          profile.requiresBrowserAutomation ? 'ブラウザ自動化の接続準備が必要です。' : '',
+        ].filter(Boolean)),
   )
 }

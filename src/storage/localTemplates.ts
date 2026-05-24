@@ -1,5 +1,6 @@
 import { createTemplateMetadata, normalizeTemplateMetadata } from '../domain/templateMetadata'
 import type { Workflow, WorkflowTemplateMetadata } from '../domain/workflow'
+import { validateWorkflowImport } from '../state/workflowSelectors'
 
 const TEMPLATE_STORAGE_KEY = 'agent-workflow-studio.templates.v1'
 
@@ -34,12 +35,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function normalizeTemplate(value: unknown): SavedWorkflowTemplate | null {
+export function normalizeSavedWorkflowTemplate(value: unknown): SavedWorkflowTemplate | null {
   if (!isRecord(value) || !isRecord(value.snapshot)) {
     return null
   }
 
-  const snapshot = cloneWorkflow(value.snapshot as Workflow)
+  const snapshotResult = validateWorkflowImport(value.snapshot)
+  if (!snapshotResult.valid || !snapshotResult.workflow) {
+    return null
+  }
+
+  const snapshot = cloneWorkflow(snapshotResult.workflow)
   const name =
     typeof value.name === 'string' && value.name.trim().length > 0
       ? value.name.trim()
@@ -135,7 +141,7 @@ function readTemplates(): SavedWorkflowTemplate[] {
     const parsed = JSON.parse(raw) as unknown
     return Array.isArray(parsed)
       ? parsed
-          .map((template) => normalizeTemplate(template))
+          .map((template) => normalizeSavedWorkflowTemplate(template))
           .filter((template): template is SavedWorkflowTemplate => template !== null)
       : []
   } catch {
@@ -189,6 +195,15 @@ export function saveWorkflowTemplate(
 
 export function listWorkflowTemplates(): SavedWorkflowTemplate[] {
   return readTemplates()
+}
+
+export function replaceWorkflowTemplates(templates: SavedWorkflowTemplate[]): SavedWorkflowTemplate[] {
+  const normalized = templates
+    .map((template) => normalizeSavedWorkflowTemplate(template))
+    .filter((template): template is SavedWorkflowTemplate => template !== null)
+
+  writeTemplates(normalized)
+  return normalized
 }
 
 export function loadWorkflowTemplate(id: string): Workflow | null {
