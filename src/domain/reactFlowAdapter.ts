@@ -141,6 +141,13 @@ export function scaleNodePosition(pos: { x: number; y: number }): { x: number; y
   return { x: pos.x * RF_X_SCALE, y: pos.y * RF_Y_SCALE }
 }
 
+export function unscaleNodePosition(pos: { x: number; y: number }): { x: number; y: number } {
+  return {
+    x: Math.round(pos.x / RF_X_SCALE),
+    y: Math.round(pos.y / RF_Y_SCALE),
+  }
+}
+
 export function toReactFlowNodes(
   workflow: Workflow,
   positions: NodePositionMap = {},

@@ -93,3 +93,4 @@ Human Review も現時点ではローカル状態だけで扱うモック導線�
 3. テンプレート version / metadata 編集を追加する
 4. UIモデルが安定した後に Tauri 2 と永続ローカル保存を再評価する
 5. 必要になった場合のみ共有・同期系ストレージを検討する
+M8 local run engine notes are in `docs/implementation/LOCAL_RUN_ENGINE_M8.md`.

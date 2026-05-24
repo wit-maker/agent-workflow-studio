@@ -7,6 +7,7 @@ import {
   type Connection,
   type Edge,
   type FinalConnectionState,
+  type Node,
   type NodeChange,
   type ReactFlowInstance,
   type XYPosition,
@@ -24,12 +25,12 @@ import {
   toReactFlowEdges,
   toReactFlowNodes,
   toWorkflowConnectionDraft,
+  unscaleNodePosition,
   type ReactFlowWorkflowNode,
 } from '../domain/reactFlowAdapter'
 import type { ConnectionKind, Workflow } from '../domain/workflow'
 import {
   clearReactFlowPositions,
-  readReactFlowPositions,
   writeReactFlowPositions,
   type SavedReactFlowPositions,
 } from '../storage/localCanvasState'
@@ -62,6 +63,8 @@ type ReactFlowCanvasProps = {
     kind: ConnectionKind
   }) => CreateConnectionResult
   onDeleteConnection: (connectionId: string) => void
+  onDeleteNode: (nodeId: string) => void
+  onMoveNode: (nodeId: string, position: { x: number; y: number }) => void
   onResetPositions?: () => void
 }
 
@@ -170,11 +173,13 @@ export function ReactFlowCanvas({
   onSelectNode,
   onCreateConnection,
   onDeleteConnection,
+  onDeleteNode,
+  onMoveNode,
   onResetPositions,
 }: ReactFlowCanvasProps) {
   const invalidConnections = connectionValidation.filter((result) => !result.valid)
   const [nodes, setNodes] = useState<ReactFlowWorkflowNode[]>(() =>
-    buildFlowNodes(workflow, readReactFlowPositions(), selectedNodeId),
+    buildFlowNodes(workflow, {}, selectedNodeId),
   )
   const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null)
   const [connectionNotice, setConnectionNotice] = useState<CanvasNotice | null>(null)
@@ -187,7 +192,7 @@ export function ReactFlowCanvas({
     workflow.connections.find((connection) => connection.id === selectedConnectionId)?.id ?? null
 
   useEffect(() => {
-    const next = buildFlowNodes(workflow, readReactFlowPositions(), selectedNodeId)
+    const next = buildFlowNodes(workflow, {}, selectedNodeId)
     nodesRef.current = next
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setNodes(next)
@@ -293,6 +298,13 @@ export function ReactFlowCanvas({
       writeReactFlowPositions(pickWorkflowPositions(next))
     }
   }, [])
+
+  const handleNodeDragStop = useCallback(
+    (_: React.MouseEvent, node: Node) => {
+      onMoveNode(node.id, unscaleNodePosition(node.position))
+    },
+    [onMoveNode],
+  )
 
   const handleEdgeClick = useCallback(
     (_: React.MouseEvent, edge: Edge) => {
@@ -424,10 +436,15 @@ export function ReactFlowCanvas({
       return
     }
 
+    if (selectedNodeId) {
+      onDeleteNode(selectedNodeId)
+      return
+    }
+
     setDeleteNotice(
       'ノード削除は現在未対応です。部品削除は今後のPhaseで実装します。接続は詳細カードから削除できます。',
     )
-  }, [effectiveSelectedConnectionId, handleDeleteSelectedConnection])
+  }, [effectiveSelectedConnectionId, handleDeleteSelectedConnection, onDeleteNode, selectedNodeId])
 
   const handleResetPositions = useCallback(() => {
     clearReactFlowPositions()
@@ -442,6 +459,21 @@ export function ReactFlowCanvas({
       reactFlowInstance?.fitView({ padding: 0.12, duration: 250 })
     })
   }, [onResetPositions, reactFlowInstance, selectedNodeId, workflow])
+
+  const handleNudgeSelectedNode = useCallback(
+    (delta: { x: number; y: number }) => {
+      const selectedNode = workflow.nodes.find((node) => node.id === selectedNodeId)
+      if (!selectedNode) {
+        return
+      }
+
+      onMoveNode(selectedNode.id, {
+        x: selectedNode.position.x + delta.x,
+        y: selectedNode.position.y + delta.y,
+      })
+    },
+    [onMoveNode, selectedNodeId, workflow.nodes],
+  )
 
   return (
     <main
@@ -462,6 +494,22 @@ export function ReactFlowCanvas({
         </button>
         <button type="button" className="icon-button" onClick={handleResetPositions}>
           位置をリセット
+        </button>
+        <button
+          type="button"
+          className="icon-button"
+          onClick={() => handleNudgeSelectedNode({ x: 40, y: 0 })}
+          disabled={!selectedNodeId}
+        >
+          Move right
+        </button>
+        <button
+          type="button"
+          className="icon-button"
+          onClick={() => handleNudgeSelectedNode({ x: 0, y: 40 })}
+          disabled={!selectedNodeId}
+        >
+          Move down
         </button>
         <select
           className="canvas-toolbar-select"
@@ -499,6 +547,7 @@ export function ReactFlowCanvas({
             fitView
             onInit={setReactFlowInstance}
             onNodesChange={handleNodesChange}
+            onNodeDragStop={handleNodeDragStop}
             onConnectStart={handleConnectStart}
             onConnect={handleConnect}
             onConnectEnd={handleConnectEnd}

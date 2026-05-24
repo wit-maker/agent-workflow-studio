@@ -4,8 +4,15 @@ import { createEmptyExecutionGraph } from '../domain/executionGraph'
 import type { Workflow } from '../domain/workflow'
 import type { WorkflowAction } from './workflowActions'
 
+export type WorkflowHistorySnapshot = {
+  workflow: Workflow
+  selectedNodeId: string
+}
+
 export type WorkflowState = {
   workflow: Workflow
+  past: WorkflowHistorySnapshot[]
+  future: WorkflowHistorySnapshot[]
   executionGraph: ExecutionGraph | null
   selectedNodeId: string
   isRunning: boolean
@@ -16,6 +23,50 @@ export type WorkflowState = {
   rebuildRequests: RebuildRequest[]
   artifactVersions: ArtifactVersion[]
   selectedArtifactVersionId?: string
+}
+
+const maxHistoryDepth = 50
+
+function createHistorySnapshot(state: WorkflowState): WorkflowHistorySnapshot {
+  return {
+    workflow: state.workflow,
+    selectedNodeId: state.selectedNodeId,
+  }
+}
+
+function restoreEditableWorkflow(current: Workflow, snapshot: Workflow): Workflow {
+  return {
+    ...current,
+    id: snapshot.id,
+    schemaVersion: snapshot.schemaVersion,
+    name: snapshot.name,
+    description: snapshot.description,
+    version: snapshot.version,
+    nodes: snapshot.nodes,
+    connections: snapshot.connections,
+    createdAt: snapshot.createdAt,
+    updatedAt: snapshot.updatedAt,
+  }
+}
+
+function withHistory(
+  state: WorkflowState,
+  workflow: Workflow,
+  selectedNodeId = state.selectedNodeId,
+): WorkflowState {
+  return {
+    ...state,
+    workflow,
+    selectedNodeId,
+    past: [...state.past, createHistorySnapshot(state)].slice(-maxHistoryDepth),
+    future: [],
+  }
+}
+
+function getSafeSelectedNodeId(workflow: Workflow, selectedNodeId: string): string {
+  return workflow.nodes.some((node) => node.id === selectedNodeId)
+    ? selectedNodeId
+    : (workflow.nodes[0]?.id ?? '')
 }
 
 function markNodeStatus(
@@ -73,6 +124,8 @@ function appendUnique(values: string[], nextValue: string): string[] {
 export function createWorkflowState(workflow: Workflow): WorkflowState {
   return {
     workflow,
+    past: [],
+    future: [],
     executionGraph: null,
     selectedNodeId: workflow.nodes[0]?.id ?? '',
     isRunning: false,
@@ -94,10 +147,64 @@ export function workflowReducer(
     case 'selectNode':
       return { ...state, selectedNodeId: action.nodeId }
 
+    case 'addNode':
+      return withHistory(
+        state,
+        {
+          ...state.workflow,
+          nodes: [...state.workflow.nodes, action.node],
+          updatedAt: new Date().toISOString(),
+        },
+        action.node.id,
+      )
+
+    case 'deleteNode': {
+      const nextNodes = state.workflow.nodes.filter((node) => node.id !== action.nodeId)
+      const nextSelectedNodeId =
+        state.selectedNodeId === action.nodeId
+          ? (nextNodes[0]?.id ?? '')
+          : state.selectedNodeId
+
+      return withHistory(
+        state,
+        {
+          ...state.workflow,
+          nodes: nextNodes,
+          connections: state.workflow.connections.filter(
+            (connection) =>
+              connection.sourceNodeId !== action.nodeId &&
+              connection.targetNodeId !== action.nodeId,
+          ),
+          updatedAt: new Date().toISOString(),
+        },
+        nextSelectedNodeId,
+      )
+    }
+
+    case 'updateNodePositions': {
+      const changed = state.workflow.nodes.some((node) => {
+        const nextPosition = action.positions[node.id]
+        return (
+          nextPosition &&
+          (nextPosition.x !== node.position.x || nextPosition.y !== node.position.y)
+        )
+      })
+
+      if (!changed) {
+        return state
+      }
+
+      return withHistory(state, {
+        ...state.workflow,
+        nodes: state.workflow.nodes.map((node) =>
+          action.positions[node.id] ? { ...node, position: action.positions[node.id] } : node,
+        ),
+        updatedAt: new Date().toISOString(),
+      })
+    }
+
     case 'updateNodeConfig':
-      return {
-        ...state,
-        workflow: {
+      return withHistory(state, {
           ...state.workflow,
           nodes: state.workflow.nodes.map((node) =>
             node.id === action.nodeId
@@ -111,32 +218,26 @@ export function workflowReducer(
               : node,
           ),
           updatedAt: new Date().toISOString(),
-        },
-      }
+        })
 
     case 'createConnection':
-      return {
-        ...state,
-        workflow: {
+      return withHistory(state, {
           ...state.workflow,
           connections: [...state.workflow.connections, action.connection],
           updatedAt: new Date().toISOString(),
-        },
-      }
+        })
 
     case 'deleteConnection':
-      return {
-        ...state,
-        workflow: {
+      return withHistory(state, {
           ...state.workflow,
           connections: state.workflow.connections.filter(
             (connection) => connection.id !== action.connectionId,
           ),
           updatedAt: new Date().toISOString(),
-        },
-      }
+        })
 
-    case 'runWorkflowStart':
+    case 'runWorkflowStart': {
+      const queuedNodeIds = action.nodeIds ? new Set(action.nodeIds) : null
       return {
         ...state,
         isRunning: true,
@@ -147,7 +248,10 @@ export function workflowReducer(
         workflow: {
           ...state.workflow,
           status: 'running',
-          nodes: state.workflow.nodes.map((node) => ({ ...node, status: 'queued' })),
+          nodes: state.workflow.nodes.map((node) => ({
+            ...node,
+            status: !queuedNodeIds || queuedNodeIds.has(node.id) ? 'queued' : 'idle',
+          })),
           connections: state.workflow.connections.map((connection) => ({
             ...connection,
             status: 'inactive',
@@ -162,6 +266,7 @@ export function workflowReducer(
           updatedAt: new Date().toISOString(),
         },
       }
+    }
 
     case 'clearExecutionGraph':
       return {
@@ -198,7 +303,8 @@ export function workflowReducer(
           ...markNodeStatus(state.workflow, action.nodeId, status),
           logs: [...state.workflow.logs, action.log],
           connections: state.workflow.connections.map((connection) =>
-            connection.sourceNodeId === action.nodeId || connection.targetNodeId === action.nodeId
+            status !== 'skipped' &&
+            (connection.sourceNodeId === action.nodeId || connection.targetNodeId === action.nodeId)
               ? { ...connection, status: 'success' }
               : connection,
           ),
@@ -470,6 +576,8 @@ export function workflowReducer(
     case 'importWorkflow':
       return {
         ...state,
+        past: [...state.past, createHistorySnapshot(state)].slice(-maxHistoryDepth),
+        future: [],
         workflow: action.workflow,
         executionGraph: null,
         selectedNodeId: action.workflow.nodes[0]?.id ?? '',
@@ -483,7 +591,10 @@ export function workflowReducer(
       }
 
     case 'resetWorkflow':
-      return createWorkflowState(action.workflow)
+      return {
+        ...createWorkflowState(action.workflow),
+        past: [...state.past, createHistorySnapshot(state)].slice(-maxHistoryDepth),
+      }
 
     case 'setRunning':
       return { ...state, isRunning: action.isRunning }
@@ -582,6 +693,42 @@ export function workflowReducer(
         evaluation: undefined,
         humanReview: undefined,
       }
+
+    case 'undo': {
+      const previous = state.past[state.past.length - 1]
+      if (!previous) {
+        return state
+      }
+
+      const workflow = restoreEditableWorkflow(state.workflow, previous.workflow)
+      return {
+        ...state,
+        workflow,
+        selectedNodeId: getSafeSelectedNodeId(workflow, previous.selectedNodeId),
+        past: state.past.slice(0, -1),
+        future: [createHistorySnapshot(state), ...state.future],
+        executionGraph: null,
+        isRunning: false,
+      }
+    }
+
+    case 'redo': {
+      const next = state.future[0]
+      if (!next) {
+        return state
+      }
+
+      const workflow = restoreEditableWorkflow(state.workflow, next.workflow)
+      return {
+        ...state,
+        workflow,
+        selectedNodeId: getSafeSelectedNodeId(workflow, next.selectedNodeId),
+        past: [...state.past, createHistorySnapshot(state)].slice(-maxHistoryDepth),
+        future: state.future.slice(1),
+        executionGraph: null,
+        isRunning: false,
+      }
+    }
 
     default:
       return state

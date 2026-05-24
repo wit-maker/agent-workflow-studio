@@ -2,6 +2,136 @@
 
 Last updated: 2026-05-24
 
+## M5 Node Add / Delete
+
+- Branch: `feature/workflow-authoring-and-run-engine`
+- Completed:
+  - Added node authoring from `PartsPalette`.
+  - Added collision-safe node id generation and cloned node config/ports/position.
+  - Added selected-node deletion with in-app confirmation.
+  - Deleting a node removes related workflow connections and safely moves selection.
+  - Delete / Backspace now deletes selected nodes; React Flow selected edges still use the existing edge deletion path.
+- Browser QA:
+  - Initial display: 12 nodes.
+  - PartsPalette Add node: 12 -> 13 nodes, added node selected, Inspector updated.
+  - Delete selected node: confirmation panel shown, 13 -> 12 nodes after confirm, app remained stable.
+  - Console runtime errors: none.
+  - Export JSON: not directly downloaded in Codex in-app browser because downloads are unsupported; implementation serializes the updated workflow state used by Canvas/Inspector.
+- build / lint:
+  - `npm run build`: pass
+  - `npm run lint`: pass
+- Not implemented:
+  - Drag-and-drop node creation.
+  - In-canvas node add menu.
+- Next candidates:
+  - M6 Undo / Redo history for add/delete/edit/connect/move/import/reset.
+- Known risks:
+  - PartsPalette currently uses workflow nodes as authoring parts, so newly added nodes also appear as reusable parts.
+  - Native browser downloads are not available in the in-app Browser QA surface.
+
+## M6 Undo / Redo
+
+- Branch: `feature/workflow-authoring-and-run-engine`
+- Completed:
+  - Added edit history with `past` / `future` snapshots in reducer state.
+  - Added Undo / Redo actions and TopBar buttons.
+  - Added Ctrl+Z, Ctrl+Shift+Z, and Ctrl+Y shortcuts outside editable fields.
+  - History covers node add, node delete, node edit, connection add/delete reducer paths, node position updates, import workflow, and reset workflow.
+  - Run logs / metrics / artifacts are kept outside edit-history restoration.
+  - React Flow node movement now updates workflow positions; Inspector also exposes a stable move action for keyboard/browser QA.
+- Browser QA:
+  - Node add: Undo 13 -> 12, Redo 12 -> 13.
+  - Node delete: Undo restored deleted node, Redo deleted again.
+  - Node edit: title edit Undo / Redo restored Inspector and Canvas text.
+  - Node move: Inspector Move selected right changed position, Undo restored position, Redo reapplied position.
+  - Reset workflow: Undo restored pre-reset position state.
+  - Console runtime errors: none.
+- build / lint:
+  - `npm run build`: pass
+  - `npm run lint`: pass
+- Not implemented:
+  - Coalesced drag history entries for long continuous drags.
+  - Dedicated visual history panel.
+- Next candidates:
+  - M7 template save/load/reuse hardening against current workflow collisions.
+- Known risks:
+  - React Flow drag simulation remains unreliable in the Codex in-app browser; movement was verified through the same reducer action via Inspector.
+  - Connection add/delete history is implemented in reducer paths, but full browser manipulation of edge deletion still depends on the existing React Flow edge UI.
+
+## M7 Template Feature
+
+- Branch: `feature/workflow-authoring-and-run-engine`
+- Completed:
+  - Extended template metadata with source workflow/run, metrics summary, and artifact summary.
+  - Template save keeps name, description, tags, category, node count, connection count, createdAt, updatedAt, source workflow, optional source run, metrics, and artifact summary.
+  - Template load now instantiates a new workflow with a new workflow id and collision-safe node/connection ids.
+  - Loaded template nodes reset to idle and connections reset to inactive for reuse.
+  - Template duplicate keeps metadata and creates a new template id.
+  - Existing confirmation flow before destructive template load is retained.
+- Browser QA:
+  - Template save: list count 0 -> 1, metadata/tags visible.
+  - Template duplicate: list count 1 -> 2, copied template selected.
+  - Template load: confirmation box shown, workflow restored with 12 nodes.
+  - Console runtime errors: none.
+- build / lint:
+  - `npm run build`: pass
+  - `npm run lint`: pass
+- Not implemented:
+  - Real file/database template persistence.
+  - Template edit form after save.
+- Next candidates:
+  - M8 local run engine responsibility split and run modes.
+- Known risks:
+  - Template storage remains localStorage-bound.
+  - Browser automation had intermittent coordinate translation failures on repeated template-card clicks after the visibility recovery path; primary save/duplicate/load QA passed before that issue.
+
+## M8 Run Engine Strengthening
+
+- Branch: `feature/workflow-authoring-and-run-engine`
+- Completed:
+  - Added `src/domain/runPlanner.ts`, `src/domain/nodeExecutors.ts`, and `src/domain/runEngine.ts`.
+  - Added Run All, Run Selected, Run From Selected, and Dry Run buttons.
+  - Run planner selects target nodes and produces a local execution queue.
+  - Mock node executor handles PASS / REVIEW / FAIL for check nodes and skipped status for dry runs.
+  - Run engine updates artifact, metrics, logs, retry candidates, and review/failure statuses without real API calls.
+  - Added implementation note at `docs/implementation/LOCAL_RUN_ENGINE_M8.md`.
+- Browser QA:
+  - Run All FAIL: failed status, retry candidate, failed check node, artifact updated.
+  - Run All REVIEW: review_required status, review pending artifact, no console errors.
+  - Run Selected: selected node-only PASS run.
+  - Run From Selected: verified in Browser QA before final recheck; mode appears in artifact.
+  - Dry Run: validateOnly yes, skipped local execution, artifact/metrics updated.
+  - Metrics tab: tokens, cost, latencyMs, successRate, retryCount, bottleneck updated.
+  - Output tab: artifact summary updated and explicitly says no real API calls/adapters.
+- build / lint:
+  - `npm run build`: pass
+  - `npm run lint`: pass
+- Not implemented:
+  - Real adapter/API calls.
+  - Persistent queue storage or worker-based async engine.
+  - Adapter plugin registry.
+- Next candidates:
+  - M9-style persistence strategy review for local workflows/templates/runs.
+- Known risks:
+  - AppShell still contains legacy run helper code behind an early return; future cleanup should remove it once run-engine behavior settles.
+  - Dry run currently marks planned nodes as skipped after validating/planning rather than running a separate validation report object.
+
+## PR #17 Review Fixes
+
+- Branch: `feature/workflow-authoring-and-run-engine`
+- Completed:
+  - Fix 1: `runPlannedWorkflow` execution route regression — 前ノード→現ノードの遷移 edge を常に `main` route として記録するよう修正。`decision.route !== 'main'` の場合のみ、現ノード起点の別 route（review/error）を追加登録。
+  - Fix 2: keyboard shortcut `useEffect` に dependency array `[selectedNodeId, workflow.nodes, dispatch]` を追加。stale closure を防ぐため `handleDeleteNode` の呼び出しもインライン化。
+  - Fix 3: `runMockWorkflow` の `return` 後の unreachable dead code を全削除。`runPlannedWorkflow` を正規実装として確定。`buildArtifactContent` / `buildMetrics` は他のライブコードで使用中につき保持。
+  - Fix 4: `ReactFlowCanvas` の workflow change effect から `writeReactFlowPositions` 呼び出しを削除。位置保存の責務は `handleNodesChange`（ドラッグ中）と `handleMoveNode`（ドラッグ確定）が担う。
+  - Fix 5: `runEngine.ts` の `successRate` magic numbers を `SUCCESS_RATE_BY_OUTCOME` 定数（export）に置き換え。`AppShell.tsx` の `buildMetrics` 内でも同定数を import して使用。
+- build / lint:
+  - `npm run build`: pass (490.16 kB / gzip 148.09 kB)
+  - `npm run lint`: pass (0 errors, 0 warnings)
+- Browser QA:
+  - アプリ起動: 正常（12 ノード初期表示、エラーなし）
+  - console runtime errors: リロード後なし（HMR遷移時の useEffect hook shape 警告のみで、フル再起動後は消滅）
+
 ## Current Phase
 
 feature/workflow-foundation-milestones — M0〜M4 連続実装中。

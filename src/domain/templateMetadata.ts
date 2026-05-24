@@ -73,12 +73,28 @@ export function createTemplateMetadata(
     category: normalizeCategory(input.category),
     nodeCount: input.workflow.nodes.length,
     connectionCount: input.workflow.connections.length,
+    sourceWorkflowId: input.workflow.id,
+    sourceRunId: input.createdFromRunId?.trim() || undefined,
     requiredPortCount: portSummary.requiredPortCount,
     unconnectedRequiredPortCount: portSummary.unconnectedRequiredPortCount,
     lastEvaluationStatus: input.lastEvaluationStatus?.trim() || undefined,
     lastEvaluationScore: normalizeOptionalNumber(input.lastEvaluationScore),
     artifactVersionCount: normalizeOptionalNumber(input.artifactVersionCount),
     createdFromRunId: input.createdFromRunId?.trim() || undefined,
+    metricsSummary: {
+      tokens: input.workflow.metrics.tokens,
+      cost: input.workflow.metrics.cost,
+      latencyMs: input.workflow.metrics.latencyMs,
+      successRate: input.workflow.metrics.successRate,
+      retryCount: input.workflow.metrics.retryCount,
+      bottleneckNodeId: input.workflow.metrics.bottleneckNodeId,
+    },
+    artifactSummary: {
+      title: input.workflow.artifact.title,
+      format: input.workflow.artifact.format,
+      status: input.workflow.artifact.status,
+      contentPreview: input.workflow.artifact.content.slice(0, 180),
+    },
   }
 }
 

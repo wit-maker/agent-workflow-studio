@@ -3,12 +3,16 @@ import { calculateBottleneck } from '../domain/connectionRules'
 import { findPort, getOutputPorts } from '../domain/portRules'
 import type { ArtifactVersion, ReviewDecision } from '../domain/evaluation'
 import { runLocalEvaluation } from '../domain/evaluationRules'
+import { buildRunArtifact, buildRunMetrics, SUCCESS_RATE_BY_OUTCOME } from '../domain/runEngine'
+import { executeMockNode } from '../domain/nodeExecutors'
+import { planWorkflowRun, type RunMode } from '../domain/runPlanner'
 import type {
   ExecutionRoute,
   ExecutionRouteKind,
   ExecutionStep,
 } from '../domain/executionGraph'
 import { createSampleWorkflow } from '../domain/sampleWorkflow'
+import { createNodeFromPart } from '../domain/workflowAuthoring'
 import type {
   AgentRole,
   ConnectionKind,
@@ -34,9 +38,12 @@ import {
 } from '../storage/localWorkflowHistory'
 import {
   readCanvasModePreference,
+  readReactFlowPositions,
+  writeReactFlowPositions,
   writeCanvasModePreference,
   type SavedCanvasMode,
 } from '../storage/localCanvasState'
+import { scaleNodePosition, unscaleNodePosition } from '../domain/reactFlowAdapter'
 import { createWorkflowState, workflowReducer } from '../state/workflowReducer'
 import {
   selectSelectedNode,
@@ -60,6 +67,20 @@ function toCanvasMode(savedMode: SavedCanvasMode | null): CanvasMode {
 
 function toSavedCanvasMode(mode: CanvasMode): SavedCanvasMode {
   return mode === 'reactFlow' ? 'react-flow' : 'standard'
+}
+
+function createInitialWorkflow() {
+  const workflow = createSampleWorkflow()
+  const savedPositions = readReactFlowPositions()
+
+  return {
+    ...workflow,
+    nodes: workflow.nodes.map((node) =>
+      savedPositions[node.id]
+        ? { ...node, position: unscaleNodePosition(savedPositions[node.id]) }
+        : node,
+    ),
+  }
 }
 
 function makeLog(
@@ -158,10 +179,25 @@ function buildArtifactContent(options: {
   }
 }
 
+function isEditableElement(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false
+  }
+
+  const tagName = target.tagName
+  return (
+    target.isContentEditable ||
+    tagName === 'INPUT' ||
+    tagName === 'TEXTAREA' ||
+    tagName === 'SELECT' ||
+    target.closest('[contenteditable="true"]') !== null
+  )
+}
+
 export function AppShell() {
   const [state, dispatch] = useReducer(
     workflowReducer,
-    createWorkflowState(createSampleWorkflow()),
+    createWorkflowState(createInitialWorkflow()),
   )
   const [templates, setTemplates] = useState<SavedWorkflowTemplate[]>(() =>
     listWorkflowTemplates(),
@@ -176,6 +212,7 @@ export function AppShell() {
   const [canvasMode, setCanvasMode] = useState<CanvasMode>(() =>
     toCanvasMode(readCanvasModePreference()),
   )
+  const [pendingDeleteNodeId, setPendingDeleteNodeId] = useState<string | null>(null)
   const artifactVersionCountRef = useRef(0)
   const cancelledRebuildIdsRef = useRef<Set<string>>(new Set())
   const {
@@ -191,10 +228,27 @@ export function AppShell() {
     artifactVersions,
     selectedArtifactVersionId,
   } = state
+  const canUndo = state.past.length > 0
+  const canRedo = state.future.length > 0
 
   const selectedNode = useMemo(
     () => selectSelectedNode(workflow, selectedNodeId),
     [selectedNodeId, workflow],
+  )
+  const pendingDeleteNode = useMemo(
+    () => workflow.nodes.find((node) => node.id === pendingDeleteNodeId),
+    [pendingDeleteNodeId, workflow.nodes],
+  )
+  const pendingDeleteConnectionCount = useMemo(
+    () =>
+      pendingDeleteNodeId
+        ? workflow.connections.filter(
+            (connection) =>
+              connection.sourceNodeId === pendingDeleteNodeId ||
+              connection.targetNodeId === pendingDeleteNodeId,
+          ).length
+        : 0,
+    [pendingDeleteNodeId, workflow.connections],
   )
   const connectionValidation = useMemo(() => validateConnections(workflow), [workflow])
 
@@ -207,6 +261,54 @@ export function AppShell() {
     const timer = window.setTimeout(() => setImportSuccessMessage(null), 4000)
     return () => window.clearTimeout(timer)
   }, [importSuccessMessage])
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.defaultPrevented) {
+        return
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+        if (isEditableElement(event.target) || isRunning) {
+          return
+        }
+
+        event.preventDefault()
+        dispatch({ type: event.shiftKey ? 'redo' : 'undo' })
+        return
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') {
+        if (isEditableElement(event.target) || isRunning) {
+          return
+        }
+
+        event.preventDefault()
+        dispatch({ type: 'redo' })
+        return
+      }
+
+      if (event.key !== 'Delete' && event.key !== 'Backspace') {
+        return
+      }
+
+      if (isEditableElement(event.target)) {
+        return
+      }
+
+      if (!selectedNodeId) {
+        return
+      }
+
+      event.preventDefault()
+      if (workflow.nodes.some((node) => node.id === selectedNodeId)) {
+        setPendingDeleteNodeId(selectedNodeId)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedNodeId, workflow.nodes, dispatch, isRunning])
 
   function calculateOutcomeByRunCount(): 'PASS' | 'REVIEW' | 'FAIL' {
     const currentCount = runCountRef.current
@@ -244,7 +346,7 @@ export function AppShell() {
         (total, node) => total + getStepDuration(node),
         0,
       ),
-      successRate: outcome === 'FAIL' ? 54 : outcome === 'REVIEW' ? 78 : 100,
+      successRate: SUCCESS_RATE_BY_OUTCOME[outcome] ?? SUCCESS_RATE_BY_OUTCOME.PASS,
       queueCount: Math.max(workflow.nodes.length - executedNodes.length, 0),
       retryCount,
       bottleneckNodeId: bottleneck?.id ?? null,
@@ -257,7 +359,7 @@ export function AppShell() {
     route: ExecutionRouteKind
     attempt?: number
     retryOfStepId?: string
-    result: 'success' | 'review_required' | 'failed'
+    result: 'success' | 'review_required' | 'failed' | 'skipped'
   }): Promise<ExecutionStep> {
     const durationMs = getStepDuration(options.node, options.attempt ?? 0)
     const step = createStep(
@@ -291,6 +393,28 @@ export function AppShell() {
     })
 
     await delay(Math.min(durationMs, 260))
+
+    if (options.result === 'skipped') {
+      dispatch({
+        type: 'runStepSuccess',
+        stepId: step.id,
+        finishedAt: new Date().toISOString(),
+        durationMs,
+        message: `${options.node.title} validated without local execution.`,
+      })
+      dispatch({
+        type: 'runNodeSuccess',
+        nodeId: options.node.id,
+        status: 'skipped',
+        log: makeLog(
+          options.runId,
+          `${options.node.title} was validated only and skipped.`,
+          options.node.id,
+          'info',
+        ),
+      })
+      return step
+    }
 
     if (options.result === 'failed') {
       dispatch({
@@ -396,128 +520,130 @@ export function AppShell() {
     return executedNodes
   }
 
-  async function runMockWorkflow() {
+  async function runPlannedWorkflow(mode: RunMode) {
     const runToken = runTokenRef.current + 1
     runTokenRef.current = runToken
     const runId = `run-${new Date().toISOString()}`
-    const outcome = calculateOutcomeByRunCount()
+    const plan = planWorkflowRun(workflow, mode, selectedNodeId)
+    const plannedHasCheck = plan.nodes.some((node) => node.type === 'check')
+    const outcome = mode === 'dryRun' || !plannedHasCheck ? 'PASS' : calculateOutcomeByRunCount()
     const executedNodes: WorkflowNode[] = []
+    const decisions: ReturnType<typeof executeMockNode>[] = []
 
     dispatch({
       type: 'runWorkflowStart',
       runId,
-      log: makeLog(runId, 'ローカルモック実行を開始しました。外部APIは呼び出しません。'),
+      nodeIds: plan.nodes.map((node) => node.id),
+      log: makeLog(
+        runId,
+        `Local mock run started. mode=${mode}. No real API calls are made.`,
+      ),
     })
     dispatch({ type: 'setCheckOutcome', outcome })
 
-    for (let index = 0; index < workflow.nodes.length; index += 1) {
+    for (const warning of plan.warnings) {
+      dispatch({ type: 'appendLog', log: makeLog(runId, warning, undefined, 'warn') })
+    }
+
+    for (let index = 0; index < plan.nodes.length; index += 1) {
       if (runTokenRef.current !== runToken) {
         return
       }
 
-      const node = workflow.nodes[index]
+      const node = plan.nodes[index]
+      const decision = executeMockNode(node, outcome, mode)
+      decisions.push(decision)
 
       if (index > 0) {
-        const previousNode = workflow.nodes[index - 1]
+        const previousNode = plan.nodes[index - 1]
         dispatch({
           type: 'addExecutionRoute',
           route: createRoute('main', previousNode.id, node.id, '通常実行フロー'),
         })
       }
 
-      if (node.type === 'check') {
-        if (outcome === 'FAIL') {
-          const failedStep = await executeNodeStep({
-            runId,
-            node,
-            route: 'error',
-            result: 'failed',
-          })
-          executedNodes.push(node)
-          dispatch({
-            type: 'addExecutionRoute',
-            route: createRoute('error', node.id, undefined, '検査で失敗したため停止'),
-          })
-          dispatch({ type: 'setRetryCandidate', stepId: failedStep.id })
-          dispatch({ type: 'runNodeRetryReady', nodeId: node.id })
-          dispatch({
-            type: 'setArtifact',
-            artifact: buildArtifactContent({
-              outcome,
-              executedNodes,
-              retryCandidates: 1,
-              reviewPending: false,
-              failedNodeTitle: node.title,
-              note: '再試行ボタンから単体再試行できます。',
-            }),
-          })
-          dispatch({
-            type: 'updateMetrics',
-            metrics: buildMetrics(executedNodes, outcome, 1),
-          })
-          dispatch({ type: 'setRunning', isRunning: false })
-          return
-        }
-
-        if (outcome === 'REVIEW') {
-          const reviewStep = await executeNodeStep({
-            runId,
-            node,
-            route: 'review',
-            result: 'review_required',
-          })
-          executedNodes.push(node)
-          dispatch({
-            type: 'addExecutionRoute',
-            route: createRoute('review', node.id, workflow.nodes[index + 1]?.id, '人間確認待ち'),
-          })
-          dispatch({
-            type: 'setArtifact',
-            artifact: buildArtifactContent({
-              outcome,
-              executedNodes,
-              retryCandidates: 0,
-              reviewPending: true,
-              note: `確認対象: ${reviewStep.nodeTitle}`,
-            }),
-          })
-          dispatch({
-            type: 'updateMetrics',
-            metrics: buildMetrics(executedNodes, outcome, 0),
-          })
-          dispatch({ type: 'setRunning', isRunning: false })
-          return
-        }
+      if (decision.route !== 'main') {
+        dispatch({
+          type: 'addExecutionRoute',
+          route: createRoute(
+            decision.route,
+            node.id,
+            decision.route === 'review' ? plan.nodes[index + 1]?.id : undefined,
+            decision.message,
+          ),
+        })
       }
 
-      await executeNodeStep({
+      const step = await executeNodeStep({
         runId,
         node,
-        route: 'main',
-        result: 'success',
+        route: decision.route,
+        result: decision.result,
       })
       executedNodes.push(node)
+
+      if (decision.retryCandidate) {
+        dispatch({
+          type: 'addExecutionRoute',
+          route: createRoute(
+            'retry',
+            node.id,
+            node.id,
+            'Retry candidate after local mock failure.',
+          ),
+        })
+        dispatch({ type: 'setRetryCandidate', stepId: step.id })
+        dispatch({ type: 'runNodeRetryReady', nodeId: node.id })
+      }
+
+      if (decision.result === 'failed' || decision.result === 'review_required') {
+        dispatch({
+          type: 'setArtifact',
+          artifact: buildRunArtifact({
+            plan,
+            outcome,
+            executedNodes,
+            decisions,
+            failedNodeTitle: decision.result === 'failed' ? node.title : undefined,
+          }),
+        })
+        dispatch({
+          type: 'updateMetrics',
+          metrics: buildRunMetrics(
+            plan.nodes.length,
+            executedNodes,
+            outcome,
+            decisions.filter((item) => item.retryCandidate).length,
+          ),
+        })
+        dispatch({ type: 'setRunning', isRunning: false })
+        return
+      }
     }
 
     dispatch({
       type: 'setArtifact',
-      artifact: buildArtifactContent({
-        outcome,
-        executedNodes,
-        retryCandidates: 0,
-        reviewPending: false,
-      }),
+      artifact: buildRunArtifact({ plan, outcome, executedNodes, decisions }),
     })
     dispatch({
       type: 'updateMetrics',
-      metrics: buildMetrics(executedNodes, outcome, 0),
+      metrics: buildRunMetrics(
+        plan.nodes.length,
+        executedNodes,
+        outcome,
+        decisions.filter((item) => item.retryCandidate).length,
+      ),
     })
     dispatch({ type: 'setWorkflowStatus', status: 'success' })
     dispatch({
       type: 'appendLog',
-      log: makeLog(runId, '実行グラフとメトリクスを更新しました。', undefined, 'metric'),
+      log: makeLog(runId, 'Local run engine updated artifact and metrics.', undefined, 'metric'),
     })
     dispatch({ type: 'setRunning', isRunning: false })
+  }
+
+  async function runMockWorkflow(mode: RunMode = 'all') {
+    await runPlannedWorkflow(mode)
   }
 
   function stopRun() {
@@ -553,6 +679,39 @@ export function AppShell() {
     },
   ) {
     dispatch({ type: 'updateNodeConfig', nodeId, updates })
+  }
+
+  function handleAddNode(part: WorkflowNode) {
+    const node = createNodeFromPart(part, workflow.nodes, selectedNodeId)
+    dispatch({ type: 'addNode', node })
+  }
+
+  function handleDeleteNode(nodeId: string) {
+    const node = workflow.nodes.find((item) => item.id === nodeId)
+    if (!node) {
+      return
+    }
+
+    setPendingDeleteNodeId(nodeId)
+  }
+
+  function handleMoveNode(nodeId: string, position: WorkflowNode['position']) {
+    dispatch({ type: 'updateNodePositions', positions: { [nodeId]: position } })
+    writeReactFlowPositions({
+      ...Object.fromEntries(
+        workflow.nodes.map((node) => [node.id, scaleNodePosition(node.position)]),
+      ),
+      [nodeId]: scaleNodePosition(position),
+    })
+  }
+
+  function confirmDeleteNode() {
+    if (!pendingDeleteNodeId) {
+      return
+    }
+
+    dispatch({ type: 'deleteNode', nodeId: pendingDeleteNodeId })
+    setPendingDeleteNodeId(null)
   }
 
   function createConnectionFromDraft(draft: {
@@ -678,6 +837,7 @@ export function AppShell() {
     }
 
     const importedWorkflow = JSON.parse(JSON.stringify(loaded)) as typeof loaded
+    importedWorkflow.name = `${selectedTemplate?.name ?? importedWorkflow.name} workflow`
     importedWorkflow.logs = [
       ...importedWorkflow.logs,
       makeLog(
@@ -754,6 +914,11 @@ export function AppShell() {
   }
 
   function handleResetReactFlowPositions() {
+    const defaultPositions = Object.fromEntries(
+      workflow.nodes.map((node) => [node.id, node.position]),
+    )
+
+    dispatch({ type: 'updateNodePositions', positions: defaultPositions })
     dispatch({
       type: 'appendLog',
       log: makeLog(
@@ -1125,20 +1290,50 @@ export function AppShell() {
           status={workflow.status as WorkflowStatus}
           isRunning={isRunning}
           canvasMode={canvasMode}
+          canUndo={canUndo}
+          canRedo={canRedo}
           onRun={runMockWorkflow}
+          onRunSelected={() => runMockWorkflow('selected')}
+          onRunFromSelected={() => runMockWorkflow('fromSelected')}
+          onDryRun={() => runMockWorkflow('dryRun')}
           onStop={stopRun}
           onReset={handleReset}
+          onUndo={() => dispatch({ type: 'undo' })}
+          onRedo={() => dispatch({ type: 'redo' })}
           onExportJson={exportJson}
           onImportJson={importJson}
           onChangeCanvasMode={setCanvasMode}
         />
       {importError ? <div className="import-error">{importError}</div> : null}
       {!importError && importSuccessMessage ? <div className="import-success">{importSuccessMessage}</div> : null}
+      {pendingDeleteNode ? (
+        <section className="confirm-panel" aria-label="Node delete confirmation">
+          <div>
+            <strong>Delete node "{pendingDeleteNode.title}"?</strong>
+            <p>
+              {pendingDeleteConnectionCount} related connection(s) will also be deleted.
+            </p>
+          </div>
+          <div className="confirm-actions">
+            <button type="button" className="primary-button danger-action" onClick={confirmDeleteNode}>
+              Delete node
+            </button>
+            <button
+              type="button"
+              className="icon-button"
+              onClick={() => setPendingDeleteNodeId(null)}
+            >
+              Cancel
+            </button>
+          </div>
+        </section>
+      ) : null}
       <div className="workspace-grid">
         <PartsPalette
           parts={workflow.nodes}
           selectedNodeId={selectedNodeId}
           onSelectNode={(nodeId) => dispatch({ type: 'selectNode', nodeId })}
+          onAddNode={handleAddNode}
         />
         <div className="center-stack">
           {canvasMode === 'standard' ? (
@@ -1156,6 +1351,8 @@ export function AppShell() {
               connectionValidation={connectionValidation}
               onCreateConnection={createConnectionFromDraft}
               onDeleteConnection={handleDeleteConnection}
+              onDeleteNode={handleDeleteNode}
+              onMoveNode={handleMoveNode}
               onResetPositions={handleResetReactFlowPositions}
             />
           )}
@@ -1177,6 +1374,8 @@ export function AppShell() {
           onSaveNode={handleSaveNode}
           onCreateConnection={handleCreateConnection}
           onDeleteConnection={handleDeleteConnection}
+          onDeleteNode={handleDeleteNode}
+          onMoveNode={handleMoveNode}
         />
       </div>
       <BottomMonitor

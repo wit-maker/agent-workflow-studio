@@ -11,6 +11,7 @@ export type SavedWorkflowTemplate = {
   name: string
   description?: string
   workflowId: string
+  sourceWorkflowId: string
   snapshot: Workflow
   metadata: WorkflowTemplateMetadata
   createdAt: string
@@ -69,10 +70,59 @@ function normalizeTemplate(value: unknown): SavedWorkflowTemplate | null {
       typeof value.workflowId === 'string' && value.workflowId
         ? value.workflowId
         : snapshot.id,
+    sourceWorkflowId:
+      typeof value.sourceWorkflowId === 'string' && value.sourceWorkflowId
+        ? value.sourceWorkflowId
+        : snapshot.id,
     snapshot,
     metadata,
     createdAt,
     updatedAt,
+  }
+}
+
+function instantiateTemplateWorkflow(template: SavedWorkflowTemplate): Workflow {
+  const now = new Date().toISOString()
+  const suffix = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`
+  const snapshot = cloneWorkflow(template.snapshot)
+  const nodeIdByOldId = new Map(
+    snapshot.nodes.map((node, index) => [node.id, `tpl-${suffix}-node-${index + 1}`]),
+  )
+
+  return {
+    ...snapshot,
+    id: `workflow-from-${template.id}-${suffix}`,
+    name: `${template.name} workflow`,
+    status: 'draft',
+    metrics: {
+      ...snapshot.metrics,
+      bottleneckNodeId:
+        snapshot.metrics.bottleneckNodeId !== null
+          ? (nodeIdByOldId.get(snapshot.metrics.bottleneckNodeId) ?? null)
+          : null,
+    },
+    nodes: snapshot.nodes.map((node) => ({
+      ...node,
+      id: nodeIdByOldId.get(node.id) ?? node.id,
+      status: 'idle',
+      lastRun: undefined,
+    })),
+    connections: snapshot.connections
+      .filter(
+        (connection) =>
+          nodeIdByOldId.has(connection.sourceNodeId) &&
+          nodeIdByOldId.has(connection.targetNodeId),
+      )
+      .map((connection, index) => ({
+        ...connection,
+        id: `tpl-${suffix}-edge-${index + 1}`,
+        sourceNodeId: nodeIdByOldId.get(connection.sourceNodeId) ?? connection.sourceNodeId,
+        targetNodeId: nodeIdByOldId.get(connection.targetNodeId) ?? connection.targetNodeId,
+        status: 'inactive',
+      })),
+    logs: [],
+    createdAt: now,
+    updatedAt: now,
   }
 }
 
@@ -118,6 +168,7 @@ export function saveWorkflowTemplate(
     name,
     description,
     workflowId: input.workflow.id,
+    sourceWorkflowId: input.workflow.id,
     snapshot,
     metadata: createTemplateMetadata({
       workflow: snapshot,
@@ -141,7 +192,8 @@ export function listWorkflowTemplates(): SavedWorkflowTemplate[] {
 }
 
 export function loadWorkflowTemplate(id: string): Workflow | null {
-  return readTemplates().find((template) => template.id === id)?.snapshot ?? null
+  const template = readTemplates().find((item) => item.id === id)
+  return template ? instantiateTemplateWorkflow(template) : null
 }
 
 export function duplicateWorkflowTemplate(id: string): SavedWorkflowTemplate | null {
@@ -164,6 +216,7 @@ export function duplicateWorkflowTemplate(id: string): SavedWorkflowTemplate | n
     name: duplicateName,
     description: original.description,
     workflowId: original.workflowId,
+    sourceWorkflowId: original.sourceWorkflowId,
     snapshot: duplicatedSnapshot,
     metadata: normalizeTemplateMetadata(duplicatedSnapshot, original.metadata),
     createdAt: now,

@@ -18,10 +18,13 @@ export type NodeEditableFields = Pick<WorkflowNode, 'title' | 'description'> &
 
 export type WorkflowAction =
   | { type: 'selectNode'; nodeId: string }
+  | { type: 'addNode'; node: WorkflowNode }
+  | { type: 'deleteNode'; nodeId: string }
+  | { type: 'updateNodePositions'; positions: Record<string, WorkflowNode['position']> }
   | { type: 'updateNodeConfig'; nodeId: string; updates: NodeEditableFields }
   | { type: 'createConnection'; connection: WorkflowConnection }
   | { type: 'deleteConnection'; connectionId: string }
-  | { type: 'runWorkflowStart'; runId: string; log: WorkflowRunLog }
+  | { type: 'runWorkflowStart'; runId: string; log: WorkflowRunLog; nodeIds?: string[] }
   | { type: 'clearExecutionGraph' }
   | { type: 'runNodeQueued'; nodeId: string }
   | { type: 'runNodeRunning'; nodeId: string; log: WorkflowRunLog }
@@ -83,3 +86,5 @@ export type WorkflowAction =
   | { type: 'addArtifactVersion'; version: ArtifactVersion }
   | { type: 'selectArtifactVersion'; versionId: string }
   | { type: 'clearEvaluation' }
+  | { type: 'undo' }
+  | { type: 'redo' }

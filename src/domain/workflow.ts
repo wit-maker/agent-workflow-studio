@@ -191,12 +191,28 @@ export type WorkflowTemplateMetadata = {
   category?: string
   nodeCount: number
   connectionCount: number
+  sourceWorkflowId?: string
+  sourceRunId?: string
   requiredPortCount: number
   unconnectedRequiredPortCount: number
   lastEvaluationStatus?: string
   lastEvaluationScore?: number
   artifactVersionCount?: number
   createdFromRunId?: string
+  metricsSummary?: {
+    tokens: number
+    cost: number
+    latencyMs: number
+    successRate: number
+    retryCount: number
+    bottleneckNodeId: string | null
+  }
+  artifactSummary?: {
+    title: string
+    format: WorkflowArtifact['format']
+    status: WorkflowArtifact['status']
+    contentPreview: string
+  }
 }
 
 export type Workflow = {
