@@ -4,7 +4,7 @@ Last updated: 2026-05-24
 
 ## Current Phase
 
-Phase 7.3 Workflow JSON import/export ブラウザ完走確認と最小修正。
+Phase 7.4 Inspector ノード編集体験のハードニング。
 
 ## Completed
 
@@ -126,9 +126,45 @@ Phase 7.3 Workflow JSON import/export ブラウザ完走確認と最小修正。
 - 既存 localStorage テンプレートに `metadata` がなくても読めるよう後方互換を維持した。
 - `docs/implementation/TEMPLATE_REUSE_UX_MVP.md` を追加した。
 
+## Phase 7.4 実装内容
+
+- Inspector に `isDirty` 判定と「未保存の変更があります」バナーを追加
+- 保存ボタン：変更なし時は「変更なし」(disabled)、変更あり時は「ノードを保存」(enabled)
+- 「変更を破棄」ボタンを追加（未保存変更をすべてリセット）
+- Config JSON リアルタイムバリデーション：有効時は緑ボーダー、無効時は赤ボーダー＋エラー文言
+- 「JSONを整形」ボタンを追加（valid な JSON のみ整形、invalid 時は disabled）
+- configValidation が invalid の場合は保存を blocked
+- セクション再構成：基本情報 / 編集 / ポート / 接続検証 / メトリクス / 接続編集
+- 出力ポート表示に `port.required ? '必須・未接続' : '任意'` を適用（入力ポートと統一）
+- `key={selectedNode.id}` により別ノード選択時は InspectorContent を remount
+- dirty 判定はセマンティック JSON 比較（整形差異では dirty にならない）
+
+## Phase 7.4 追加修正（マージ前）
+
+- `originalConfigJson` を `useState` 初期化から `useMemo([selectedNode.config])` に変更し、保存後に stale baseline が残らないようにした
+- `saveChanges()` で `setTitle` / `setDescription` / `setConfigText` を保存後に正規化し、保存直後に dirty が残らないようにした
+
+## Phase 7.4 Verification
+
+- Model: claude-sonnet-4-6
+- Branch: `feature/inspector-editing-hardening`
+- `npm run build`: success
+- `npm run lint`: success
+- タイトル編集 → dirty バナー表示・保存ボタン有効化: OK
+- 保存 → canvas / React Flow / 接続ドロップダウン / タイムライン に反映: OK
+- 変更を破棄 → 全フィールドが保存済み値へリセット: OK
+- agentRole 変更 → dirty バナー表示: OK
+- Config JSON 無効 → 赤ボーダー・エラー文言・保存 disabled: OK
+- Config JSON 有効 → 緑ボーダー
+- JSONを整形 → compact JSON がインデント付きに整形: OK
+- Export JSON → 編集済みタイトルが JSON に含まれる: OK
+- Import JSON → 成功バナー・編集済み内容復元: OK
+- Import → Run: 実行中ステータスに移行: OK
+- Console error: なし（React Flow parent container warn は既存）
+
 ## Next Work
 
-1. Phase 7.4 候補として React Flow 側の接続編集拡張とノード追加導線を検討する。
+1. Phase 7.5 候補として React Flow 側の接続編集拡張とノード追加導線を検討する。
 2. 評価結果と実行グラフを結びつけた差分表示を追加する。
 3. テンプレートの version / metadata 編集を追加する。
 4. localStorage MVP から永続ストレージへ進む条件を整理する。
