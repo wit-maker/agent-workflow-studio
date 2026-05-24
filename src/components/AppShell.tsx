@@ -628,7 +628,7 @@ export function AppShell() {
     dispatch({
       type: 'updateMetrics',
       metrics: buildRunMetrics(
-        workflow.nodes.length,
+        plan.nodes.length,
         executedNodes,
         outcome,
         decisions.filter((item) => item.retryCandidate).length,
