@@ -23,7 +23,11 @@ export function readCanvasModePreference(): SavedCanvasMode | null {
 }
 
 export function writeCanvasModePreference(mode: SavedCanvasMode) {
-  window.localStorage.setItem(CANVAS_MODE_STORAGE_KEY, mode)
+  try {
+    window.localStorage.setItem(CANVAS_MODE_STORAGE_KEY, mode)
+  } catch {
+    // localStorage が使えない環境では保存を諦める
+  }
 }
 
 export function readReactFlowPositions(): SavedReactFlowPositions {
@@ -59,12 +63,20 @@ export function readReactFlowPositions(): SavedReactFlowPositions {
 }
 
 export function writeReactFlowPositions(positions: SavedReactFlowPositions) {
-  window.localStorage.setItem(
-    REACT_FLOW_POSITIONS_STORAGE_KEY,
-    JSON.stringify(positions),
-  )
+  try {
+    window.localStorage.setItem(
+      REACT_FLOW_POSITIONS_STORAGE_KEY,
+      JSON.stringify(positions),
+    )
+  } catch {
+    // localStorage が使えない環境では保存を諦める
+  }
 }
 
 export function clearReactFlowPositions() {
-  window.localStorage.removeItem(REACT_FLOW_POSITIONS_STORAGE_KEY)
+  try {
+    window.localStorage.removeItem(REACT_FLOW_POSITIONS_STORAGE_KEY)
+  } catch {
+    // localStorage が使えない環境では削除を諦める
+  }
 }

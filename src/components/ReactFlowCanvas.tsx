@@ -189,19 +189,18 @@ export function ReactFlowCanvas({
   )
 
   const handleNodesChange = useCallback((changes: NodeChange[]) => {
-    setNodes((current) => {
-      const next = applyNodeChanges<ReactFlowWorkflowNode>(
-        changes as NodeChange<ReactFlowWorkflowNode>[],
-        current,
-      )
-      nodesRef.current = next
+    const safeChanges = changes.filter((change) => change.type !== 'remove')
+    const next = applyNodeChanges<ReactFlowWorkflowNode>(
+      safeChanges as NodeChange<ReactFlowWorkflowNode>[],
+      nodesRef.current,
+    )
 
-      if (changes.some((change) => change.type === 'position' && change.position)) {
-        writeReactFlowPositions(pickWorkflowPositions(next))
-      }
+    nodesRef.current = next
+    setNodes(next)
 
-      return next
-    })
+    if (safeChanges.some((change) => change.type === 'position' && change.position)) {
+      writeReactFlowPositions(pickWorkflowPositions(next))
+    }
   }, [])
 
   const handleEdgeClick = useCallback((_: React.MouseEvent, edge: Edge) => {
