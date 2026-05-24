@@ -1077,7 +1077,7 @@ export function AppShell() {
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
     anchor.href = url
-    const date = new Date().toISOString().slice(0, 10)
+    const date = new Date().toLocaleDateString('sv-SE')
     anchor.download = `${workflow.id || 'workflow'}_${date}.json`
     anchor.click()
     window.setTimeout(() => URL.revokeObjectURL(url), 100)
@@ -1108,6 +1108,7 @@ export function AppShell() {
 
       artifactVersionCountRef.current = 0
       dispatch({ type: 'importWorkflow', workflow: result.workflow })
+      dispatch({ type: 'setImportError', message: null })
       setImportSuccessMessage(`「${result.workflow.name}」を読み込みました。`)
     } catch (error) {
       dispatch({

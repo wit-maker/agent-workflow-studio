@@ -159,7 +159,7 @@ button:disabled {
   display: flex;
   align-items: center;
   padding: 0 18px;
-  border-bottom: 1px solid rgba(40, 167, 69, 0.25);
+  border-bottom: 1px solid rgba(24, 129, 90, 0.25);
   background: var(--green-soft);
   color: var(--green);
   font-size: 13px;
