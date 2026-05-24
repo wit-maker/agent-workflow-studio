@@ -38,6 +38,50 @@
 
 ユーザーが不十分なモデルでの続行を明示的に許可した場合のみ、その事実を `PROJECT_STATE.md` に記録して続行できます。
 
+Goal / Plan / Source of Truth / 安全境界 / Credential / アーキテクチャに触れる作業では、モデル不一致を軽い注意で流さず、現在モデル、推奨モデル、許容モデル、ユーザー継続許可の有無を `PROJECT_STATE.md` に残します。
+
+## Goal / Plan / Task / Prompt
+
+このリポジトリでは、長期Goalと現在Planを混ぜません。
+
+- Goal: 最終到達点、判断基準、安全原則、完成形
+- Plan: 現在フェーズの作戦、順序、リスク、完了条件
+- Task: 1PR / 1ブランチ / 1作業単位の具体指示
+- Prompt: 今回だけのAI coding agentへの入力
+
+判断に迷った場合は `docs/project/PROJECT_GOAL.md` と `docs/project/PLAN_PROTOCOL.md` を先に確認します。
+
+## Source of Truth
+
+仕様判断の優先順位は `docs/project/SOURCE_OF_TRUTH.md` に従います。短縮版は以下です。
+
+1. `docs/project/PROJECT_GOAL.md`
+2. `AGENTS.md`
+3. `docs/source-specs/01_要件定義書_完全版.md`
+4. `docs/source-specs/02_機能仕様書_完全版.md`
+5. `docs/source-specs/03_UI_UX_認知HUD設計書_完全版.md`
+6. `docs/source-specs/04_システム設計書_データモデル_実行基盤_完全版.md`
+7. `docs/source-specs/05_AIエージェント運用設計書_完全版.md`
+8. `docs/source-specs/06_QA_セキュリティ_受け入れ基準_完全版.md`
+9. `docs/source-specs/07_実装ロードマップ_完全版.md`
+10. `PROJECT_STATE.md`
+11. Issue / PR / 現在Prompt
+
+MVPの都合で長期Goalを縮小してはいけません。現在実装との差分は `docs/audit/` に記録し、Source Specを書き換えて解消しないでください。
+
+## Stop Rules
+
+以下に該当する場合は実装を止め、最小の安全な次手を報告します。詳細は `docs/project/STOP_RULES.md` に従います。
+
+- モデル未確認または作業リスクに対して不足している
+- Goal と作業内容が矛盾している
+- Source of Truth の優先順位が不明
+- Credential値を保存しそうになっている
+- 外部API接続を Adapter なしで直結しようとしている
+- `main` / `develop` へ直接反映が必要になっている
+- 1PRとして大きすぎる
+- Browser QA不能なのに完了扱いにしようとしている
+
 ## 日本語優先ルール
 
 このリポジトリでは、以下を日本語優先にします。
@@ -85,10 +129,20 @@
 ```bash
 npm run build
 npm run lint
+npm run typecheck
 ```
 
-どちらかを実行できない場合は、その理由を `PROJECT_STATE.md` と最終報告の両方へ記録します。
+`typecheck` script が存在しない場合は、その事実を `PROJECT_STATE.md` と最終報告に記録し、`npm run build` に含まれる `tsc -b` を TypeScript check の代替として扱います。
+
+いずれかを実行できない場合は、その理由を `PROJECT_STATE.md` と最終報告の両方へ記録します。
 
 ## 仕様書の扱い
 
 `docs/source-specs/` 配下のファイルは原文仕様です。一般的な workflow app の思い込みで置き換えたり、原文を書き換えたりしてはいけません。
+
+現在実装と最大構想の差分は以下に記録します。
+
+- `docs/audit/current-implementation-map.md`
+- `docs/audit/spec-coverage-matrix.md`
+- `docs/audit/missing-systems.md`
+- `docs/audit/technical-debt.md`

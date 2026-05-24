@@ -1,0 +1,62 @@
+# Plan Protocol
+
+Last updated: 2026-05-25
+
+## Purpose
+
+This protocol keeps implementation work aligned with the long-term goal while still allowing small, shippable phases.
+
+Every non-trivial task should separate:
+
+- Goal: why the product exists and what must remain true
+- Plan: what this phase will do and not do
+- Task: the specific branch-sized unit of work
+- Prompt: the current instruction passed to an AI coding agent
+
+## Before Implementation
+
+For each task:
+
+1. Confirm the active model and record any mismatch when the task touches Goal, Plan, Source of Truth, safety, credentials, or architecture.
+2. Read `PROJECT_STATE.md`, `AGENTS.md`, `docs/project/SOURCE_OF_TRUTH.md`, and the relevant source specs.
+3. Check `git status --short --branch`.
+4. Confirm the branch is not `main` or `develop`.
+5. Identify whether the task is docs-only, UI, domain model, execution, storage, connector, or safety work.
+6. Define validation before editing.
+
+## Plan Contents
+
+A decision-complete plan should state:
+
+- current state and source specs consulted
+- in-scope and out-of-scope changes
+- public interfaces or document contracts affected
+- file groups to change
+- data model impact
+- UI impact
+- safety and credential impact
+- validation steps
+- Browser QA scenarios
+- unresolved risks
+
+## Implementation Rules
+
+- Prefer small, reviewable phases.
+- Preserve source specs as reference documents.
+- Keep docs, code, and `PROJECT_STATE.md` in sync.
+- Add abstractions only when they protect future phases or remove real duplication.
+- Keep mock connectors clearly marked as mock.
+- Treat localStorage as MVP persistence, not the final storage architecture.
+
+## Completion Rules
+
+A task is complete only when the report includes:
+
+- implemented changes
+- changed files
+- build, lint, and typecheck result
+- Browser QA result
+- save/load or persistence impact when relevant
+- known gaps against the full product goal
+- next recommended phase
+- unresolved risks
