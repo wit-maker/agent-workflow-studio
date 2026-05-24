@@ -79,8 +79,8 @@ export function validateWorkflowImport(value: unknown): {
     return { valid: false, error: '読み込んだファイルには workflow オブジェクトが必要です。' }
   }
 
-  const nodes = value.nodes
-  const connections = value.connections
+  const rawNodes = value.nodes
+  const rawConnections = value.connections
 
   if (typeof value.id !== 'string' || value.id.trim() === '') {
     return { valid: false, error: 'workflow.id がありません。' }
@@ -90,11 +90,11 @@ export function validateWorkflowImport(value: unknown): {
     return { valid: false, error: 'workflow.name がありません。' }
   }
 
-  if (!Array.isArray(nodes)) {
+  if (!Array.isArray(rawNodes)) {
     return { valid: false, error: 'workflow.nodes は配列である必要があります。' }
   }
 
-  if (!Array.isArray(connections)) {
+  if (!Array.isArray(rawConnections)) {
     return { valid: false, error: 'workflow.connections は配列である必要があります。' }
   }
 
@@ -106,7 +106,7 @@ export function validateWorkflowImport(value: unknown): {
     return { valid: false, error: 'workflow.artifact.content がありません。' }
   }
 
-  const hasInvalidNode = nodes.some(
+  const hasInvalidNode = rawNodes.some(
     (node) =>
       !isRecord(node) ||
       typeof node.id !== 'string' ||
@@ -116,24 +116,66 @@ export function validateWorkflowImport(value: unknown): {
   )
 
   if (hasInvalidNode) {
-    return { valid: false, error: '必須項目が不足しているノードがあります。' }
+    return { valid: false, error: '必須項目 (id/title/inputTypes/outputTypes) が不足しているノードがあります。' }
   }
 
-  const hasInvalidConnection = connections.some(
-    (connection) =>
-      !isRecord(connection) ||
-      typeof connection.sourceNodeId !== 'string' ||
-      typeof connection.targetNodeId !== 'string',
+  // 欠落フィールドを安全なデフォルト値で補完
+  const nodeIds = new Set(rawNodes.map((n: Record<string, unknown>) => n.id as string))
+
+  const nodes = rawNodes.map((raw: Record<string, unknown>): WorkflowNode => ({
+    id: raw.id as string,
+    type: typeof raw.type === 'string' ? raw.type : 'unknown',
+    title: raw.title as string,
+    category: typeof raw.category === 'string' ? raw.category : 'その他',
+    description: typeof raw.description === 'string' ? raw.description : '',
+    status: (['idle', 'queued', 'running', 'complete', 'failed', 'review_required', 'skipped', 'retry_ready'].includes(raw.status as string)
+      ? raw.status
+      : 'idle') as WorkflowNode['status'],
+    agentRole: raw.agentRole as WorkflowNode['agentRole'],
+    inputTypes: raw.inputTypes as WorkflowDataType[],
+    outputTypes: raw.outputTypes as WorkflowDataType[],
+    inputPorts: Array.isArray(raw.inputPorts) ? (raw.inputPorts as WorkflowNode['inputPorts']) : undefined,
+    outputPorts: Array.isArray(raw.outputPorts) ? (raw.outputPorts as WorkflowNode['outputPorts']) : undefined,
+    config: isRecord(raw.config) ? (raw.config as Record<string, unknown>) : {},
+    position: isRecord(raw.position) && typeof (raw.position as Record<string, unknown>).x === 'number'
+      ? (raw.position as { x: number; y: number })
+      : { x: 0, y: 0 },
+    metrics: isRecord(raw.metrics) ? (raw.metrics as WorkflowNode['metrics']) : undefined,
+    lastRun: isRecord(raw.lastRun) ? (raw.lastRun as WorkflowNode['lastRun']) : undefined,
+  }))
+
+  // sourceNodeId / targetNodeId が nodes に存在する接続のみ残す
+  const validConnections = rawConnections.filter(
+    (conn) =>
+      isRecord(conn) &&
+      typeof conn.sourceNodeId === 'string' &&
+      typeof conn.targetNodeId === 'string' &&
+      nodeIds.has(conn.sourceNodeId as string) &&
+      nodeIds.has(conn.targetNodeId as string),
   )
 
-  if (hasInvalidConnection) {
-    return {
-      valid: false,
-      error: '接続に source または target の必須項目が不足しています。',
-    }
-  }
+  const connections = validConnections.map((raw: Record<string, unknown>, index): WorkflowConnection => ({
+    id: typeof raw.id === 'string' ? raw.id : `conn-imported-${index}`,
+    sourceNodeId: raw.sourceNodeId as string,
+    sourcePort: raw.sourcePort as string | undefined,
+    sourcePortId: raw.sourcePortId as string | undefined,
+    targetNodeId: raw.targetNodeId as string,
+    targetPort: raw.targetPort as string | undefined,
+    targetPortId: raw.targetPortId as string | undefined,
+    kind: (['data', 'instruction', 'decision', 'result', 'evidence', 'log', 'template'].includes(raw.kind as string)
+      ? raw.kind
+      : 'data') as WorkflowConnection['kind'],
+    carries: Array.isArray(raw.carries) ? (raw.carries as WorkflowDataType[]) : [],
+    status: (['inactive', 'active', 'error'].includes(raw.status as string) ? raw.status : 'inactive') as WorkflowConnection['status'],
+  }))
 
-  return { valid: true, workflow: value as Workflow }
+  const workflow: Workflow = {
+    ...(value as Record<string, unknown>),
+    nodes,
+    connections,
+  } as Workflow
+
+  return { valid: true, workflow }
 }
 
 function formatNodeLabel(node: WorkflowNode | undefined, fallback: string): string {

@@ -14,6 +14,7 @@ feature/workflow-foundation-milestones — M0〜M4 連続実装中。
 ### Completed Milestones
 - M0: main sync / build / lint 確認済み。ブランチ作成済み。
 - M1: Browser QA noise 調査・分類・防衛的修正を実施。
+- M2: Workflow JSON import/export の信頼性強化を実施。
 
 ### Verification
 - npm run build: pass
@@ -27,6 +28,8 @@ feature/workflow-foundation-milestones — M0〜M4 連続実装中。
 - **PartsPalette key warning**: React 18 StrictMode の初期ダブルレンダリング時のみ発生。ファイバーツリーのキーは `node-1`〜`node-12` で正常。再レンダリング・ノードクリック・検索フィルタ時は発生しない。機能上の影響なし。production build では StrictMode が非アクティブのため警告なし。
 - **InspectorContent warning**: 同様に StrictMode 初期レンダリング時のみ発生。ノードクリックによる再マウント時は発生しない。
 - **修正**: `Inspector.tsx` の `node.position?.x` を防衛的アクセスに変更（import データに position がない場合の実行時クラッシュを防止）。
+- **M2 実装**: `validateWorkflowImport` を強化。`node.config`欠落→`{}`、`node.description`欠落→`''`、`node.position`欠落→`{x:0,y:0}`、`node.status`欠落→`'idle'`、`node.category`欠落→`'その他'` として補完。接続の source/target node 存在確認を追加し、不正な接続を安全に除外。`connection.id`欠落時は自動生成。
+- **M2 Browser QA**: 欠損フィールドのある JSON import 成功・不正 JSON エラー表示・schema エラー表示・export→reimport→run のサイクルを確認。
 
 ---
 
