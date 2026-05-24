@@ -62,6 +62,7 @@ type ReactFlowCanvasProps = {
     kind: ConnectionKind
   }) => CreateConnectionResult
   onDeleteConnection: (connectionId: string) => void
+  onDeleteNode: (nodeId: string) => void
   onResetPositions?: () => void
 }
 
@@ -170,6 +171,7 @@ export function ReactFlowCanvas({
   onSelectNode,
   onCreateConnection,
   onDeleteConnection,
+  onDeleteNode,
   onResetPositions,
 }: ReactFlowCanvasProps) {
   const invalidConnections = connectionValidation.filter((result) => !result.valid)
@@ -424,10 +426,15 @@ export function ReactFlowCanvas({
       return
     }
 
+    if (selectedNodeId) {
+      onDeleteNode(selectedNodeId)
+      return
+    }
+
     setDeleteNotice(
       'ノード削除は現在未対応です。部品削除は今後のPhaseで実装します。接続は詳細カードから削除できます。',
     )
-  }, [effectiveSelectedConnectionId, handleDeleteSelectedConnection])
+  }, [effectiveSelectedConnectionId, handleDeleteSelectedConnection, onDeleteNode, selectedNodeId])
 
   const handleResetPositions = useCallback(() => {
     clearReactFlowPositions()

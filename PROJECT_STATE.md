@@ -2,6 +2,33 @@
 
 Last updated: 2026-05-24
 
+## M5 Node Add / Delete
+
+- Branch: `feature/workflow-authoring-and-run-engine`
+- Completed:
+  - Added node authoring from `PartsPalette`.
+  - Added collision-safe node id generation and cloned node config/ports/position.
+  - Added selected-node deletion with in-app confirmation.
+  - Deleting a node removes related workflow connections and safely moves selection.
+  - Delete / Backspace now deletes selected nodes; React Flow selected edges still use the existing edge deletion path.
+- Browser QA:
+  - Initial display: 12 nodes.
+  - PartsPalette Add node: 12 -> 13 nodes, added node selected, Inspector updated.
+  - Delete selected node: confirmation panel shown, 13 -> 12 nodes after confirm, app remained stable.
+  - Console runtime errors: none.
+  - Export JSON: not directly downloaded in Codex in-app browser because downloads are unsupported; implementation serializes the updated workflow state used by Canvas/Inspector.
+- build / lint:
+  - `npm run build`: pass
+  - `npm run lint`: pass
+- Not implemented:
+  - Drag-and-drop node creation.
+  - In-canvas node add menu.
+- Next candidates:
+  - M6 Undo / Redo history for add/delete/edit/connect/move/import/reset.
+- Known risks:
+  - PartsPalette currently uses workflow nodes as authoring parts, so newly added nodes also appear as reusable parts.
+  - Native browser downloads are not available in the in-app Browser QA surface.
+
 ## Current Phase
 
 feature/workflow-foundation-milestones — M0〜M4 連続実装中。

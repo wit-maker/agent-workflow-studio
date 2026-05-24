@@ -6,9 +6,15 @@ type PartsPaletteProps = {
   parts: WorkflowNode[]
   selectedNodeId: string
   onSelectNode: (nodeId: string) => void
+  onAddNode: (part: WorkflowNode) => void
 }
 
-export function PartsPalette({ parts, selectedNodeId, onSelectNode }: PartsPaletteProps) {
+export function PartsPalette({
+  parts,
+  selectedNodeId,
+  onSelectNode,
+  onAddNode,
+}: PartsPaletteProps) {
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('すべて')
 
@@ -66,6 +72,28 @@ export function PartsPalette({ parts, selectedNodeId, onSelectNode }: PartsPalet
             <span className="port-row">
               {part.inputTypes.map(formatDataTypeLabel).join(', ') || '開始'} から{' '}
               {part.outputTypes.map(formatDataTypeLabel).join(', ')}
+            </span>
+            <span className="part-card-actions">
+              <span
+                role="button"
+                tabIndex={0}
+                className="inline-mini-button"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onAddNode(part)
+                }}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter' && event.key !== ' ') {
+                    return
+                  }
+
+                  event.preventDefault()
+                  event.stopPropagation()
+                  onAddNode(part)
+                }}
+              >
+                Add node
+              </span>
             </span>
           </button>
         ))}

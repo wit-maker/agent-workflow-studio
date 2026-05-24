@@ -129,6 +129,28 @@ button:disabled {
   display: none;
 }
 
+.confirm-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid rgba(190, 63, 59, 0.32);
+  padding: 10px 18px;
+  background: #fff4f2;
+  color: var(--text);
+}
+
+.confirm-panel p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .primary-button {
   border-color: var(--blue);
   background: var(--blue);
@@ -324,6 +346,29 @@ button:disabled {
 .muted {
   color: var(--muted);
   font-size: 12px;
+}
+
+.part-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.inline-mini-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.inline-mini-button:hover {
+  border-color: var(--blue);
 }
 
 .center-stack {
@@ -1046,6 +1091,11 @@ button:disabled {
 
 .inline-action {
   width: 100%;
+}
+
+.danger-action {
+  border-color: rgba(190, 63, 59, 0.45);
+  color: #be3f3b;
 }
 
 .mini-metrics {

@@ -18,6 +18,8 @@ export type NodeEditableFields = Pick<WorkflowNode, 'title' | 'description'> &
 
 export type WorkflowAction =
   | { type: 'selectNode'; nodeId: string }
+  | { type: 'addNode'; node: WorkflowNode }
+  | { type: 'deleteNode'; nodeId: string }
   | { type: 'updateNodeConfig'; nodeId: string; updates: NodeEditableFields }
   | { type: 'createConnection'; connection: WorkflowConnection }
   | { type: 'deleteConnection'; connectionId: string }

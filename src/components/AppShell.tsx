@@ -9,6 +9,7 @@ import type {
   ExecutionStep,
 } from '../domain/executionGraph'
 import { createSampleWorkflow } from '../domain/sampleWorkflow'
+import { createNodeFromPart } from '../domain/workflowAuthoring'
 import type {
   AgentRole,
   ConnectionKind,
@@ -158,6 +159,21 @@ function buildArtifactContent(options: {
   }
 }
 
+function isEditableElement(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false
+  }
+
+  const tagName = target.tagName
+  return (
+    target.isContentEditable ||
+    tagName === 'INPUT' ||
+    tagName === 'TEXTAREA' ||
+    tagName === 'SELECT' ||
+    target.closest('[contenteditable="true"]') !== null
+  )
+}
+
 export function AppShell() {
   const [state, dispatch] = useReducer(
     workflowReducer,
@@ -176,6 +192,7 @@ export function AppShell() {
   const [canvasMode, setCanvasMode] = useState<CanvasMode>(() =>
     toCanvasMode(readCanvasModePreference()),
   )
+  const [pendingDeleteNodeId, setPendingDeleteNodeId] = useState<string | null>(null)
   const artifactVersionCountRef = useRef(0)
   const cancelledRebuildIdsRef = useRef<Set<string>>(new Set())
   const {
@@ -196,6 +213,21 @@ export function AppShell() {
     () => selectSelectedNode(workflow, selectedNodeId),
     [selectedNodeId, workflow],
   )
+  const pendingDeleteNode = useMemo(
+    () => workflow.nodes.find((node) => node.id === pendingDeleteNodeId),
+    [pendingDeleteNodeId, workflow.nodes],
+  )
+  const pendingDeleteConnectionCount = useMemo(
+    () =>
+      pendingDeleteNodeId
+        ? workflow.connections.filter(
+            (connection) =>
+              connection.sourceNodeId === pendingDeleteNodeId ||
+              connection.targetNodeId === pendingDeleteNodeId,
+          ).length
+        : 0,
+    [pendingDeleteNodeId, workflow.connections],
+  )
   const connectionValidation = useMemo(() => validateConnections(workflow), [workflow])
 
   useEffect(() => {
@@ -207,6 +239,32 @@ export function AppShell() {
     const timer = window.setTimeout(() => setImportSuccessMessage(null), 4000)
     return () => window.clearTimeout(timer)
   }, [importSuccessMessage])
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.defaultPrevented) {
+        return
+      }
+
+      if (event.key !== 'Delete' && event.key !== 'Backspace') {
+        return
+      }
+
+      if (isEditableElement(event.target)) {
+        return
+      }
+
+      if (!selectedNodeId) {
+        return
+      }
+
+      event.preventDefault()
+      handleDeleteNode(selectedNodeId)
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  })
 
   function calculateOutcomeByRunCount(): 'PASS' | 'REVIEW' | 'FAIL' {
     const currentCount = runCountRef.current
@@ -553,6 +611,29 @@ export function AppShell() {
     },
   ) {
     dispatch({ type: 'updateNodeConfig', nodeId, updates })
+  }
+
+  function handleAddNode(part: WorkflowNode) {
+    const node = createNodeFromPart(part, workflow.nodes, selectedNodeId)
+    dispatch({ type: 'addNode', node })
+  }
+
+  function handleDeleteNode(nodeId: string) {
+    const node = workflow.nodes.find((item) => item.id === nodeId)
+    if (!node) {
+      return
+    }
+
+    setPendingDeleteNodeId(nodeId)
+  }
+
+  function confirmDeleteNode() {
+    if (!pendingDeleteNodeId) {
+      return
+    }
+
+    dispatch({ type: 'deleteNode', nodeId: pendingDeleteNodeId })
+    setPendingDeleteNodeId(null)
   }
 
   function createConnectionFromDraft(draft: {
@@ -1134,11 +1215,34 @@ export function AppShell() {
         />
       {importError ? <div className="import-error">{importError}</div> : null}
       {!importError && importSuccessMessage ? <div className="import-success">{importSuccessMessage}</div> : null}
+      {pendingDeleteNode ? (
+        <section className="confirm-panel" aria-label="Node delete confirmation">
+          <div>
+            <strong>Delete node "{pendingDeleteNode.title}"?</strong>
+            <p>
+              {pendingDeleteConnectionCount} related connection(s) will also be deleted.
+            </p>
+          </div>
+          <div className="confirm-actions">
+            <button type="button" className="primary-button danger-action" onClick={confirmDeleteNode}>
+              Delete node
+            </button>
+            <button
+              type="button"
+              className="icon-button"
+              onClick={() => setPendingDeleteNodeId(null)}
+            >
+              Cancel
+            </button>
+          </div>
+        </section>
+      ) : null}
       <div className="workspace-grid">
         <PartsPalette
           parts={workflow.nodes}
           selectedNodeId={selectedNodeId}
           onSelectNode={(nodeId) => dispatch({ type: 'selectNode', nodeId })}
+          onAddNode={handleAddNode}
         />
         <div className="center-stack">
           {canvasMode === 'standard' ? (
@@ -1156,6 +1260,7 @@ export function AppShell() {
               connectionValidation={connectionValidation}
               onCreateConnection={createConnectionFromDraft}
               onDeleteConnection={handleDeleteConnection}
+              onDeleteNode={handleDeleteNode}
               onResetPositions={handleResetReactFlowPositions}
             />
           )}
@@ -1177,6 +1282,7 @@ export function AppShell() {
           onSaveNode={handleSaveNode}
           onCreateConnection={handleCreateConnection}
           onDeleteConnection={handleDeleteConnection}
+          onDeleteNode={handleDeleteNode}
         />
       </div>
       <BottomMonitor

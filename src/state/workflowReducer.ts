@@ -94,6 +94,40 @@ export function workflowReducer(
     case 'selectNode':
       return { ...state, selectedNodeId: action.nodeId }
 
+    case 'addNode':
+      return {
+        ...state,
+        selectedNodeId: action.node.id,
+        workflow: {
+          ...state.workflow,
+          nodes: [...state.workflow.nodes, action.node],
+          updatedAt: new Date().toISOString(),
+        },
+      }
+
+    case 'deleteNode': {
+      const nextNodes = state.workflow.nodes.filter((node) => node.id !== action.nodeId)
+      const nextSelectedNodeId =
+        state.selectedNodeId === action.nodeId
+          ? (nextNodes[0]?.id ?? '')
+          : state.selectedNodeId
+
+      return {
+        ...state,
+        selectedNodeId: nextSelectedNodeId,
+        workflow: {
+          ...state.workflow,
+          nodes: nextNodes,
+          connections: state.workflow.connections.filter(
+            (connection) =>
+              connection.sourceNodeId !== action.nodeId &&
+              connection.targetNodeId !== action.nodeId,
+          ),
+          updatedAt: new Date().toISOString(),
+        },
+      }
+    }
+
     case 'updateNodeConfig':
       return {
         ...state,

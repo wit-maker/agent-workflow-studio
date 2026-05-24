@@ -43,6 +43,7 @@ type InspectorProps = {
     kind: ConnectionKind
   }) => void
   onDeleteConnection: (connectionId: string) => void
+  onDeleteNode: (nodeId: string) => void
 }
 
 export function Inspector({
@@ -53,6 +54,7 @@ export function Inspector({
   onSaveNode,
   onCreateConnection,
   onDeleteConnection,
+  onDeleteNode,
 }: InspectorProps) {
   if (!selectedNode) {
     return (
@@ -76,6 +78,7 @@ export function Inspector({
       onSaveNode={onSaveNode}
       onCreateConnection={onCreateConnection}
       onDeleteConnection={onDeleteConnection}
+      onDeleteNode={onDeleteNode}
     />
   )
 }
@@ -115,6 +118,7 @@ function InspectorContent({
   onSaveNode,
   onCreateConnection,
   onDeleteConnection,
+  onDeleteNode,
 }: InspectorContentProps) {
   const [title, setTitle] = useState(selectedNode.title)
   const [description, setDescription] = useState(selectedNode.description)
@@ -230,6 +234,13 @@ function InspectorContent({
             </dd>
           </div>
         </dl>
+        <button
+          type="button"
+          className="icon-button inline-action danger-action"
+          onClick={() => onDeleteNode(selectedNode.id)}
+        >
+          Delete selected node
+        </button>
       </section>
 
       <section className="inspector-section">
