@@ -15,6 +15,7 @@ import { AgentConnectorPanel } from './AgentConnectorPanel'
 import { ArtifactVersionHistory } from './ArtifactVersionHistory'
 import { ConnectorQueuePanel } from './ConnectorQueuePanel'
 import { CredentialBoundaryPanel } from './CredentialBoundaryPanel'
+import { ImportExportPanel } from './ImportExportPanel'
 import { PersistencePanel } from './PersistencePanel'
 import { StorageBoundaryPanel } from './StorageBoundaryPanel'
 import { EvaluationPanel } from './EvaluationPanel'
@@ -64,6 +65,7 @@ type BottomMonitorProps = {
   onCancelRebuild: (requestId: string) => void
   onSelectArtifactVersion: (versionId: string) => void
   onResetStorage: () => void
+  onImportBundle: (bundle: { workflow: Workflow; templates: import('../storage/localTemplates').SavedWorkflowTemplate[] }) => void
 }
 
 export function BottomMonitor({
@@ -101,6 +103,7 @@ export function BottomMonitor({
   onCancelRebuild,
   onSelectArtifactVersion,
   onResetStorage,
+  onImportBundle,
 }: BottomMonitorProps) {
   const [activeTab, setActiveTab] = useState<
     'Logs' | 'Metrics' | 'Queue' | 'Output' | 'Execution' | 'Evaluation' | 'Agent' | 'Storage'
@@ -358,6 +361,11 @@ export function BottomMonitor({
         {activeTab === 'Storage' ? (
           <div className="storage-tab-panel">
             <StorageBoundaryPanel />
+            <ImportExportPanel
+              workflow={workflow}
+              templates={templates}
+              onImportBundle={onImportBundle}
+            />
             <PersistencePanel onResetStorage={onResetStorage} />
           </div>
         ) : null}

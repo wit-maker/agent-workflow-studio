@@ -25,6 +25,7 @@ import {
 import type {
   AgentRole,
   ConnectionKind,
+  Workflow,
   WorkflowArtifact,
   WorkflowNode,
   WorkflowRunLog,
@@ -758,6 +759,32 @@ export function AppShell() {
     runTokenRef.current += 1
     artifactVersionCountRef.current = 0
     dispatch({ type: 'resetWorkflow', workflow: createSampleWorkflow() })
+  }
+
+  function handleImportBundle(bundle: { workflow: Workflow; templates: SavedWorkflowTemplate[] }) {
+    artifactVersionCountRef.current = 0
+    dispatch({ type: 'importWorkflow', workflow: bundle.workflow })
+    if (bundle.templates.length > 0) {
+      for (const template of bundle.templates) {
+        saveWorkflowTemplate({
+          workflow: template.snapshot,
+          name: template.name,
+          description: template.description,
+          tags: template.metadata.tags,
+          category: template.metadata.category,
+        })
+      }
+      setTemplates(listWorkflowTemplates())
+    }
+    dispatch({
+      type: 'appendLog',
+      log: makeLog(
+        executionGraph?.runId ?? `import-bundle-${Date.now()}`,
+        `バンドルを読み込みました: ${bundle.workflow.name}${bundle.templates.length > 0 ? ` (テンプレート ${bundle.templates.length} 件)` : ''}`,
+        undefined,
+        'info',
+      ),
+    })
   }
 
   function handleSaveNode(
@@ -1581,6 +1608,7 @@ export function AppShell() {
         onCancelRebuild={handleCancelRebuild}
         onSelectArtifactVersion={handleSelectArtifactVersion}
         onResetStorage={handleResetStorage}
+        onImportBundle={handleImportBundle}
       />
     </div>
   )

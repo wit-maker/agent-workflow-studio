@@ -1,0 +1,202 @@
+import { useRef, useState } from 'react'
+import type { Workflow } from '../domain/workflow'
+import type { SavedWorkflowTemplate } from '../storage/localTemplates'
+import type { AppSettings } from '../storage/localAppSettings'
+import {
+  createWorkflowBundle,
+  createFullBundle,
+  downloadBundle,
+  buildExportFilename,
+} from '../domain/exportBundle'
+import { readBundleFromFile } from '../domain/importValidation'
+
+type ImportResult =
+  | { status: 'success'; workflowName: string; templateCount: number; warnings: string[] }
+  | { status: 'error'; error: string; warnings: string[] }
+
+type ImportExportPanelProps = {
+  workflow: Workflow
+  templates: SavedWorkflowTemplate[]
+  settings?: AppSettings
+  onImportBundle: (bundle: {
+    workflow: Workflow
+    templates: SavedWorkflowTemplate[]
+  }) => void
+}
+
+export function ImportExportPanel({
+  workflow,
+  templates,
+  settings,
+  onImportBundle,
+}: ImportExportPanelProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [importResult, setImportResult] = useState<ImportResult | null>(null)
+  const [pendingImport, setPendingImport] = useState<{
+    workflow: Workflow
+    templates: SavedWorkflowTemplate[]
+    warnings: string[]
+  } | null>(null)
+
+  function handleExportWorkflow() {
+    const bundle = createWorkflowBundle(workflow)
+    downloadBundle(bundle, buildExportFilename(workflow.id || 'workflow'))
+  }
+
+  function handleExportFullBundle() {
+    const bundle = createFullBundle(workflow, templates, settings)
+    downloadBundle(bundle, buildExportFilename('full-bundle'))
+  }
+
+  function handleImportClick() {
+    fileInputRef.current?.click()
+  }
+
+  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    e.target.value = ''
+    setImportResult(null)
+    setPendingImport(null)
+
+    const result = await readBundleFromFile(file)
+
+    if (!result.valid) {
+      setImportResult({ status: 'error', error: result.error, warnings: result.warnings })
+      return
+    }
+
+    setPendingImport({
+      workflow: result.bundle.workflow,
+      templates: result.bundle.templates,
+      warnings: result.warnings,
+    })
+  }
+
+  function confirmImport() {
+    if (!pendingImport) return
+    onImportBundle({
+      workflow: pendingImport.workflow,
+      templates: pendingImport.templates,
+    })
+    setImportResult({
+      status: 'success',
+      workflowName: pendingImport.workflow.name,
+      templateCount: pendingImport.templates.length,
+      warnings: pendingImport.warnings,
+    })
+    setPendingImport(null)
+  }
+
+  function cancelImport() {
+    setPendingImport(null)
+    setImportResult(null)
+  }
+
+  return (
+    <div className="import-export-panel">
+      <h4>エクスポート / インポート</h4>
+      <p className="muted">
+        ワークフローやバンドルをファイルとして保存・復元できます。将来のDesktopファイル保存に対応した形式です。
+      </p>
+
+      <div className="import-export-actions">
+        <div className="export-group">
+          <strong>エクスポート</strong>
+          <button type="button" className="primary-button" onClick={handleExportWorkflow}>
+            現在のワークフローを保存
+          </button>
+          <button type="button" className="icon-button" onClick={handleExportFullBundle}>
+            フルバンドルを保存（ワークフロー＋テンプレート）
+          </button>
+        </div>
+
+        <div className="import-group">
+          <strong>インポート</strong>
+          <button type="button" className="primary-button" onClick={handleImportClick}>
+            バンドルを読み込む
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            style={{ display: 'none' }}
+            onChange={handleFileSelected}
+          />
+        </div>
+      </div>
+
+      {pendingImport ? (
+        <div className="import-preview">
+          <p>
+            <strong>読み込み確認</strong>
+          </p>
+          <p>
+            ワークフロー: <strong>{pendingImport.workflow.name}</strong>
+          </p>
+          <p>テンプレート: {pendingImport.templates.length} 件</p>
+          {pendingImport.warnings.length > 0 ? (
+            <ul className="import-warnings">
+              {pendingImport.warnings.map((w, i) => (
+                <li key={i} className="health-warn">
+                  {w}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <p className="muted">現在のワークフローは置き換えられます。よろしいですか？</p>
+          <div className="import-confirm-actions">
+            <button type="button" className="primary-button" onClick={confirmImport}>
+              インポートする
+            </button>
+            <button type="button" className="icon-button" onClick={cancelImport}>
+              キャンセル
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {importResult ? (
+        <div
+          className={
+            importResult.status === 'success' ? 'import-result-success' : 'import-result-error'
+          }
+        >
+          {importResult.status === 'success' ? (
+            <>
+              <p>
+                ✓ 「{importResult.workflowName}」を読み込みました。
+                {importResult.templateCount > 0
+                  ? ` テンプレート ${importResult.templateCount} 件も復元されました。`
+                  : ''}
+              </p>
+              {importResult.warnings.length > 0 ? (
+                <ul className="import-warnings">
+                  {importResult.warnings.map((w, i) => (
+                    <li key={i} className="health-warn">
+                      {w}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <p>✗ インポート失敗: {importResult.error}</p>
+              {importResult.warnings.length > 0 ? (
+                <ul className="import-warnings">
+                  {importResult.warnings.map((w, i) => (
+                    <li key={i} className="health-warn">
+                      {w}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </>
+          )}
+        </div>
+      ) : null}
+    </div>
+  )
+}
