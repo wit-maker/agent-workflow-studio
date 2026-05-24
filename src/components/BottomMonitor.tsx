@@ -6,12 +6,15 @@ import {
 } from '../domain/displayLabels'
 import type { ArtifactVersion, EvaluationResult, HumanReviewState, RebuildRequest, ReviewDecision } from '../domain/evaluation'
 import type { ExecutionGraph } from '../domain/executionGraph'
+import type { ConnectorJob } from '../domain/connectorQueue'
 import type { Workflow } from '../domain/workflow'
 import type { SavedWorkflowTemplate } from '../storage/localTemplates'
 import type { SavedWorkflowSnapshot } from '../storage/localWorkflowHistory'
 import { selectActiveQueueNodes, selectBottleneckNode } from '../state/workflowSelectors'
 import { AgentConnectorPanel } from './AgentConnectorPanel'
 import { ArtifactVersionHistory } from './ArtifactVersionHistory'
+import { ConnectorQueuePanel } from './ConnectorQueuePanel'
+import { CredentialBoundaryPanel } from './CredentialBoundaryPanel'
 import { PersistencePanel } from './PersistencePanel'
 import { EvaluationPanel } from './EvaluationPanel'
 import { ExecutionGraphPanel } from './ExecutionGraphPanel'
@@ -23,6 +26,11 @@ import { WorkflowHistoryPanel } from './WorkflowHistoryPanel'
 type BottomMonitorProps = {
   workflow: Workflow
   executionGraph: ExecutionGraph | null
+  connectorJobs: ConnectorJob[]
+  onRetryConnectorJob: (jobId: string) => void
+  onMarkConnectorJobReviewed: (jobId: string) => void
+  onSkipConnectorJob: (jobId: string) => void
+  onCancelConnectorJob: (jobId: string) => void
   templates: SavedWorkflowTemplate[]
   snapshots: SavedWorkflowSnapshot[]
   onSaveTemplate: (input: {
@@ -60,6 +68,11 @@ type BottomMonitorProps = {
 export function BottomMonitor({
   workflow,
   executionGraph,
+  connectorJobs,
+  onRetryConnectorJob,
+  onMarkConnectorJobReviewed,
+  onSkipConnectorJob,
+  onCancelConnectorJob,
   templates,
   snapshots,
   onSaveTemplate,
@@ -181,6 +194,17 @@ export function BottomMonitor({
 
         {activeTab === 'Queue' ? (
           <div className="queue-panel">
+            <section className="queue-action-card">
+              <h4>コネクタージョブキュー</h4>
+              <ConnectorQueuePanel
+                jobs={connectorJobs}
+                onRetryJob={onRetryConnectorJob}
+                onMarkJobReviewed={onMarkConnectorJobReviewed}
+                onSkipJob={onSkipConnectorJob}
+                onCancelJob={onCancelConnectorJob}
+              />
+            </section>
+
             <div className="queue-list">
               {queueNodes.length === 0 ? (
                 <p className="muted">待機列・実行中・失敗・確認待ちのノードはありません。</p>
@@ -326,6 +350,7 @@ export function BottomMonitor({
         {activeTab === 'Agent' ? (
           <div className="agent-tab-panel">
             <AgentConnectorPanel />
+            <CredentialBoundaryPanel />
           </div>
         ) : null}
 
