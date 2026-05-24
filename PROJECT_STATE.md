@@ -15,6 +15,7 @@ feature/workflow-foundation-milestones — M0〜M4 連続実装中。
 - M0: main sync / build / lint 確認済み。ブランチ作成済み。
 - M1: Browser QA noise 調査・分類・防衛的修正を実施。
 - M2: Workflow JSON import/export の信頼性強化を実施。
+- M3: Inspector 編集フロー（dirty/保存/破棄/validation）の Browser QA 完走確認。
 
 ### Verification
 - npm run build: pass
@@ -30,6 +31,7 @@ feature/workflow-foundation-milestones — M0〜M4 連続実装中。
 - **修正**: `Inspector.tsx` の `node.position?.x` を防衛的アクセスに変更（import データに position がない場合の実行時クラッシュを防止）。
 - **M2 実装**: `validateWorkflowImport` を強化。`node.config`欠落→`{}`、`node.description`欠落→`''`、`node.position`欠落→`{x:0,y:0}`、`node.status`欠落→`'idle'`、`node.category`欠落→`'その他'` として補完。接続の source/target node 存在確認を追加し、不正な接続を安全に除外。`connection.id`欠落時は自動生成。
 - **M2 Browser QA**: 欠損フィールドのある JSON import 成功・不正 JSON エラー表示・schema エラー表示・export→reimport→run のサイクルを確認。
+- **M3 Browser QA**: title 編集→dirty バナー表示・保存ボタン有効化・保存→全UI反映（Inspector/Palette/Timeline/ReactFlow Canvas）・破棄→保存済み値へ復元・空 title 保存不可・invalid JSON 保存不可（赤ボーダー・整形 disabled）・保存後 dirty なしをすべて確認。
 
 ---
 
