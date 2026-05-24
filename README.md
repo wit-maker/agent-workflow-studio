@@ -30,7 +30,7 @@ npm run lint
 
 ## 現在フェーズ
 
-現在は Phase 7.2 の React Flow Canvas 操作性改善まで実装しています。
+M9〜M12（Alpha Foundation — mock agent connectors / local persistence / Tauri readiness）まで実装しています。
 
 - `useReducer` ベースの workflow state
 - Inspector 編集
@@ -50,6 +50,9 @@ npm run lint
 - **React Flow Canvas MVP**（Port Handle 表示、ドラッグ接続、Edge 削除、Inspector 選択連動、ノード位置保存、位置リセット）
 - **React Flow Canvas 操作性改善**（操作ヘルプ、Edge 詳細、削除確認、無効接続理由表示、Delete キー案内、Port 視認性改善）
 - **Undo / Redo 方針整理**（実装はまだ行わず、Phase 7.1 では方針文書化のみ）
+- **Mock Agent Connector Architecture**（Codex / Claude / Gemini / Hermes / Grok / Human Review の mock adapter、実行ログにコネクター名を記録）
+- **Local Persistence**（ワークフロー自動保存・復元、ストレージ管理UI、reset 導線）
+- **Tauri Readiness Design**（`IStorageAdapter` interface、localStorage adapter、移行設計ドキュメント）
 - 旧 inputTypes / outputTypes との後方互換
 - 日本語優先 UI / ドキュメント
 
@@ -88,9 +91,12 @@ Human Review も現時点ではローカル状態だけで扱うモック導線�
 
 ## 次の実装順候補
 
-1. Phase 7.3 候補として React Flow Canvas の接続編集拡張とノード追加導線を検討する
-2. 実行グラフと評価結果を結びつけた差分表示を追加する
-3. テンプレート version / metadata 編集を追加する
-4. UIモデルが安定した後に Tauri 2 と永続ローカル保存を再評価する
-5. 必要になった場合のみ共有・同期系ストレージを検討する
+1. 実 API 接続の設計（Credential 管理・OS Keychain 連携）
+2. Tauri 導入条件の確認と `tauriAdapter` 実装
+3. React Flow Canvas の接続編集拡張とノード追加導線
+4. 評価結果と実行グラフを結びつけた差分表示
+5. テンプレート version / metadata 編集
+
 M8 local run engine notes are in `docs/implementation/LOCAL_RUN_ENGINE_M8.md`.
+M9〜M12 alpha foundation notes are in `docs/implementation/alpha-foundation.md`.
+Tauri readiness design is in `docs/architecture/tauri-readiness.md`.

@@ -13,6 +13,7 @@ import type {
 } from '../domain/executionGraph'
 import { createSampleWorkflow } from '../domain/sampleWorkflow'
 import { createNodeFromPart } from '../domain/workflowAuthoring'
+import { buildConnectorLogMessage } from '../domain/agentExecution'
 import type {
   AgentRole,
   ConnectionKind,
@@ -41,8 +42,15 @@ import {
   readReactFlowPositions,
   writeReactFlowPositions,
   writeCanvasModePreference,
+  clearReactFlowPositions,
   type SavedCanvasMode,
 } from '../storage/localCanvasState'
+import {
+  saveCurrentWorkflow,
+  loadCurrentWorkflow,
+  clearCurrentWorkflow,
+} from '../storage/localWorkflowState'
+import { clearAppSettings } from '../storage/localAppSettings'
 import { scaleNodePosition, unscaleNodePosition } from '../domain/reactFlowAdapter'
 import { createWorkflowState, workflowReducer } from '../state/workflowReducer'
 import {
@@ -70,12 +78,14 @@ function toSavedCanvasMode(mode: CanvasMode): SavedCanvasMode {
 }
 
 function createInitialWorkflow() {
-  const workflow = createSampleWorkflow()
   const savedPositions = readReactFlowPositions()
+  const savedWorkflow = loadCurrentWorkflow()
+
+  const base = savedWorkflow ?? createSampleWorkflow()
 
   return {
-    ...workflow,
-    nodes: workflow.nodes.map((node) =>
+    ...base,
+    nodes: base.nodes.map((node) =>
       savedPositions[node.id]
         ? { ...node, position: unscaleNodePosition(savedPositions[node.id]) }
         : node,
@@ -257,6 +267,12 @@ export function AppShell() {
   }, [canvasMode])
 
   useEffect(() => {
+    if (!isRunning) {
+      saveCurrentWorkflow(workflow)
+    }
+  }, [workflow, isRunning])
+
+  useEffect(() => {
     if (!importSuccessMessage) return
     const timer = window.setTimeout(() => setImportSuccessMessage(null), 4000)
     return () => window.clearTimeout(timer)
@@ -390,6 +406,15 @@ export function AppShell() {
       type: 'runNodeRunning',
       nodeId: options.node.id,
       log: makeLog(options.runId, `${options.node.title} を開始しました。`, options.node.id),
+    })
+    dispatch({
+      type: 'appendLog',
+      log: makeLog(
+        options.runId,
+        buildConnectorLogMessage(options.node),
+        options.node.id,
+        'info',
+      ),
     })
 
     await delay(Math.min(durationMs, 260))
@@ -664,6 +689,15 @@ export function AppShell() {
   }
 
   function handleReset() {
+    runTokenRef.current += 1
+    artifactVersionCountRef.current = 0
+    dispatch({ type: 'resetWorkflow', workflow: createSampleWorkflow() })
+  }
+
+  function handleResetStorage() {
+    clearCurrentWorkflow()
+    clearAppSettings()
+    clearReactFlowPositions()
     runTokenRef.current += 1
     artifactVersionCountRef.current = 0
     dispatch({ type: 'resetWorkflow', workflow: createSampleWorkflow() })
@@ -1407,6 +1441,7 @@ export function AppShell() {
         onStartRebuild={handleStartRebuild}
         onCancelRebuild={handleCancelRebuild}
         onSelectArtifactVersion={handleSelectArtifactVersion}
+        onResetStorage={handleResetStorage}
       />
     </div>
   )
