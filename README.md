@@ -16,6 +16,7 @@ Phase 3 の実行グラフMVPは `docs/implementation/EXECUTION_GRAPH_MVP.md` �
 Phase 5 のポートモデルMVPは `docs/implementation/PORT_MODEL_MVP.md` に整理しています。
 Phase 6 のテンプレート再利用UXは `docs/implementation/TEMPLATE_REUSE_UX_MVP.md` に整理しています。
 Phase 7 の React Flow Canvas MVP は `docs/implementation/REACT_FLOW_CANVAS_MVP.md` に整理しています。
+Phase 7.2 の React Flow Canvas 操作性改善は `docs/implementation/REACT_FLOW_CANVAS_USABILITY.md` に整理しています。
 Phase 7.1 の Undo / Redo 方針は `docs/implementation/UNDO_REDO_POLICY.md` に整理しています。
 
 ## 開始手順
@@ -29,7 +30,7 @@ npm run lint
 
 ## 現在フェーズ
 
-現在は Phase 7.1 の React Flow Canvas 安定化MVP まで実装しています。
+現在は Phase 7.2 の React Flow Canvas 操作性改善まで実装しています。
 
 - `useReducer` ベースの workflow state
 - Inspector 編集
@@ -47,6 +48,7 @@ npm run lint
 - **ポートベース接続検証**（ポートID存在チェック・型互換チェック）
 - **Canvas表示モード切替**（標準 / React Flow、localStorage保存）
 - **React Flow Canvas MVP**（Port Handle 表示、ドラッグ接続、Edge 削除、Inspector 選択連動、ノード位置保存、位置リセット）
+- **React Flow Canvas 操作性改善**（操作ヘルプ、Edge 詳細、削除確認、無効接続理由表示、Delete キー案内、Port 視認性改善）
 - **Undo / Redo 方針整理**（実装はまだ行わず、Phase 7.1 では方針文書化のみ）
 - 旧 inputTypes / outputTypes との後方互換
 - 日本語優先 UI / ドキュメント
@@ -60,6 +62,7 @@ npm run lint
 - 既存 `WorkflowCanvas` と共存する `ReactFlowCanvas`
 - localStorage による Canvas 表示モード保存
 - localStorage による React Flow ノード位置保存と位置リセット
+- React Flow Canvas 上の操作ヘルプ、接続詳細、無効接続理由表示
 - ローカルモック実行、ExecutionGraph、実行タイムライン
 - review / error / retry / skip の可視化
 - localStorage によるテンプレート保存、検索、プレビュー、複製とワークフロー履歴保存
@@ -78,13 +81,14 @@ Human Review も現時点ではローカル状態だけで扱うモック導線�
 - Tauri、SQLite、本番DB
 - React Flow 全面移行
 - 本格 Undo / Redo
+- ノード削除
 - 自動レイアウト、複雑なEdge編集、DnDノード追加
 - 非同期ジョブエンジン化
 - Human Review の永続化
 
 ## 次の実装順候補
 
-1. Phase 7.2 として React Flow Canvas の操作性改善を進める
+1. Phase 7.3 候補として React Flow Canvas の接続編集拡張とノード追加導線を検討する
 2. 実行グラフと評価結果を結びつけた差分表示を追加する
 3. テンプレート version / metadata 編集を追加する
 4. UIモデルが安定した後に Tauri 2 と永続ローカル保存を再評価する

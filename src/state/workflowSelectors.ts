@@ -29,6 +29,14 @@ export type ConnectionDraft = {
   kind: ConnectionKind
 }
 
+export type ConnectionAttempt = {
+  sourceNodeId?: string | null
+  sourcePortId?: string | null
+  targetNodeId?: string | null
+  targetPortId?: string | null
+  kind?: ConnectionKind
+}
+
 export const isDuplicateConnectionDraft = (
   workflow: Workflow,
   draft: ConnectionDraft,
@@ -333,6 +341,73 @@ export function validateConnectionDraft(
     kind: draft.kind,
     carries: srcPort ? [srcPort.dataType] : (sourceNode?.outputTypes.slice(0, 1) ?? []),
     status: 'inactive',
+  })
+}
+
+function buildInvalidDraftResult(
+  workflow: Workflow,
+  attempt: ConnectionAttempt,
+  reason: string,
+): ConnectionValidationResult {
+  const sourceNode = workflow.nodes.find((node) => node.id === attempt.sourceNodeId)
+  const targetNode = workflow.nodes.find((node) => node.id === attempt.targetNodeId)
+
+  return {
+    sourceLabel: formatNodeLabel(sourceNode, attempt.sourceNodeId ?? '不明'),
+    targetLabel: formatNodeLabel(targetNode, attempt.targetNodeId ?? '不明'),
+    valid: false,
+    reason,
+    severity: 'error',
+  }
+}
+
+export function explainConnectionAttempt(
+  workflow: Workflow,
+  attempt: ConnectionAttempt,
+): ConnectionValidationResult {
+  if (!attempt.sourceNodeId || !attempt.targetNodeId) {
+    return buildInvalidDraftResult(
+      workflow,
+      attempt,
+      '接続元ノードまたは接続先ノードが見つかりません。',
+    )
+  }
+
+  if (!attempt.sourcePortId || !attempt.targetPortId) {
+    return buildInvalidDraftResult(workflow, attempt, '接続元または接続先ポートが未指定です。')
+  }
+
+  const sourceNode = workflow.nodes.find((node) => node.id === attempt.sourceNodeId)
+  const targetNode = workflow.nodes.find((node) => node.id === attempt.targetNodeId)
+
+  if (!sourceNode || !targetNode) {
+    return buildInvalidDraftResult(
+      workflow,
+      attempt,
+      '接続元ノードまたは接続先ノードが見つかりません。',
+    )
+  }
+
+  if (sourceNode.id === targetNode.id) {
+    return buildInvalidDraftResult(workflow, attempt, '同じノード同士は接続できません。')
+  }
+
+  const sourcePort = findPort(getOutputPorts(sourceNode), attempt.sourcePortId)
+  if (!sourcePort) {
+    return buildInvalidDraftResult(workflow, attempt, '接続元ポートが見つかりません。')
+  }
+
+  const targetPort = findPort(getInputPorts(targetNode), attempt.targetPortId)
+  if (!targetPort) {
+    return buildInvalidDraftResult(workflow, attempt, '接続先ポートが見つかりません。')
+  }
+
+  return validateConnectionDraft(workflow, {
+    sourceNodeId: attempt.sourceNodeId,
+    sourcePortId: attempt.sourcePortId,
+    targetNodeId: attempt.targetNodeId,
+    targetPortId: attempt.targetPortId,
+    kind: attempt.kind ?? 'data',
   })
 }
 
