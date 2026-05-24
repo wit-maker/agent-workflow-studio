@@ -14,6 +14,7 @@ import { selectActiveQueueNodes, selectBottleneckNode } from '../state/workflowS
 import { AgentConnectorPanel } from './AgentConnectorPanel'
 import { ArtifactVersionHistory } from './ArtifactVersionHistory'
 import { ConnectorQueuePanel } from './ConnectorQueuePanel'
+import { ConnectorRoadmapPanel } from './ConnectorRoadmapPanel'
 import { CredentialBoundaryPanel } from './CredentialBoundaryPanel'
 import { ImportExportPanel } from './ImportExportPanel'
 import { PersistencePanel } from './PersistencePanel'
@@ -106,7 +107,7 @@ export function BottomMonitor({
   onImportBundle,
 }: BottomMonitorProps) {
   const [activeTab, setActiveTab] = useState<
-    'Logs' | 'Metrics' | 'Queue' | 'Output' | 'Execution' | 'Evaluation' | 'Agent' | 'Storage'
+    'Logs' | 'Metrics' | 'Queue' | 'Output' | 'Execution' | 'Evaluation' | 'Agent' | 'Storage' | 'Roadmap'
   >('Logs')
 
   const tabLabels = {
@@ -118,6 +119,7 @@ export function BottomMonitor({
     Evaluation: '評価',
     Agent: 'エージェント',
     Storage: 'ストレージ',
+    Roadmap: 'Roadmap',
   } as const
 
   const bottleneck = selectBottleneckNode(workflow)
@@ -132,7 +134,7 @@ export function BottomMonitor({
   return (
     <footer className="bottom-monitor" aria-label="メトリクスとログ">
       <section className="monitor-tabs">
-        {(['Logs', 'Metrics', 'Queue', 'Output', 'Execution', 'Evaluation', 'Agent', 'Storage'] as const).map((tab) => (
+        {(['Logs', 'Metrics', 'Queue', 'Output', 'Execution', 'Evaluation', 'Agent', 'Storage', 'Roadmap'] as const).map((tab) => (
           <button
             key={tab}
             type="button"
@@ -367,6 +369,12 @@ export function BottomMonitor({
               onImportBundle={onImportBundle}
             />
             <PersistencePanel onResetStorage={onResetStorage} />
+          </div>
+        ) : null}
+
+        {activeTab === 'Roadmap' ? (
+          <div className="roadmap-tab-panel">
+            <ConnectorRoadmapPanel />
           </div>
         ) : null}
       </section>

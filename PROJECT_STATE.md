@@ -86,6 +86,58 @@ Last updated: 2026-05-25
 
 ---
 
+## M17-M20 Storage Adapter and Real Connector Design Foundation
+
+- Branch: `feature/storage-adapter-and-real-connector-design`
+- Commits:
+  - M17: `440e5c8` `feat: consolidate storage adapter boundary`
+  - M18: `13c17b9` `feat: harden workflow bundle import export`
+  - M19: `da859f9` `feat: define real connector adapter interfaces`
+  - M20 base: `3a5157a` `feat: add connector implementation roadmap documentation and domain model`
+  - M20 completion: follow-up commit with Roadmap UI/docs integration
+
+### Completed Scope
+
+| Milestone | Status | Notes |
+|---|---|---|
+| M17 | Complete | Storage adapter boundary, localStorage implementation file, validation, migrations, storage health UI |
+| M18 | Complete | Workflow/full-bundle export, import validation, import confirmation UI, architecture note |
+| M19 | Complete | Real connector adapter request/response/error/readiness interfaces and architecture note |
+| M20 | Complete | Connector implementation order, roadmap domain model, BottomMonitor Roadmap tab, readiness snapshot, architecture note |
+
+### Verification
+
+- `npm run build`: pass
+- `npm run lint`: pass
+- Browser QA: app launch pass
+- Browser QA: Storage tab and storage health pass
+- Browser QA: Export Current Workflow button path pass
+- Browser QA: Export Full Bundle button path pass
+- Browser QA: Import valid/invalid bundle file picker not fully automated in the in-app browser; UI route and validation implementation are present
+- Browser QA: Connector readiness snapshot pass
+- Browser QA: Connector roadmap pass
+- Browser QA: Run All pass
+- Browser QA: console errors none observed
+
+### Not Included
+
+- Tauri
+- SQLite
+- Zustand
+- real API calls
+- credential input or storage
+- `.env` creation
+- OS Keychain
+- Codex/Hermes/Grok live integration
+
+### Next Candidates
+
+1. Human Review connector adapter wrapper.
+2. Manual Connector / Local Mock adapter wrapper.
+3. Claude CLI style local adapter or Codex CLI style local adapter after the safe adapter lifecycle is proven.
+
+---
+
 ## M13〜M16 Connector Queue Safety and Recovery
 
 - Branch: `feature/connector-queue-safety-recovery`

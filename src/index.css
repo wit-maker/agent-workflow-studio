@@ -2099,6 +2099,12 @@ button:disabled {
   height: 100%;
 }
 
+.roadmap-tab-panel {
+  padding: 8px;
+  overflow-y: auto;
+  height: 100%;
+}
+
 .persistence-panel {
   display: flex;
   flex-direction: column;
@@ -2254,6 +2260,28 @@ button:disabled {
   color: var(--amber);
 }
 
+.connector-badge.roadmap {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+.connector-badge.roadmap-ready-next,
+.connector-badge.roadmap-recommended {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.connector-badge.roadmap-blocked {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.connector-badge.roadmap-later,
+.connector-badge.roadmap-research-needed {
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
 .connector-detail {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -2283,4 +2311,78 @@ button:disabled {
 .connector-detail dd {
   margin: 0;
   color: var(--text);
+}
+
+.connector-roadmap-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.connector-roadmap-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.connector-roadmap-header h4,
+.connector-readiness-summary h4 {
+  margin: 0 0 4px;
+  font-size: 13px;
+}
+
+.connector-roadmap-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 1120px;
+  font-size: 12px;
+}
+
+.connector-roadmap-table th,
+.connector-roadmap-table td {
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.connector-roadmap-table th {
+  background: var(--surface-2);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.connector-roadmap-table td:nth-child(11),
+.connector-roadmap-table td:nth-child(12) {
+  min-width: 220px;
+}
+
+.roadmap-category {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.connector-readiness-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.readiness-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.readiness-card {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--surface);
 }

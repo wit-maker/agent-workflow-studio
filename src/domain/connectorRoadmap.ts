@@ -1,145 +1,184 @@
-export type RoadmapPhase = 'phase-a' | 'phase-b' | 'phase-c' | 'phase-d'
+export type ConnectorRoadmapStatus =
+  | 'ready-next'
+  | 'recommended'
+  | 'blocked'
+  | 'later'
+  | 'research-needed'
 
-export type RoadmapStatus =
-  | 'available'        // 既に動作している
-  | 'next'             // 次に実装するコネクター
-  | 'short-term'       // 短期候補（Phase B）
-  | 'mid-term'         // 中期候補（Phase C）
-  | 'long-term'        // 長期候補（Phase D）
-  | 'blocked'          // 前提条件待ち
+export type ConnectorRoadmapCategory =
+  | 'human'
+  | 'mock'
+  | 'local-cli'
+  | 'local-gateway'
+  | 'cloud-api'
 
-export type ConnectorRoadmapEntry = {
-  connectorId: string
-  displayName: string
-  phase: RoadmapPhase
-  status: RoadmapStatus
-  priority: number
-  value: 1 | 2 | 3 | 4 | 5
-  implementationDifficulty: 'lowest' | 'low' | 'medium' | 'high'
-  credentialRisk: 'none' | 'low' | 'medium' | 'high'
-  localFirst: boolean
-  prerequisite?: string
-  rationale: string
-  nextAction: string
+export type ConnectorRoadmapItem = {
+  id: string
+  label: string
+  category: ConnectorRoadmapCategory
+  recommendedOrder: number
+  status: ConnectorRoadmapStatus
+  value: number
+  implementationDifficulty: number
+  credentialRisk: number
+  localFirstCompatibility: number
+  rateLimitRisk: number
+  userControl: number
+  debuggability: number
+  recommendedPhase: string
+  reason: string
+  nextRequirement: string
 }
 
-export const CONNECTOR_ROADMAP: ConnectorRoadmapEntry[] = [
+export const CONNECTOR_ROADMAP: ConnectorRoadmapItem[] = [
   {
-    connectorId: 'human-review',
-    displayName: 'Human Review',
-    phase: 'phase-a',
-    status: 'available',
-    priority: 1,
+    id: 'human-review',
+    label: 'Human Review',
+    category: 'human',
+    recommendedOrder: 1,
+    status: 'ready-next',
     value: 5,
-    implementationDifficulty: 'low',
-    credentialRisk: 'none',
-    localFirst: true,
-    rationale: 'API不要・ユーザーが完全制御・ワークフロー信頼性の核',
-    nextAction: 'IRealConnectorAdapter を実装（ネットワーク不要）',
+    implementationDifficulty: 1,
+    credentialRisk: 1,
+    localFirstCompatibility: 5,
+    rateLimitRisk: 1,
+    userControl: 5,
+    debuggability: 5,
+    recommendedPhase: 'M21 candidate',
+    reason: 'Already fits the local-first workflow and keeps the user in full control without API calls or credential handling.',
+    nextRequirement: 'Wrap the existing human review flow with the real connector adapter interface.',
   },
   {
-    connectorId: 'local-mock',
-    displayName: 'Local Mock',
-    phase: 'phase-a',
-    status: 'available',
-    priority: 2,
+    id: 'manual-local-mock',
+    label: 'Manual Connector / Local Mock',
+    category: 'mock',
+    recommendedOrder: 2,
+    status: 'ready-next',
     value: 4,
-    implementationDifficulty: 'lowest',
-    credentialRisk: 'none',
-    localFirst: true,
-    rationale: '既にほぼ動作している・テストの基盤',
-    nextAction: 'IRealConnectorAdapter に準拠させる',
+    implementationDifficulty: 1,
+    credentialRisk: 1,
+    localFirstCompatibility: 5,
+    rateLimitRisk: 1,
+    userControl: 5,
+    debuggability: 5,
+    recommendedPhase: 'M21 candidate',
+    reason: 'It is the safest connector for proving request, response, error, queue, and import/export behavior end to end.',
+    nextRequirement: 'Promote the mock execution path to an adapter-conformant manual connector.',
   },
   {
-    connectorId: 'claude-cli',
-    displayName: 'Claude CLI',
-    phase: 'phase-b',
-    status: 'next',
-    priority: 3,
+    id: 'claude-cli-style-local-adapter',
+    label: 'Claude CLI style local adapter',
+    category: 'local-cli',
+    recommendedOrder: 3,
+    status: 'recommended',
     value: 5,
-    implementationDifficulty: 'low',
-    credentialRisk: 'low',
-    localFirst: true,
-    prerequisite: 'Tauri 導入または Local Proxy 設計',
-    rationale: '最も高い value・local-first・credential リスクが低い',
-    nextAction: 'Tauri 導入後に実装',
+    implementationDifficulty: 2,
+    credentialRisk: 2,
+    localFirstCompatibility: 4,
+    rateLimitRisk: 3,
+    userControl: 4,
+    debuggability: 4,
+    recommendedPhase: 'After Human Review / Manual Connector',
+    reason: 'High workflow value with credentials delegated to an already installed local CLI rather than stored in the app.',
+    nextRequirement: 'Define the local command boundary and readiness check without invoking real commands from the browser runtime.',
   },
   {
-    connectorId: 'codex-cli',
-    displayName: 'Codex CLI',
-    phase: 'phase-b',
-    status: 'short-term',
-    priority: 4,
+    id: 'codex-cli-style-local-adapter',
+    label: 'Codex CLI style local adapter',
+    category: 'local-cli',
+    recommendedOrder: 4,
+    status: 'recommended',
     value: 4,
-    implementationDifficulty: 'low',
-    credentialRisk: 'low',
-    localFirst: true,
-    prerequisite: 'Claude CLI 完了',
-    rationale: 'Claude CLI と同等アーキテクチャ・設計を再利用できる',
-    nextAction: 'Claude CLI 完了後に実装',
+    implementationDifficulty: 2,
+    credentialRisk: 2,
+    localFirstCompatibility: 4,
+    rateLimitRisk: 3,
+    userControl: 4,
+    debuggability: 4,
+    recommendedPhase: 'After Claude CLI style adapter or in parallel design',
+    reason: 'Shares most of the local CLI boundary shape and can reuse readiness, logging, and cancellation rules.',
+    nextRequirement: 'Reuse the CLI adapter contract after the first local CLI connector proves the lifecycle.',
   },
   {
-    connectorId: 'gemini-cli',
-    displayName: 'Gemini CLI',
-    phase: 'phase-b',
-    status: 'short-term',
-    priority: 5,
+    id: 'gemini-cli-style-local-adapter',
+    label: 'Gemini CLI style local adapter',
+    category: 'local-cli',
+    recommendedOrder: 5,
+    status: 'later',
     value: 4,
-    implementationDifficulty: 'medium',
-    credentialRisk: 'low',
-    localFirst: true,
-    prerequisite: 'Codex CLI 完了',
-    rationale: '大きなコンテキストウィンドウ・web search 内蔵',
-    nextAction: 'Codex CLI 完了後に実装',
+    implementationDifficulty: 3,
+    credentialRisk: 2,
+    localFirstCompatibility: 4,
+    rateLimitRisk: 3,
+    userControl: 4,
+    debuggability: 3,
+    recommendedPhase: 'After the first CLI adapter is stable',
+    reason: 'Useful for large-context and search-assisted work, but should follow a proven CLI adapter lifecycle.',
+    nextRequirement: 'Confirm CLI availability checks, streaming shape, and rate-limit reporting.',
   },
   {
-    connectorId: 'hermes-gateway',
-    displayName: 'Hermes Gateway',
-    phase: 'phase-c',
-    status: 'mid-term',
-    priority: 6,
+    id: 'hermes-local-gateway',
+    label: 'Hermes local gateway',
+    category: 'local-gateway',
+    recommendedOrder: 6,
+    status: 'research-needed',
     value: 3,
-    implementationDifficulty: 'medium',
-    credentialRisk: 'low',
-    localFirst: true,
-    prerequisite: 'Gemini CLI 完了・Hermesローカル起動',
-    rationale: '複数モデルへのルーティングを抽象化できる',
-    nextAction: 'Gemini CLI 完了後に設計',
+    implementationDifficulty: 3,
+    credentialRisk: 2,
+    localFirstCompatibility: 4,
+    rateLimitRisk: 2,
+    userControl: 3,
+    debuggability: 3,
+    recommendedPhase: 'After CLI adapters',
+    reason: 'A gateway can simplify multi-provider routing, but adds another local service boundary to diagnose.',
+    nextRequirement: 'Document Hermes process discovery, health checks, and request routing before implementation.',
   },
   {
-    connectorId: 'grok-search',
-    displayName: 'Grok / X Search',
-    phase: 'phase-c',
-    status: 'mid-term',
-    priority: 7,
+    id: 'grok-x-search-via-hermes',
+    label: 'Grok/X Search via Hermes',
+    category: 'local-gateway',
+    recommendedOrder: 7,
+    status: 'blocked',
     value: 3,
-    implementationDifficulty: 'medium',
-    credentialRisk: 'low',
-    localFirst: false,
-    prerequisite: 'Hermes Gateway 完了',
-    rationale: 'Web検索特化・Hermes経由で実装',
-    nextAction: 'Hermes 完了後に実装',
+    implementationDifficulty: 4,
+    credentialRisk: 3,
+    localFirstCompatibility: 2,
+    rateLimitRisk: 4,
+    userControl: 3,
+    debuggability: 2,
+    recommendedPhase: 'After Hermes gateway is proven',
+    reason: 'Search integration depends on Hermes readiness and provider-specific usage limits.',
+    nextRequirement: 'Wait for Hermes gateway implementation and explicit search credential policy.',
   },
   {
-    connectorId: 'direct-cloud-api',
-    displayName: 'Direct Cloud APIs',
-    phase: 'phase-d',
-    status: 'long-term',
-    priority: 8,
+    id: 'direct-cloud-apis',
+    label: 'Direct Cloud APIs',
+    category: 'cloud-api',
+    recommendedOrder: 8,
+    status: 'blocked',
     value: 4,
-    implementationDifficulty: 'high',
-    credentialRisk: 'high',
-    localFirst: false,
-    prerequisite: 'Tauri + OS Keychain 導入',
-    rationale: '最も機能が豊富だが credential リスクが最も高い',
-    nextAction: 'Tauri + OS Keychain 導入後に検討',
+    implementationDifficulty: 5,
+    credentialRisk: 5,
+    localFirstCompatibility: 1,
+    rateLimitRisk: 5,
+    userControl: 2,
+    debuggability: 2,
+    recommendedPhase: 'Deferred',
+    reason: 'Direct APIs require credential storage, request signing, provider error handling, and rate-limit controls outside the current scope.',
+    nextRequirement: 'Introduce an approved secure credential boundary before any direct cloud API implementation.',
   },
 ]
 
-export function getNextConnector(): ConnectorRoadmapEntry | undefined {
-  return CONNECTOR_ROADMAP.find((entry) => entry.status === 'next')
+export function getConnectorRoadmap(): ConnectorRoadmapItem[] {
+  return [...CONNECTOR_ROADMAP].sort(
+    (a, b) => a.recommendedOrder - b.recommendedOrder,
+  )
 }
 
-export function getConnectorsByPhase(phase: RoadmapPhase): ConnectorRoadmapEntry[] {
-  return CONNECTOR_ROADMAP.filter((entry) => entry.phase === phase)
+export function getNextConnectorCandidates(): ConnectorRoadmapItem[] {
+  return getConnectorRoadmap().filter((item) => item.status === 'ready-next')
+}
+
+export function getNextConnector(): ConnectorRoadmapItem | undefined {
+  return getConnectorRoadmap().find((item) => item.status === 'ready-next')
 }

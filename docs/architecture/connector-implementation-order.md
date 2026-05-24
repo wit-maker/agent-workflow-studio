@@ -1,115 +1,113 @@
 # Connector Implementation Order
 
-## 目的
+M20 decides the connector implementation order. It does not start any real API connection work.
 
-Codex / Claude / Gemini / Hermes / Grok/X Search / Human Review の実装順序と条件を決める。
+## Why Real APIs Are Not Started Now
 
-**今回は実装を開始しない。順序決定まで。**
+Direct real API execution would require credential input, credential storage, provider-specific error handling, rate-limit policy, audit logging, and a secure desktop boundary. Those are intentionally outside the current scope. The current app remains local-first and mock/manual by default.
 
----
+This milestone only records the order, readiness conditions, and implementation gates so the next milestone can start from the safest connector surface.
 
-## 比較軸
+## Decision
 
-| 軸 | 説明 |
-|---|---|
-| **value** | ワークフロー全体に与える価値。代替が効かないほど高い |
-| **implementation difficulty** | 接続コスト（CLI/API key/ブラウザ自動化） |
-| **credential risk** | API key をブラウザに渡すリスク |
-| **local-first compatibility** | ローカルのみで動くか |
-| **rate-limit risk** | レート制限にぶつかる頻度 |
-| **user control** | ユーザーが実行を制御しやすいか |
-| **debuggability** | 失敗時に原因を特定しやすいか |
+| Order | Connector | Phase | Status | Value | Difficulty | Credential risk | Local-first | Rate-limit risk | User control | Debuggability |
+|---:|---|---|---|---:|---:|---:|---:|---:|---:|---:|
+| 1 | Human Review | M21 candidate | ready-next | 5 | 1 | 1 | 5 | 1 | 5 | 5 |
+| 2 | Manual Connector / Local Mock | M21 candidate | ready-next | 4 | 1 | 1 | 5 | 1 | 5 | 5 |
+| 3 | Claude CLI style local adapter | after manual/human connector | recommended | 5 | 2 | 2 | 4 | 3 | 4 | 4 |
+| 4 | Codex CLI style local adapter | after first CLI adapter | recommended | 4 | 2 | 2 | 4 | 3 | 4 | 4 |
+| 5 | Gemini CLI style local adapter | after first CLI adapter is stable | later | 4 | 3 | 2 | 4 | 3 | 4 | 3 |
+| 6 | Hermes local gateway | after CLI adapters | research-needed | 3 | 3 | 2 | 4 | 2 | 3 | 3 |
+| 7 | Grok/X Search via Hermes | after Hermes is proven | blocked | 3 | 4 | 3 | 2 | 4 | 3 | 2 |
+| 8 | Direct Cloud APIs | deferred | blocked | 4 | 5 | 5 | 1 | 5 | 2 | 2 |
 
----
+Scores use 1-5, where higher value, local-first compatibility, user control, and debuggability are good; higher difficulty, credential risk, and rate-limit risk are worse.
 
-## コネクター比較表
+## Connector Notes
 
-| コネクター | value | 難易度 | credential risk | local-first | rate-limit | user control | debuggability |
-|---|---|---|---|---|---|---|---|
-| Human Review | ★★★★★ | 低 | なし | ✓ | なし | 完全 | 高 |
-| Local Mock | ★★★★ | 最低 | なし | ✓ | なし | 完全 | 高 |
-| Claude CLI | ★★★★★ | 低〜中 | 低（CLIに委譲） | ✓ | 中 | 高 | 高 |
-| Codex CLI | ★★★★ | 低〜中 | 低（CLIに委譲） | ✓ | 中 | 高 | 高 |
-| Gemini CLI | ★★★★ | 低〜中 | 低（CLIに委譲） | ✓ | 中 | 高 | 高 |
-| Hermes Gateway | ★★★ | 中 | 低（ローカル） | ✓ | 低 | 中 | 中 |
-| Grok/X Search | ★★★ | 中〜高 | 低（Hermes経由） | 条件付き | 中 | 中 | 中 |
-| Direct Cloud APIs | ★★★★ | 高 | 高 | ✗ | 高 | 低 | 低 |
+### 1. Human Review
 
----
+Human Review is the safest next connector because it does not require network calls or credentials. It also anchors the workflow around explicit user approval, which is important before any automated real execution path is introduced.
 
-## 実装順序（決定）
+Next requirement: wrap the existing review flow with the real connector adapter interface.
 
-### Phase A: 即時実装候補（次のマイルストーンで実装開始可）
+### 2. Manual Connector / Local Mock
 
-**1位: Human Review**
-- 理由: API不要、ユーザーが完全制御、ワークフローの信頼性の核
-- 現状: UIは既存（HumanReviewPanel）、adapter interface のみ残
-- 次のアクション: IRealConnectorAdapter を実装（ネットワーク不要）
+Manual Connector / Local Mock proves request, response, error, queue, import/export, and UI behavior without external side effects. It should be implemented before local CLI connectors so the adapter lifecycle is exercised with a safe connector.
 
-**2位: Local Mock / Manual Connector**
-- 理由: 既にほぼ動作している、テストの基盤
-- 現状: `agentConnectors.ts` に実装済み、interface適合のみ
-- 次のアクション: IRealConnectorAdapter に準拠させる
+Next requirement: promote the current mock execution path into an adapter-conformant manual connector.
 
-### Phase B: CLI経由接続（短期）
+### 3. Claude CLI Style Local Adapter
 
-**3位: Claude CLI adapter**
-- 理由: 最も価値が高く、local-first で credential リスクが低い
-- 前提条件: `claude` コマンドがローカルにインストール済み
-- 接続方式: Tauri shell コマンド または ブラウザ側 fetch → local proxy
-- 次のアクション: Tauri 導入後に実装
+Claude CLI style integration is a strong next candidate after the manual/human connectors. It can keep credentials outside the app by relying on the user's local CLI setup, but it still requires a command execution boundary and readiness checks.
 
-**4位: Codex CLI adapter**
-- 理由: Claude CLIと同等のアーキテクチャ、設計を再利用できる
-- 前提条件: `codex` コマンドがローカルにインストール済み
-- 次のアクション: Claude CLI 完了後に実装
+Next requirement: define CLI discovery, command invocation, cancellation, output capture, and failure reporting without invoking real commands from the browser runtime.
 
-**5位: Gemini CLI adapter**
-- 理由: 大きなコンテキストウィンドウ、web search 内蔵
-- 前提条件: `gemini` コマンドがローカルにインストール済み
-- 次のアクション: Codex CLI 完了後に実装
+### 4. Codex CLI Style Local Adapter
 
-### Phase C: Gateway経由（中期）
+Codex CLI style integration is similar to the Claude CLI shape and can reuse the local CLI adapter contract. It should follow the first proven CLI adapter or be designed in parallel while implementation remains gated.
 
-**6位: Hermes Gateway**
-- 理由: 複数モデルへのルーティングを抽象化できる
-- 前提条件: Hermes がローカルで起動していること
-- 次のアクション: Gemini CLI 完了後に設計
+Next requirement: reuse the CLI adapter lifecycle and confirm Codex-specific readiness and output conventions.
 
-**7位: Grok / X Search**
-- 理由: Web検索特化、Hermes経由で実装
-- 前提条件: Hermes が動作していること
-- 次のアクション: Hermes 完了後に実装
+### 5. Gemini CLI Style Local Adapter
 
-### Phase D: 直接クラウドAPI（長期 / 慎重に）
+Gemini CLI may add value for large-context or search-assisted tasks, but it should wait until the common CLI adapter lifecycle is stable.
 
-**8位: Direct Cloud APIs（OpenAI / Anthropic / Google）**
-- 理由: 最も機能が豊富だが credential リスクが最も高い
-- 前提条件: OS Keychain またはサーバーサイドプロキシの実装
-- 次のアクション: Tauri + OS Keychain 導入後に検討
+Next requirement: confirm CLI readiness, streaming behavior, and rate-limit reporting.
 
----
+### 6. Hermes Local Gateway
 
-## 「次に本当に実装するコネクター」
+Hermes can centralize routing to multiple model/search backends, but it adds a local service boundary. It needs its own process discovery and health model before implementation.
 
-### **Claude CLI adapter**
+Next requirement: document local gateway discovery, health checks, routing, and failure modes.
 
-理由:
-- 最も高い value
-- local-first で credential がブラウザに入らない
-- Human Review と Local Mock はすでに動作しているため
-- Claude CLI は既にユーザーの手元にある可能性が高い
+### 7. Grok/X Search Via Hermes
 
-前提タスク:
-- Tauri 導入（M21以降の候補）
-- または Local Proxy サーバーの設計
+Grok/X Search should go through Hermes rather than direct browser-side API calls. It remains blocked until Hermes exists and search credential policy is explicit.
 
----
+Next requirement: wait for Hermes readiness and define search-specific rate-limit and credential policy.
 
-## 実装しないこと（この段階では）
+### 8. Direct Cloud APIs
 
-- 実API接続
-- API key の入力・保存
-- OS Keychain
-- .env ファイルの作成
-- Direct Cloud API の呼び出し
+Direct Cloud APIs are deferred. They have the highest credential risk, the highest rate-limit risk, and the weakest local-first compatibility in the current browser-only architecture.
+
+Next requirement: introduce an approved secure credential boundary before any direct cloud API implementation.
+
+## Credential Risk Handling
+
+- Do not store credential values in UI state, localStorage, templates, logs, metrics, or exported bundles.
+- Do not create `.env` files as part of connector implementation.
+- Do not introduce OS Keychain, Tauri secure storage, or a backend credential vault in this milestone.
+- Prefer local CLI adapters where credentials remain under the user's existing CLI configuration.
+
+## Local-First Policy
+
+The app should remain useful without network access and without live credentials. Human Review and Manual Connector / Local Mock are therefore first. Local CLI adapters are preferred over direct cloud APIs because they preserve more user control and keep secrets outside the app.
+
+## First Real Implementation Candidates
+
+Most likely next implementation:
+
+1. Human Review
+2. Manual Connector / Local Mock
+
+Next candidates after that:
+
+1. Claude CLI style local adapter
+2. Codex CLI style local adapter
+
+Deferred:
+
+1. Direct Cloud APIs
+2. Grok/X Search until Hermes exists
+
+## Implementation Start Conditions
+
+Start connector implementation only when all of these are true:
+
+- `IRealConnectorAdapter` request/response/error/readiness boundaries are used.
+- Readiness can explain why real execution is unavailable.
+- The connector can run without storing credentials in this app.
+- Failure and cancellation behavior are visible in the UI.
+- Export/import does not include secrets.
+- Build, lint, and Browser QA pass.

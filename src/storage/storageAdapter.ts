@@ -1,20 +1,12 @@
 import type { Workflow, WorkflowTemplateMetadata } from '../domain/workflow'
-import { loadAppSettings, saveAppSettings, clearAppSettings, type AppSettings } from './localAppSettings'
-import {
-  listWorkflowTemplates,
-  saveWorkflowTemplate,
-  deleteWorkflowTemplate,
-  type SavedWorkflowTemplate,
-  type SaveWorkflowTemplateInput,
+import type { AppSettings } from './localAppSettings'
+import type { SavedReactFlowPositions } from './localCanvasState'
+import { localStorageAdapter } from './localStorageAdapter'
+import type {
+  SavedWorkflowTemplate,
+  SaveWorkflowTemplateInput,
 } from './localTemplates'
-import { loadCurrentWorkflow, saveCurrentWorkflow, clearCurrentWorkflow } from './localWorkflowState'
-import {
-  readReactFlowPositions,
-  writeReactFlowPositions,
-  clearReactFlowPositions,
-  type SavedReactFlowPositions,
-} from './localCanvasState'
-import { getStorageHealth, type StorageHealth } from './storageValidation'
+import type { StorageHealth } from './storageValidation'
 
 /**
  * Storage adapter interface.
@@ -38,60 +30,6 @@ export interface IStorageAdapter {
   saveReactFlowPositions(positions: SavedReactFlowPositions): void
   clearAll(): void
   getStorageHealth(): StorageHealth
-}
-
-/**
- * localStorage implementation of IStorageAdapter.
- *
- * This is the only adapter shipped for now.
- * A Tauri adapter would implement the same interface using Tauri's fs plugin.
- */
-const localStorageAdapter: IStorageAdapter = {
-  loadWorkflow() {
-    return loadCurrentWorkflow()
-  },
-
-  saveWorkflow(workflow) {
-    saveCurrentWorkflow(workflow)
-  },
-
-  loadTemplates() {
-    return listWorkflowTemplates()
-  },
-
-  saveTemplate(input) {
-    return saveWorkflowTemplate(input)
-  },
-
-  deleteTemplate(id) {
-    return deleteWorkflowTemplate(id)
-  },
-
-  loadSettings() {
-    return loadAppSettings()
-  },
-
-  saveSettings(settings) {
-    saveAppSettings(settings)
-  },
-
-  loadReactFlowPositions() {
-    return readReactFlowPositions()
-  },
-
-  saveReactFlowPositions(positions) {
-    writeReactFlowPositions(positions)
-  },
-
-  clearAll() {
-    clearCurrentWorkflow()
-    clearAppSettings()
-    clearReactFlowPositions()
-  },
-
-  getStorageHealth() {
-    return getStorageHealth()
-  },
 }
 
 /**

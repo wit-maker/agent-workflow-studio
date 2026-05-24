@@ -1,5 +1,25 @@
 # Agent Workflow Studio
 
+## M17-M20 Current Status
+
+The `feature/storage-adapter-and-real-connector-design` branch now contains the storage adapter and real connector design foundation.
+
+- M17: storage adapter consolidation is complete, including storage health UI and localStorage boundary files.
+- M18: file export/import hardening is complete, including workflow/full-bundle export, import validation, and import UI.
+- M19: real connector adapter request/response/error/readiness interfaces are complete.
+- M20: connector implementation order is complete, including `ConnectorRoadmapPanel` in the BottomMonitor Roadmap tab.
+- Verification: `npm run build` pass, `npm run lint` pass, Browser QA pass for app launch, Storage health, export button paths, connector readiness, connector roadmap, Run All, and console error check.
+- Browser QA limitation: native file upload/download dialogs are constrained in the in-app browser, so import valid/invalid file selection was verified by UI route and validation implementation rather than a completed dialog automation.
+- Not included: Tauri, SQLite, Zustand, real API calls, credentials, `.env`, OS Keychain, and live Codex/Hermes/Grok integration.
+- Next candidates: Human Review / Manual Connector first, then Claude CLI style or Codex CLI style local adapter.
+
+Architecture notes:
+
+- `docs/architecture/storage-adapter-boundary.md`
+- `docs/architecture/file-export-import-boundary.md`
+- `docs/architecture/real-connector-adapter-design.md`
+- `docs/architecture/connector-implementation-order.md`
+
 Agent Workflow Studio は、AI 作業を型付きワークフローノードとして設計・実行・観測・再利用するための
 ローカルファーストな React アプリです。既存の `ai-workflow-lab` とは別リポジトリ・別製品として扱い、
 添付された AI Workflow Lab 文書は参照仕様として保持します。
