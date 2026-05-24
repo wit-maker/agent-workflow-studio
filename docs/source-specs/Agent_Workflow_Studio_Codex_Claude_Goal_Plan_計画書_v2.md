@@ -89,21 +89,9 @@ Agent Workflow Studio の最終Goalは、
 
 ## 2. Source of Truth 階層
 
-AI coding agent が迷わないように、仕様の優先順位を固定する。
+AI coding agent が迷わないように、仕様の優先順位は `docs/project/SOURCE_OF_TRUTH.md` に集約する。
 
-| 優先順位 | 文書 | 役割 |
-|---:|---|---|
-| 1 | `docs/project/PROJECT_GOAL.md` | 最終Goal、北極星、判断基準 |
-| 2 | `AGENTS.md` | 全AI coding agent の永続作業ルール |
-| 3 | `docs/source-specs/01_要件定義書_完全版.md` | 何を作るか、何の問題を解くか |
-| 4 | `docs/source-specs/02_機能仕様書_完全版.md` | 画面、部品、ノード、接続線、実行仕様 |
-| 5 | `docs/source-specs/03_UI_UX_認知HUD設計書_完全版.md` | UI/UX、認知HUD、4D空間 |
-| 6 | `docs/source-specs/04_システム設計書_データモデル_実行基盤_完全版.md` | データモデル、実行基盤、永続化 |
-| 7 | `docs/source-specs/05_AIエージェント運用設計書_完全版.md` | AI役割、Git権限、モデル確認ゲート |
-| 8 | `docs/source-specs/06_QA_セキュリティ_受け入れ基準_完全版.md` | QA、安全ゲート、受け入れ条件 |
-| 9 | `docs/source-specs/07_実装ロードマップ_完全版.md` | 段階実装順序 |
-| 10 | `PROJECT_STATE.md` | 現在状態、作業履歴、次作業 |
-| 11 | Issue / PR / 現在Prompt | 今回だけの局所作業 |
+この文書では、Source of Truth の考え方だけを示し、詳細な優先順位リストは重複管理しない。
 
 ### 禁止される仕様判断
 
@@ -179,21 +167,22 @@ GPT-5.5 high
 
 ## 5. 次に最初に実行するべきPlan
 
-現在のMVPから最大構想へ進める最初の正しい一歩は、実装追加ではなく棚卸しである。
+Phase 0 の Source of Truth 整備とMVP監査は完了済みである。次に進めるべきPlanは、完全版仕様に耐えるWorkflow Domain Modelの強化である。
 
 第一タスク:
 
 ```text
-feat: audit current MVP against full Agent Workflow Studio goal
+feat: harden Workflow Domain Model (Phase 1)
 ```
 
-作成物:
+主な対象:
 
 ```text
-docs/audit/current-implementation-map.md
-docs/audit/spec-coverage-matrix.md
-docs/audit/missing-systems.md
-docs/audit/technical-debt.md
+WorkflowDocument
+category normalization
+RunState / RiskState / HudState
+migration placeholder
+durable run history / trace / audit log foundation
 ```
 
 ---
