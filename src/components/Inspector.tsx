@@ -121,6 +121,7 @@ function InspectorContent({
   const [agentRole, setAgentRole] = useState<AgentRole | ''>(selectedNode.agentRole ?? '')
   const [configText, setConfigText] = useState(() => JSON.stringify(selectedNode.config, null, 2))
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
+  const [originalConfigJson] = useState(() => JSON.stringify(selectedNode.config))
 
   const configValidation = useMemo(() => validateConfigText(configText), [configText])
 
@@ -129,10 +130,10 @@ function InspectorContent({
     if (description !== selectedNode.description) return true
     if (agentRole !== (selectedNode.agentRole ?? '')) return true
     if (!configValidation.valid) return true
-    return JSON.stringify(configValidation.value) !== JSON.stringify(selectedNode.config)
-  }, [title, description, agentRole, configValidation, selectedNode])
+    return JSON.stringify(configValidation.value) !== originalConfigJson
+  }, [title, description, agentRole, configValidation, selectedNode, originalConfigJson])
 
-  const canSave = isDirty && configValidation.valid
+  const canSave = isDirty && configValidation.valid && title.trim().length > 0
 
   const nextNode = nodes.find((node) => node.position.x > selectedNode.position.x)
   const connectionError = nextNode ? getConnectionError(selectedNode, nextNode) : null
@@ -165,12 +166,12 @@ function InspectorContent({
   }
 
   function saveChanges() {
-    if (!configValidation.valid || !configValidation.value) {
+    if (!configValidation.valid || !configValidation.value || !title.trim()) {
       return
     }
     onSaveNode(selectedNode.id, {
-      title: title.trim() || selectedNode.title,
-      description: description.trim() || selectedNode.description,
+      title: title.trim(),
+      description: description.trim(),
       agentRole: agentRole || undefined,
       config: configValidation.value,
     })
@@ -235,6 +236,7 @@ function InspectorContent({
             }}
           />
         </label>
+        {!title.trim() ? <p className="error-text">タイトルは必須です。</p> : null}
         <label className="field-label">
           説明
           <textarea

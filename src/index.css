@@ -1012,12 +1012,12 @@ button:disabled {
   line-height: 1.45;
 }
 
-.json-editor--valid {
-  border-color: rgba(24, 129, 90, 0.5) !important;
+.field-label .json-editor--valid {
+  border-color: rgba(24, 129, 90, 0.5);
 }
 
-.json-editor--invalid {
-  border-color: var(--red) !important;
+.field-label .json-editor--invalid {
+  border-color: var(--red);
 }
 
 .inspector-dirty-banner {
