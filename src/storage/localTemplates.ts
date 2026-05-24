@@ -94,6 +94,13 @@ function instantiateTemplateWorkflow(template: SavedWorkflowTemplate): Workflow 
     id: `workflow-from-${template.id}-${suffix}`,
     name: `${template.name} workflow`,
     status: 'draft',
+    metrics: {
+      ...snapshot.metrics,
+      bottleneckNodeId:
+        snapshot.metrics.bottleneckNodeId !== null
+          ? (nodeIdByOldId.get(snapshot.metrics.bottleneckNodeId) ?? null)
+          : null,
+    },
     nodes: snapshot.nodes.map((node) => ({
       ...node,
       id: nodeIdByOldId.get(node.id) ?? node.id,

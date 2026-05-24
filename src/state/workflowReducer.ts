@@ -303,7 +303,8 @@ export function workflowReducer(
           ...markNodeStatus(state.workflow, action.nodeId, status),
           logs: [...state.workflow.logs, action.log],
           connections: state.workflow.connections.map((connection) =>
-            connection.sourceNodeId === action.nodeId || connection.targetNodeId === action.nodeId
+            status !== 'skipped' &&
+            (connection.sourceNodeId === action.nodeId || connection.targetNodeId === action.nodeId)
               ? { ...connection, status: 'success' }
               : connection,
           ),

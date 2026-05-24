@@ -269,7 +269,7 @@ export function AppShell() {
       }
 
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
-        if (isEditableElement(event.target)) {
+        if (isEditableElement(event.target) || isRunning) {
           return
         }
 
@@ -279,7 +279,7 @@ export function AppShell() {
       }
 
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') {
-        if (isEditableElement(event.target)) {
+        if (isEditableElement(event.target) || isRunning) {
           return
         }
 
@@ -308,7 +308,7 @@ export function AppShell() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedNodeId, workflow.nodes, dispatch])
+  }, [selectedNodeId, workflow.nodes, dispatch, isRunning])
 
   function calculateOutcomeByRunCount(): 'PASS' | 'REVIEW' | 'FAIL' {
     const currentCount = runCountRef.current
@@ -610,7 +610,7 @@ export function AppShell() {
         dispatch({
           type: 'updateMetrics',
           metrics: buildRunMetrics(
-            workflow.nodes.length,
+            plan.nodes.length,
             executedNodes,
             outcome,
             decisions.filter((item) => item.retryCandidate).length,
@@ -914,9 +914,8 @@ export function AppShell() {
   }
 
   function handleResetReactFlowPositions() {
-    const sampleWorkflow = createSampleWorkflow()
     const defaultPositions = Object.fromEntries(
-      sampleWorkflow.nodes.map((node) => [node.id, node.position]),
+      workflow.nodes.map((node) => [node.id, node.position]),
     )
 
     dispatch({ type: 'updateNodePositions', positions: defaultPositions })
