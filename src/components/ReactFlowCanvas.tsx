@@ -368,7 +368,7 @@ export function ReactFlowCanvas({
 
   const handleConnectEnd = useCallback(
     (_event: MouseEvent | TouchEvent, connectionState: FinalConnectionState) => {
-      if (connectionState.isValid) {
+      if (connectionState.isValid !== false) {
         return
       }
 

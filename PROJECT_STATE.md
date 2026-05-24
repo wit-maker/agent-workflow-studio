@@ -262,3 +262,11 @@ Phase 7.2 React Flow Canvas 操作性改善。
   - BottomMonitor「実行グラフ」タブ: Run ID・再試行候補・経路一覧が表示される: OK
   - StagePreview executionGraph summary: 最終判定・確認待ち・失敗ノード・再試行候補が表示される: OK
   - ログ文言: 日本語で全ノードのログが記録される: OK
+
+## Phase 7.2 マージ前最終修正
+
+- Branch: `feature/react-flow-canvas-usability`
+- `handleConnectEnd` で `isValid !== false` を no-op に変更（`true` / `null` は何もしない、`false` のみエラー表示）
+- 接続キャンセル / 空白ドロップ時の不要なエラー表示を抑制
+- `npm run build`: success
+- `npm run lint`: success
