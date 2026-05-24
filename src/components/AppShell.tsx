@@ -42,8 +42,15 @@ import {
   readReactFlowPositions,
   writeReactFlowPositions,
   writeCanvasModePreference,
+  clearReactFlowPositions,
   type SavedCanvasMode,
 } from '../storage/localCanvasState'
+import {
+  saveCurrentWorkflow,
+  loadCurrentWorkflow,
+  clearCurrentWorkflow,
+} from '../storage/localWorkflowState'
+import { clearAppSettings } from '../storage/localAppSettings'
 import { scaleNodePosition, unscaleNodePosition } from '../domain/reactFlowAdapter'
 import { createWorkflowState, workflowReducer } from '../state/workflowReducer'
 import {
@@ -71,12 +78,14 @@ function toSavedCanvasMode(mode: CanvasMode): SavedCanvasMode {
 }
 
 function createInitialWorkflow() {
-  const workflow = createSampleWorkflow()
   const savedPositions = readReactFlowPositions()
+  const savedWorkflow = loadCurrentWorkflow()
+
+  const base = savedWorkflow ?? createSampleWorkflow()
 
   return {
-    ...workflow,
-    nodes: workflow.nodes.map((node) =>
+    ...base,
+    nodes: base.nodes.map((node) =>
       savedPositions[node.id]
         ? { ...node, position: unscaleNodePosition(savedPositions[node.id]) }
         : node,
@@ -256,6 +265,12 @@ export function AppShell() {
   useEffect(() => {
     writeCanvasModePreference(toSavedCanvasMode(canvasMode))
   }, [canvasMode])
+
+  useEffect(() => {
+    if (!isRunning) {
+      saveCurrentWorkflow(workflow)
+    }
+  }, [workflow, isRunning])
 
   useEffect(() => {
     if (!importSuccessMessage) return
@@ -674,6 +689,15 @@ export function AppShell() {
   }
 
   function handleReset() {
+    runTokenRef.current += 1
+    artifactVersionCountRef.current = 0
+    dispatch({ type: 'resetWorkflow', workflow: createSampleWorkflow() })
+  }
+
+  function handleResetStorage() {
+    clearCurrentWorkflow()
+    clearAppSettings()
+    clearReactFlowPositions()
     runTokenRef.current += 1
     artifactVersionCountRef.current = 0
     dispatch({ type: 'resetWorkflow', workflow: createSampleWorkflow() })
@@ -1417,6 +1441,7 @@ export function AppShell() {
         onStartRebuild={handleStartRebuild}
         onCancelRebuild={handleCancelRebuild}
         onSelectArtifactVersion={handleSelectArtifactVersion}
+        onResetStorage={handleResetStorage}
       />
     </div>
   )
