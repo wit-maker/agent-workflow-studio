@@ -1,6 +1,88 @@
 # Project State
 
-Last updated: 2026-05-24
+Last updated: 2026-05-25
+
+---
+
+## Goal / Plan v2 Source Specs and MVP Audit
+
+- Branch: `docs/source-specs-goal-plan-v2`
+- Date: 2026-05-25
+- Scope: docs-only Source of Truth整備とMVP監査。大規模UI実装、実API接続、Tauri、SQLite、Credential値保存は未実施。
+
+### モデルゲート
+
+- Requested: `GPT-5.5 xhigh`
+- Allowed fallback: `GPT-5.5 high`
+- Actual: GPT-5 ベースの Codex
+- Result: 指定モデルとは不一致。作業開始時に不一致を明示し、ユーザーから継続指示があったため、この事実を記録して続行した。
+
+### 実施内容
+
+- `docs/project/` に Goal / Plan / Source of Truth / Stop Rules を追加。
+- `docs/audit/` に current implementation map、spec coverage matrix、missing systems、technical debt を追加。
+- `AGENTS.md` に Source of Truth階層、Stop Rules、Goal / Plan / Task / Prompt分離、typecheck運用を追記。
+- 既存の AI Workflow Lab 原文source specsは削除・要約・改変していない。
+
+### 追加・更新ファイル
+
+- Added: `docs/project/PROJECT_GOAL.md`
+- Added: `docs/project/PLAN_PROTOCOL.md`
+- Added: `docs/project/SOURCE_OF_TRUTH.md`
+- Added: `docs/project/STOP_RULES.md`
+- Added: `docs/audit/current-implementation-map.md`
+- Added: `docs/audit/spec-coverage-matrix.md`
+- Added: `docs/audit/missing-systems.md`
+- Added: `docs/audit/technical-debt.md`
+- Updated: `AGENTS.md`
+- Updated: `PROJECT_STATE.md`
+
+### build / lint / typecheck
+
+- `npm run build`: pass (`tsc -b && vite build`, bundle 507.68 kB / gzip 152.69 kB)
+- `npm run lint`: pass
+- `npm run typecheck`: missing script
+- TypeScript check substitute: `npm run build` 内の `tsc -b` を代替として実行済み。
+- Build warning: Vite chunk size warningあり。今回のdocs-only変更による新規UI/code regressionではない。
+
+### Browser QA
+
+- Dev server: `http://127.0.0.1:5173/`
+- App starts: pass
+- Initial workflow visible: pass（12ノード、13接続を確認）
+- BottomMonitor visible: pass（ログ / メトリクス / キュー / 出力 / 実行グラフ / 評価 / エージェント / ストレージ）
+- Queue tab: pass（コネクタージョブキュー、確認待ち、再試行候補の表示を確認）
+- Agent tab: pass（Codex Mock等のmock connectorとCredential安全境界を確認）
+- Storage tab: pass（localStorage保存状況とリセット導線を確認）
+- Console errors: none
+- Docs-only changes did not break UI: pass
+
+### 分かったこと
+
+- 現在MVPは、Canvas / Inspector / BottomMonitor / Template / localStorage / mock execution / mock connector queue までの入口を持つ。
+- Source specs上の `07_実装ロードマップ_完全版.md` は最新remoteで追加済みで、Phase 0はまさに今回の監査成果物を完了条件としている。
+- `package.json` には `typecheck` script がないため、現状は `npm run build` の `tsc -b` がTypeScript checkを兼ねている。
+
+### 最大構想との差分
+
+- Cognitive HUD（UI-11）は専用状態モデル・設定UIともに未実装。
+- UI-12の実行履歴 / 監査ログは一部履歴と一時ログのみで、durable run history / trace / audit logは未整備。
+- Run modesは Run All / Selected / From Selected / Dry Run中心で、Validate / Stop / Resume / Replayは不足。
+- localStorage MVPはあるが、Tauri filesystem / SQLite / secure credential store は未実装。
+- Mock connectorsはあるが、real adapter契約、接続テスト、読み取り専用/書き込み承認境界は未実装。
+
+### 次の推奨Phase
+
+1. Phase 1: Workflow Domain Model hardening
+2. `WorkflowDocument`、category normalization、RunState / RiskState / HudState、migration placeholderを整備
+3. その後に durable run history / trace / audit log と Cognitive HUD の土台へ進む
+
+### 未解決リスク
+
+- モデル指定不一致のまま継続したため、Goal / Source of Truth判断は将来レビュー対象にする。
+- `AppShell.tsx` に実行・保存・キュー調整が集中しており、runtime/storage分離前に複雑化しやすい。
+- run logs / connector queue / metrics はreloadで消えるため、監査・再現・Replayの土台として不足。
+- Source specsとMVPカテゴリ名に差分があり、部品追加前に正規化が必要。
 
 ---
 
