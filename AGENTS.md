@@ -53,19 +53,7 @@ Goal / Plan / Source of Truth / 安全境界 / Credential / アーキテクチ�
 
 ## Source of Truth
 
-仕様判断の優先順位は `docs/project/SOURCE_OF_TRUTH.md` に従います。短縮版は以下です。
-
-1. `docs/project/PROJECT_GOAL.md`
-2. `AGENTS.md`
-3. `docs/source-specs/01_要件定義書_完全版.md`
-4. `docs/source-specs/02_機能仕様書_完全版.md`
-5. `docs/source-specs/03_UI_UX_認知HUD設計書_完全版.md`
-6. `docs/source-specs/04_システム設計書_データモデル_実行基盤_完全版.md`
-7. `docs/source-specs/05_AIエージェント運用設計書_完全版.md`
-8. `docs/source-specs/06_QA_セキュリティ_受け入れ基準_完全版.md`
-9. `docs/source-specs/07_実装ロードマップ_完全版.md`
-10. `PROJECT_STATE.md`
-11. Issue / PR / 現在Prompt
+仕様判断の優先順位は `docs/project/SOURCE_OF_TRUTH.md` に従います。
 
 MVPの都合で長期Goalを縮小してはいけません。現在実装との差分は `docs/audit/` に記録し、Source Specを書き換えて解消しないでください。
 
@@ -132,7 +120,7 @@ npm run lint
 npm run typecheck
 ```
 
-`typecheck` script が存在しない場合は、その事実を `PROJECT_STATE.md` と最終報告に記録し、`npm run build` に含まれる `tsc -b` を TypeScript check の代替として扱います。
+`npm run typecheck` は `package.json` の `typecheck` script を使って実行します。存在しない場合は、回避策で済ませず、品質ゲートの標準化タスクとして `typecheck` script の追加を優先します。
 
 いずれかを実行できない場合は、その理由を `PROJECT_STATE.md` と最終報告の両方へ記録します。
 
