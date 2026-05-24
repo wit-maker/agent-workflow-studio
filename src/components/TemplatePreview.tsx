@@ -120,6 +120,14 @@ export function TemplatePreview({
 
       <dl className="template-detail-list">
         <div>
+          <dt>Source workflow</dt>
+          <dd>{metadata.sourceWorkflowId ?? template.sourceWorkflowId}</dd>
+        </div>
+        <div>
+          <dt>Source run</dt>
+          <dd>{metadata.sourceRunId ?? metadata.createdFromRunId ?? '譛ｪ險倬鹸'}</dd>
+        </div>
+        <div>
           <dt>作成日時</dt>
           <dd>{formatDate(template.createdAt)}</dd>
         </div>
@@ -149,6 +157,22 @@ export function TemplatePreview({
         <div>
           <dt>作成元 Run</dt>
           <dd>{metadata.createdFromRunId ?? '未記録'}</dd>
+        </div>
+        <div>
+          <dt>Metrics summary</dt>
+          <dd>
+            {metadata.metricsSummary
+              ? `${metadata.metricsSummary.tokens} tokens / $${metadata.metricsSummary.cost.toFixed(3)} / ${metadata.metricsSummary.latencyMs} ms`
+              : '譛ｪ險倬鹸'}
+          </dd>
+        </div>
+        <div>
+          <dt>Artifact summary</dt>
+          <dd>
+            {metadata.artifactSummary
+              ? `${metadata.artifactSummary.title} / ${metadata.artifactSummary.format} / ${metadata.artifactSummary.status}`
+              : '譛ｪ險倬鹸'}
+          </dd>
         </div>
       </dl>
 

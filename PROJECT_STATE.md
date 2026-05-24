@@ -58,6 +58,33 @@ Last updated: 2026-05-24
   - React Flow drag simulation remains unreliable in the Codex in-app browser; movement was verified through the same reducer action via Inspector.
   - Connection add/delete history is implemented in reducer paths, but full browser manipulation of edge deletion still depends on the existing React Flow edge UI.
 
+## M7 Template Feature
+
+- Branch: `feature/workflow-authoring-and-run-engine`
+- Completed:
+  - Extended template metadata with source workflow/run, metrics summary, and artifact summary.
+  - Template save keeps name, description, tags, category, node count, connection count, createdAt, updatedAt, source workflow, optional source run, metrics, and artifact summary.
+  - Template load now instantiates a new workflow with a new workflow id and collision-safe node/connection ids.
+  - Loaded template nodes reset to idle and connections reset to inactive for reuse.
+  - Template duplicate keeps metadata and creates a new template id.
+  - Existing confirmation flow before destructive template load is retained.
+- Browser QA:
+  - Template save: list count 0 -> 1, metadata/tags visible.
+  - Template duplicate: list count 1 -> 2, copied template selected.
+  - Template load: confirmation box shown, workflow restored with 12 nodes.
+  - Console runtime errors: none.
+- build / lint:
+  - `npm run build`: pass
+  - `npm run lint`: pass
+- Not implemented:
+  - Real file/database template persistence.
+  - Template edit form after save.
+- Next candidates:
+  - M8 local run engine responsibility split and run modes.
+- Known risks:
+  - Template storage remains localStorage-bound.
+  - Browser automation had intermittent coordinate translation failures on repeated template-card clicks after the visibility recovery path; primary save/duplicate/load QA passed before that issue.
+
 ## Current Phase
 
 feature/workflow-foundation-milestones — M0〜M4 連続実装中。

@@ -808,6 +808,7 @@ export function AppShell() {
     }
 
     const importedWorkflow = JSON.parse(JSON.stringify(loaded)) as typeof loaded
+    importedWorkflow.name = `${selectedTemplate?.name ?? importedWorkflow.name} workflow`
     importedWorkflow.logs = [
       ...importedWorkflow.logs,
       makeLog(
