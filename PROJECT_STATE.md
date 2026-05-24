@@ -116,6 +116,22 @@ Last updated: 2026-05-24
   - AppShell still contains legacy run helper code behind an early return; future cleanup should remove it once run-engine behavior settles.
   - Dry run currently marks planned nodes as skipped after validating/planning rather than running a separate validation report object.
 
+## PR #17 Review Fixes
+
+- Branch: `feature/workflow-authoring-and-run-engine`
+- Completed:
+  - Fix 1: `runPlannedWorkflow` execution route regression — 前ノード→現ノードの遷移 edge を常に `main` route として記録するよう修正。`decision.route !== 'main'` の場合のみ、現ノード起点の別 route（review/error）を追加登録。
+  - Fix 2: keyboard shortcut `useEffect` に dependency array `[selectedNodeId, workflow.nodes, dispatch]` を追加。stale closure を防ぐため `handleDeleteNode` の呼び出しもインライン化。
+  - Fix 3: `runMockWorkflow` の `return` 後の unreachable dead code を全削除。`runPlannedWorkflow` を正規実装として確定。`buildArtifactContent` / `buildMetrics` は他のライブコードで使用中につき保持。
+  - Fix 4: `ReactFlowCanvas` の workflow change effect から `writeReactFlowPositions` 呼び出しを削除。位置保存の責務は `handleNodesChange`（ドラッグ中）と `handleMoveNode`（ドラッグ確定）が担う。
+  - Fix 5: `runEngine.ts` の `successRate` magic numbers を `SUCCESS_RATE_BY_OUTCOME` 定数（export）に置き換え。`AppShell.tsx` の `buildMetrics` 内でも同定数を import して使用。
+- build / lint:
+  - `npm run build`: pass (490.16 kB / gzip 148.09 kB)
+  - `npm run lint`: pass (0 errors, 0 warnings)
+- Browser QA:
+  - アプリ起動: 正常（12 ノード初期表示、エラーなし）
+  - console runtime errors: リロード後なし（HMR遷移時の useEffect hook shape 警告のみで、フル再起動後は消滅）
+
 ## Current Phase
 
 feature/workflow-foundation-milestones — M0〜M4 連続実装中。
