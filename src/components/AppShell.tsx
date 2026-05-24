@@ -172,6 +172,7 @@ export function AppShell() {
   const runTokenRef = useRef(0)
   const runCountRef = useRef(0)
   const [isEvaluating, setIsEvaluating] = useState(false)
+  const [importSuccessMessage, setImportSuccessMessage] = useState<string | null>(null)
   const [canvasMode, setCanvasMode] = useState<CanvasMode>(() =>
     toCanvasMode(readCanvasModePreference()),
   )
@@ -200,6 +201,12 @@ export function AppShell() {
   useEffect(() => {
     writeCanvasModePreference(toSavedCanvasMode(canvasMode))
   }, [canvasMode])
+
+  useEffect(() => {
+    if (!importSuccessMessage) return
+    const timer = window.setTimeout(() => setImportSuccessMessage(null), 4000)
+    return () => window.clearTimeout(timer)
+  }, [importSuccessMessage])
 
   function calculateOutcomeByRunCount(): 'PASS' | 'REVIEW' | 'FAIL' {
     const currentCount = runCountRef.current
@@ -1070,9 +1077,10 @@ export function AppShell() {
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
     anchor.href = url
-    anchor.download = `${workflow.id || 'workflow'}.json`
+    const date = new Date().toLocaleDateString('sv-SE')
+    anchor.download = `${workflow.id || 'workflow'}_${date}.json`
     anchor.click()
-    URL.revokeObjectURL(url)
+    window.setTimeout(() => URL.revokeObjectURL(url), 100)
   }
 
   async function importJson(file: File) {
@@ -1100,6 +1108,8 @@ export function AppShell() {
 
       artifactVersionCountRef.current = 0
       dispatch({ type: 'importWorkflow', workflow: result.workflow })
+      dispatch({ type: 'setImportError', message: null })
+      setImportSuccessMessage(`「${result.workflow.name}」を読み込みました。`)
     } catch (error) {
       dispatch({
         type: 'setImportError',
@@ -1123,6 +1133,7 @@ export function AppShell() {
           onChangeCanvasMode={setCanvasMode}
         />
       {importError ? <div className="import-error">{importError}</div> : null}
+      {!importError && importSuccessMessage ? <div className="import-success">{importSuccessMessage}</div> : null}
       <div className="workspace-grid">
         <PartsPalette
           parts={workflow.nodes}

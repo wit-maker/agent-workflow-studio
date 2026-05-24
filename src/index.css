@@ -65,7 +65,8 @@ button:disabled {
   grid-template-rows: 56px minmax(0, 1fr) 320px;
 }
 
-.app-shell:has(.import-error) {
+.app-shell:has(.import-error),
+.app-shell:has(.import-success) {
   grid-template-rows: 56px 36px minmax(0, 1fr) 320px;
 }
 
@@ -150,6 +151,17 @@ button:disabled {
   border-bottom: 1px solid rgba(190, 63, 59, 0.25);
   background: var(--red-soft);
   color: var(--red);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.import-success {
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  border-bottom: 1px solid rgba(24, 129, 90, 0.25);
+  background: var(--green-soft);
+  color: var(--green);
   font-size: 13px;
   font-weight: 700;
 }
