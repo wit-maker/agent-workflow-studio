@@ -4,7 +4,12 @@ import type {
   WorkflowSchemaVersion,
   WorkflowStatus,
 } from './workflow'
-import { normalizeNodeCategory } from './workflow'
+import { connectionKinds, normalizeNodeCategory } from './workflow'
+
+const workflowStatuses = [
+  'draft', 'ready', 'invalid', 'running', 'paused',
+  'success', 'failed', 'review_required', 'archived', 'cancelled',
+] as const satisfies WorkflowStatus[]
 
 export const CURRENT_WORKFLOW_SCHEMA_VERSION: WorkflowSchemaVersion = '2.0'
 
@@ -133,9 +138,16 @@ function normalizeNodes(raw: unknown): WorkflowNode[] {
     }))
 }
 
-function uniqueConnectionId(rawId: unknown, index: number, usedIds: Set<string>): string {
+function createUniqueDocumentId(
+  rawId: unknown,
+  fallbackPrefix: string,
+  index: number,
+  usedIds: Set<string>,
+): string {
   const base =
-    typeof rawId === 'string' && rawId.trim() ? rawId.trim() : `conn-doc-${index}`
+    typeof rawId === 'string' && rawId.trim()
+      ? rawId.trim()
+      : `${fallbackPrefix}-${index}`
   let candidate = base
   let suffix = 1
   while (usedIds.has(candidate)) {
@@ -151,39 +163,43 @@ function normalizeConnections(raw: unknown, nodeIds: Set<string>): WorkflowConne
   const items = Array.isArray(raw) ? raw : []
   const usedIds = new Set<string>()
   return items
-    .filter(
-      (item) =>
-        isRecord(item) &&
-        typeof item.sourceNodeId === 'string' &&
-        typeof item.targetNodeId === 'string' &&
-        nodeIds.has(item.sourceNodeId as string) &&
-        nodeIds.has(item.targetNodeId as string),
-    )
-    .map((item: Record<string, unknown>, index) => ({
-      id: uniqueConnectionId(item.id, index, usedIds),
-      sourceNodeId: item.sourceNodeId as string,
-      sourcePort: typeof item.sourcePort === 'string' ? item.sourcePort : undefined,
-      sourcePortId: typeof item.sourcePortId === 'string' ? item.sourcePortId : undefined,
-      targetNodeId: item.targetNodeId as string,
-      targetPort: typeof item.targetPort === 'string' ? item.targetPort : undefined,
-      targetPortId: typeof item.targetPortId === 'string' ? item.targetPortId : undefined,
-      kind: (item.kind as WorkflowConnection['kind']) ?? 'data',
-      carries: Array.isArray(item.carries) ? (item.carries as WorkflowConnection['carries']) : [],
-      status: 'inactive' as const,
-      metrics: isRecord(item.metrics) ? (item.metrics as WorkflowConnection['metrics']) : undefined,
-    }))
+    .filter((item) => {
+      if (!isRecord(item)) return false
+      const sourceNodeId = typeof item.sourceNodeId === 'string' ? item.sourceNodeId.trim() : ''
+      const targetNodeId = typeof item.targetNodeId === 'string' ? item.targetNodeId.trim() : ''
+      return sourceNodeId !== '' && targetNodeId !== '' && nodeIds.has(sourceNodeId) && nodeIds.has(targetNodeId)
+    })
+    .map((item: Record<string, unknown>, index) => {
+      const sourceNodeId = (item.sourceNodeId as string).trim()
+      const targetNodeId = (item.targetNodeId as string).trim()
+      const rawKind = item.kind as string
+      const kind: WorkflowConnection['kind'] = (connectionKinds as readonly string[]).includes(rawKind)
+        ? (rawKind as WorkflowConnection['kind'])
+        : 'data'
+      return {
+        id: createUniqueDocumentId(item.id, 'conn-doc', index, usedIds),
+        sourceNodeId,
+        sourcePort: typeof item.sourcePort === 'string' ? item.sourcePort : undefined,
+        sourcePortId: typeof item.sourcePortId === 'string' ? item.sourcePortId : undefined,
+        targetNodeId,
+        targetPort: typeof item.targetPort === 'string' ? item.targetPort : undefined,
+        targetPortId: typeof item.targetPortId === 'string' ? item.targetPortId : undefined,
+        kind,
+        carries: Array.isArray(item.carries) ? (item.carries as WorkflowConnection['carries']) : [],
+        status: 'inactive' as const,
+        metrics: isRecord(item.metrics) ? (item.metrics as WorkflowConnection['metrics']) : undefined,
+      }
+    })
 }
 
 function normalizeTemplates(raw: unknown): WorkflowDocumentTemplateReference[] {
   if (!Array.isArray(raw)) return []
 
+  const usedIds = new Set<string>()
   return raw
     .filter((item) => isRecord(item))
     .map((item, index) => ({
-      templateId:
-        typeof item.templateId === 'string' && item.templateId.trim()
-          ? item.templateId.trim()
-          : `template-doc-${index}`,
+      templateId: createUniqueDocumentId(item.templateId, 'template-doc', index, usedIds),
       title:
         typeof item.title === 'string' && item.title.trim()
           ? item.title.trim()
@@ -233,7 +249,9 @@ export function normalizeWorkflowDocument(raw: unknown, now = new Date().toISOSt
     nodes,
     connections,
     templates: normalizeTemplates(raw.templates),
-    status: typeof raw.status === 'string' ? (raw.status as WorkflowStatus) : undefined,
+    status: (workflowStatuses as readonly string[]).includes(raw.status as string)
+      ? (raw.status as WorkflowStatus)
+      : undefined,
     viewport: normalizeViewport(raw.viewport),
     runConfig: normalizeRunConfig(raw.runConfig),
     metadata,
@@ -243,7 +261,7 @@ export function normalizeWorkflowDocument(raw: unknown, now = new Date().toISOSt
 // migrateWorkflowDocument upgrades a raw workflow object to CURRENT_WORKFLOW_SCHEMA_VERSION.
 // This is a placeholder: version 1.0 and 1.1 are accepted with warnings, not field-transformed.
 // Full field migration logic should be added here as the schema evolves.
-export function migrateWorkflowDocument(raw: unknown): WorkflowMigrationResult {
+export function migrateWorkflowDocument(raw: unknown, now = new Date().toISOString()): WorkflowMigrationResult {
   const fromVersion = isRecord(raw) ? detectSchemaVersion(raw) : 'unknown'
   const toVersion = CURRENT_WORKFLOW_SCHEMA_VERSION
   const warnings: string[] = []
@@ -262,7 +280,7 @@ export function migrateWorkflowDocument(raw: unknown): WorkflowMigrationResult {
     warnings.push(`未知の schemaVersion "${fromVersion}" です。最善の正規化を試みます。`)
   }
 
-  const document = normalizeWorkflowDocument(raw, new Date().toISOString())
+  const document = normalizeWorkflowDocument(raw, now)
   if (!document) {
     return {
       success: false,
