@@ -1,5 +1,7 @@
-const CANVAS_MODE_STORAGE_KEY = 'agent-workflow-studio:canvas-mode'
-const REACT_FLOW_POSITIONS_STORAGE_KEY = 'agent-workflow-studio:react-flow-positions'
+import { STORAGE_KEYS } from './storageKeys'
+
+const CANVAS_MODE_STORAGE_KEY = STORAGE_KEYS.CANVAS_MODE
+const REACT_FLOW_POSITIONS_STORAGE_KEY = STORAGE_KEYS.REACT_FLOW_POSITIONS
 
 export type SavedCanvasMode = 'standard' | 'react-flow'
 

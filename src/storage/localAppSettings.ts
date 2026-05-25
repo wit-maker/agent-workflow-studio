@@ -5,13 +5,41 @@ export type AppSettings = {
   activeTab: string
 }
 
-const DEFAULT_SETTINGS: AppSettings = {
+export const DEFAULT_APP_SETTINGS: AppSettings = {
   canvasMode: 'standard',
   activeTab: 'Logs',
 }
 
+const VALID_MONITOR_TABS = new Set([
+  'Logs',
+  'Metrics',
+  'Queue',
+  'Output',
+  'Execution',
+  'Evaluation',
+  'Agent',
+  'Storage',
+  'Roadmap',
+])
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+export function normalizeAppSettings(value: unknown): AppSettings | null {
+  if (!isRecord(value)) {
+    return null
+  }
+
+  const canvasMode =
+    value['canvasMode'] === 'react-flow' ? 'react-flow' : DEFAULT_APP_SETTINGS.canvasMode
+
+  const activeTab =
+    typeof value['activeTab'] === 'string' && VALID_MONITOR_TABS.has(value['activeTab'])
+      ? value['activeTab']
+      : DEFAULT_APP_SETTINGS.activeTab
+
+  return { canvasMode, activeTab }
 }
 
 /**
@@ -21,20 +49,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export function loadAppSettings(): AppSettings {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEYS.APP_SETTINGS)
-    if (!raw) return { ...DEFAULT_SETTINGS }
+    if (!raw) return { ...DEFAULT_APP_SETTINGS }
 
     const parsed = JSON.parse(raw) as unknown
-    if (!isRecord(parsed)) return { ...DEFAULT_SETTINGS }
-
-    const canvasMode =
-      parsed['canvasMode'] === 'react-flow' ? 'react-flow' : 'standard'
-
-    const activeTab =
-      typeof parsed['activeTab'] === 'string' ? parsed['activeTab'] : DEFAULT_SETTINGS.activeTab
-
-    return { canvasMode, activeTab }
+    return normalizeAppSettings(parsed) ?? { ...DEFAULT_APP_SETTINGS }
   } catch {
-    return { ...DEFAULT_SETTINGS }
+    return { ...DEFAULT_APP_SETTINGS }
   }
 }
 

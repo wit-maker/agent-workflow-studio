@@ -25,6 +25,7 @@ import {
 import type {
   AgentRole,
   ConnectionKind,
+  Workflow,
   WorkflowArtifact,
   WorkflowNode,
   WorkflowRunLog,
@@ -32,10 +33,7 @@ import type {
 } from '../domain/workflow'
 import {
   duplicateWorkflowTemplate,
-  deleteWorkflowTemplate,
-  listWorkflowTemplates,
   loadWorkflowTemplate,
-  saveWorkflowTemplate,
   type SavedWorkflowTemplate,
 } from '../storage/localTemplates'
 import {
@@ -50,15 +48,13 @@ import {
   readReactFlowPositions,
   writeReactFlowPositions,
   writeCanvasModePreference,
-  clearReactFlowPositions,
   type SavedCanvasMode,
 } from '../storage/localCanvasState'
 import {
   saveCurrentWorkflow,
   loadCurrentWorkflow,
-  clearCurrentWorkflow,
 } from '../storage/localWorkflowState'
-import { clearAppSettings } from '../storage/localAppSettings'
+import { DEFAULT_APP_SETTINGS, type AppSettings } from '../storage/localAppSettings'
 import { scaleNodePosition, unscaleNodePosition } from '../domain/reactFlowAdapter'
 import { createWorkflowState, workflowReducer } from '../state/workflowReducer'
 import {
@@ -74,6 +70,7 @@ import { ReactFlowCanvas } from './ReactFlowCanvas'
 import { StagePreview } from './StagePreview'
 import { TopBar, type CanvasMode } from './TopBar'
 import { WorkflowCanvas } from './WorkflowCanvas'
+import { storageAdapter } from '../storage/storageAdapter'
 
 const delay = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms))
 
@@ -218,8 +215,9 @@ export function AppShell() {
     createWorkflowState(createInitialWorkflow()),
   )
   const [templates, setTemplates] = useState<SavedWorkflowTemplate[]>(() =>
-    listWorkflowTemplates(),
+    storageAdapter.loadTemplates(),
   )
+  const [appSettings, setAppSettings] = useState<AppSettings>(() => storageAdapter.loadSettings())
   const [snapshots, setSnapshots] = useState<SavedWorkflowSnapshot[]>(() =>
     listWorkflowSnapshots(),
   )
@@ -229,7 +227,7 @@ export function AppShell() {
   const [isEvaluating, setIsEvaluating] = useState(false)
   const [importSuccessMessage, setImportSuccessMessage] = useState<string | null>(null)
   const [canvasMode, setCanvasMode] = useState<CanvasMode>(() =>
-    toCanvasMode(readCanvasModePreference()),
+    toCanvasMode(readCanvasModePreference() ?? storageAdapter.loadSettings().canvasMode),
   )
   const [pendingDeleteNodeId, setPendingDeleteNodeId] = useState<string | null>(null)
   const artifactVersionCountRef = useRef(0)
@@ -272,7 +270,9 @@ export function AppShell() {
   const connectionValidation = useMemo(() => validateConnections(workflow), [workflow])
 
   useEffect(() => {
-    writeCanvasModePreference(toSavedCanvasMode(canvasMode))
+    const savedCanvasMode = toSavedCanvasMode(canvasMode)
+    writeCanvasModePreference(savedCanvasMode)
+    storageAdapter.saveSettings({ canvasMode: savedCanvasMode })
   }, [canvasMode])
 
   useEffect(() => {
@@ -752,12 +752,56 @@ export function AppShell() {
   }
 
   function handleResetStorage() {
-    clearCurrentWorkflow()
-    clearAppSettings()
-    clearReactFlowPositions()
+    storageAdapter.clearAll()
     runTokenRef.current += 1
     artifactVersionCountRef.current = 0
+    // Reset in-memory UI state to defaults after clearing persisted storage
+    setAppSettings(DEFAULT_APP_SETTINGS)
+    setCanvasMode(toCanvasMode(null))
     dispatch({ type: 'resetWorkflow', workflow: createSampleWorkflow() })
+  }
+
+  function handleImportBundle(bundle: {
+    workflow: Workflow
+    templates: SavedWorkflowTemplate[]
+    settings?: AppSettings
+  }) {
+    artifactVersionCountRef.current = 0
+    dispatch({ type: 'importWorkflow', workflow: bundle.workflow })
+
+    const isFullBundle = typeof bundle.settings !== 'undefined'
+
+    if (isFullBundle) {
+      setTemplates(storageAdapter.replaceTemplates(bundle.templates))
+      storageAdapter.saveSettings(bundle.settings ?? {})
+      if (bundle.settings) {
+        writeCanvasModePreference(bundle.settings.canvasMode)
+        setCanvasMode(toCanvasMode(bundle.settings.canvasMode))
+        setAppSettings(bundle.settings)
+      }
+    } else if (bundle.templates.length > 0) {
+      const currentTemplates = storageAdapter.loadTemplates()
+      const mergedTemplates = [
+        ...currentTemplates,
+        ...bundle.templates.filter(
+          (incoming) =>
+            !currentTemplates.some((existing) => existing.id === incoming.id),
+        ),
+      ]
+      setTemplates(storageAdapter.replaceTemplates(mergedTemplates))
+    }
+
+    dispatch({
+      type: 'appendLog',
+      log: makeLog(
+        executionGraph?.runId ?? `import-bundle-${Date.now()}`,
+        isFullBundle
+          ? `フルバンドルを復元しました: ${bundle.workflow.name} (テンプレート ${bundle.templates.length} 件 / 設定あり)`
+          : `ワークフローバンドルを読み込みました: ${bundle.workflow.name}${bundle.templates.length > 0 ? ` (テンプレート ${bundle.templates.length} 件を既存ライブラリへ追加)` : ''}`,
+        undefined,
+        'info',
+      ),
+    })
   }
 
   function handleSaveNode(
@@ -896,7 +940,7 @@ export function AppShell() {
     tags: string[]
     category?: string
   }) {
-    const template = saveWorkflowTemplate({
+    const template = storageAdapter.saveTemplate({
       workflow,
       name: input.name,
       description: input.description,
@@ -907,7 +951,7 @@ export function AppShell() {
       artifactVersionCount: artifactVersions.length,
       createdFromRunId: executionGraph?.runId,
     })
-    setTemplates(listWorkflowTemplates())
+    setTemplates(storageAdapter.loadTemplates())
     dispatch({
       type: 'appendLog',
       log: makeLog(
@@ -950,7 +994,7 @@ export function AppShell() {
       return null
     }
 
-    setTemplates(listWorkflowTemplates())
+    setTemplates(storageAdapter.loadTemplates())
     dispatch({
       type: 'appendLog',
       log: makeLog(
@@ -965,7 +1009,7 @@ export function AppShell() {
   }
 
   function handleDeleteTemplate(id: string) {
-    setTemplates(deleteWorkflowTemplate(id))
+    setTemplates(storageAdapter.deleteTemplate(id))
     dispatch({
       type: 'appendLog',
       log: makeLog(
@@ -975,6 +1019,23 @@ export function AppShell() {
         'warn',
       ),
     })
+  }
+
+  function handleChangeActiveTab(activeTab: string) {
+    storageAdapter.saveSettings({ activeTab })
+    setAppSettings((current) =>
+      current.activeTab === activeTab ? current : { ...current, activeTab },
+    )
+  }
+
+  function handleChangeCanvasMode(nextMode: CanvasMode) {
+    const savedCanvasMode = toSavedCanvasMode(nextMode)
+    setCanvasMode(nextMode)
+    setAppSettings((current) =>
+      current.canvasMode === savedCanvasMode
+        ? current
+        : { ...current, canvasMode: savedCanvasMode },
+    )
   }
 
   function handleSaveSnapshot() {
@@ -1470,7 +1531,7 @@ export function AppShell() {
           onRedo={() => dispatch({ type: 'redo' })}
           onExportJson={exportJson}
           onImportJson={importJson}
-          onChangeCanvasMode={setCanvasMode}
+          onChangeCanvasMode={handleChangeCanvasMode}
         />
       {importError ? <div className="import-error">{importError}</div> : null}
       {!importError && importSuccessMessage ? <div className="import-success">{importSuccessMessage}</div> : null}
@@ -1581,6 +1642,12 @@ export function AppShell() {
         onCancelRebuild={handleCancelRebuild}
         onSelectArtifactVersion={handleSelectArtifactVersion}
         onResetStorage={handleResetStorage}
+        settings={{
+          ...appSettings,
+          canvasMode: toSavedCanvasMode(canvasMode),
+        }}
+        onChangeActiveTab={handleChangeActiveTab}
+        onImportBundle={handleImportBundle}
       />
     </div>
   )

@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import {
   artifactStatusLabels,
   metricLabels,
@@ -8,14 +7,18 @@ import type { ArtifactVersion, EvaluationResult, HumanReviewState, RebuildReques
 import type { ExecutionGraph } from '../domain/executionGraph'
 import type { ConnectorJob } from '../domain/connectorQueue'
 import type { Workflow } from '../domain/workflow'
+import type { AppSettings } from '../storage/localAppSettings'
 import type { SavedWorkflowTemplate } from '../storage/localTemplates'
 import type { SavedWorkflowSnapshot } from '../storage/localWorkflowHistory'
 import { selectActiveQueueNodes, selectBottleneckNode } from '../state/workflowSelectors'
 import { AgentConnectorPanel } from './AgentConnectorPanel'
 import { ArtifactVersionHistory } from './ArtifactVersionHistory'
 import { ConnectorQueuePanel } from './ConnectorQueuePanel'
+import { ConnectorRoadmapPanel } from './ConnectorRoadmapPanel'
 import { CredentialBoundaryPanel } from './CredentialBoundaryPanel'
+import { ImportExportPanel } from './ImportExportPanel'
 import { PersistencePanel } from './PersistencePanel'
+import { StorageBoundaryPanel } from './StorageBoundaryPanel'
 import { EvaluationPanel } from './EvaluationPanel'
 import { ExecutionGraphPanel } from './ExecutionGraphPanel'
 import { HumanReviewPanel } from './HumanReviewPanel'
@@ -63,6 +66,40 @@ type BottomMonitorProps = {
   onCancelRebuild: (requestId: string) => void
   onSelectArtifactVersion: (versionId: string) => void
   onResetStorage: () => void
+  settings: AppSettings
+  onChangeActiveTab: (tab: string) => void
+  onImportBundle: (bundle: {
+    workflow: Workflow
+    templates: import('../storage/localTemplates').SavedWorkflowTemplate[]
+    settings?: AppSettings
+  }) => void
+}
+
+type MonitorTab =
+  | 'Logs'
+  | 'Metrics'
+  | 'Queue'
+  | 'Output'
+  | 'Execution'
+  | 'Evaluation'
+  | 'Agent'
+  | 'Storage'
+  | 'Roadmap'
+
+function normalizeMonitorTab(value: string): MonitorTab {
+  const validTabs: MonitorTab[] = [
+    'Logs',
+    'Metrics',
+    'Queue',
+    'Output',
+    'Execution',
+    'Evaluation',
+    'Agent',
+    'Storage',
+    'Roadmap',
+  ]
+
+  return validTabs.includes(value as MonitorTab) ? (value as MonitorTab) : 'Logs'
 }
 
 export function BottomMonitor({
@@ -100,10 +137,11 @@ export function BottomMonitor({
   onCancelRebuild,
   onSelectArtifactVersion,
   onResetStorage,
+  settings,
+  onChangeActiveTab,
+  onImportBundle,
 }: BottomMonitorProps) {
-  const [activeTab, setActiveTab] = useState<
-    'Logs' | 'Metrics' | 'Queue' | 'Output' | 'Execution' | 'Evaluation' | 'Agent' | 'Storage'
-  >('Logs')
+  const activeTab = normalizeMonitorTab(settings.activeTab)
 
   const tabLabels = {
     Logs: 'ログ',
@@ -114,6 +152,7 @@ export function BottomMonitor({
     Evaluation: '評価',
     Agent: 'エージェント',
     Storage: 'ストレージ',
+    Roadmap: 'Roadmap',
   } as const
 
   const bottleneck = selectBottleneckNode(workflow)
@@ -128,12 +167,12 @@ export function BottomMonitor({
   return (
     <footer className="bottom-monitor" aria-label="メトリクスとログ">
       <section className="monitor-tabs">
-        {(['Logs', 'Metrics', 'Queue', 'Output', 'Execution', 'Evaluation', 'Agent', 'Storage'] as const).map((tab) => (
+        {(['Logs', 'Metrics', 'Queue', 'Output', 'Execution', 'Evaluation', 'Agent', 'Storage', 'Roadmap'] as const).map((tab) => (
           <button
             key={tab}
             type="button"
             className={activeTab === tab ? 'active' : ''}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => onChangeActiveTab(tab)}
           >
             {tabLabels[tab]}
           </button>
@@ -356,7 +395,20 @@ export function BottomMonitor({
 
         {activeTab === 'Storage' ? (
           <div className="storage-tab-panel">
+            <StorageBoundaryPanel />
+            <ImportExportPanel
+              workflow={workflow}
+              templates={templates}
+              settings={settings}
+              onImportBundle={onImportBundle}
+            />
             <PersistencePanel onResetStorage={onResetStorage} />
+          </div>
+        ) : null}
+
+        {activeTab === 'Roadmap' ? (
+          <div className="roadmap-tab-panel">
+            <ConnectorRoadmapPanel />
           </div>
         ) : null}
       </section>
