@@ -263,8 +263,6 @@ export function AppShell() {
   } = state
   const canUndo = state.past.length > 0
   const canRedo = state.future.length > 0
-  const workflowLogsRef = useRef(workflow.logs)
-  workflowLogsRef.current = workflow.logs
 
   const selectedNode = useMemo(
     () => selectSelectedNode(workflow, selectedNodeId),
@@ -304,7 +302,7 @@ export function AppShell() {
     const pending = pendingRunRef.current
     if (pending && pending.runId === state.completedRun.runId) {
       pendingRunRef.current = null
-      const runLogs = workflowLogsRef.current.filter((log) => log.runId === pending.runId)
+      const runLogs = workflow.logs.filter((log) => log.runId === pending.runId)
       const record = createWorkflowRunRecord({
         runId: pending.runId,
         source: pending.workflowSnapshot,
@@ -319,7 +317,7 @@ export function AppShell() {
       setRunHistory(appendRunRecord(record))
     }
     dispatch({ type: 'clearCompletedRun' })
-  }, [state.completedRun])
+  }, [state.completedRun, workflow.logs])
 
   useEffect(() => {
     if (!importSuccessMessage) return
