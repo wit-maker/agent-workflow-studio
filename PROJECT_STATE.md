@@ -4,6 +4,59 @@ Last updated: 2026-05-25
 
 ---
 
+## Run History Lifecycle Hardening
+
+- Branch: `fix/run-history-lifecycle-hardening`
+- Date: 2026-05-25
+- Model: Claude Opus 4.7
+- PR #23 reviewer 留意事項 #1 への対応
+
+### 概要
+
+PR #23 で導入した `wasRunningRef + useEffect([isRunning, workflow.logs, workflow.status])` による間接的な実行終了検知を廃止し、**明示的な `runFinished` アクション**によるライフサイクルイベントに置き換えた。
+
+### 変更内容
+
+1. **`runFinished` アクション** — `workflowActions.ts` に追加。
+   - Payload: `runId: string`, `workflowStatus: WorkflowStatus`, `runStatus: WorkflowRunStatus`
+   - `setRunning(false)` + `setWorkflowStatus(...)` の 2 dispatch を 1 dispatch に統合。
+2. **`clearCompletedRun` アクション** — `workflowActions.ts` に追加。
+3. **`completedRun` フィールド** — `WorkflowState` に `{ runId: string; runStatus: WorkflowRunStatus } | null` を追加。
+   - `createWorkflowState` 初期値: `null`
+   - `runFinished` で `{ runId, runStatus }` をセット。
+   - `clearCompletedRun` で `null` に戻す。
+4. **`runNodeFailed` の変更なし** — `handleReturnReviewStep` が `runNodeFailed` 経由で `isRunning: false` を設定するため現状維持。
+5. **`workflowLogsRef`** — `workflowLogsRef.current = workflow.logs` を毎レンダーで更新する ref を追加。`useEffect` 内でのログアクセスを lint-safe かつ stale-closure-free にする。
+6. **`useEffect([state.completedRun])` に置き換え** — 旧 `useEffect([isRunning, workflow.logs, workflow.status])` + `wasRunningRef` を削除し、`state.completedRun` だけを監視する単一 `useEffect` に変更。
+   - `state.completedRun.runId === pendingRunRef.current?.runId` を確認してから record を保存。
+   - 保存後、`clearCompletedRun` を dispatch。
+7. **`runPlannedWorkflow` の exit point を更新** —
+   - `decision.result === 'failed'` 出口: `runFinished(runId, 'failed', 'failed')`
+   - `decision.result === 'review_required'` 出口: `runFinished(runId, 'review_required', 'review_required')`
+   - 通常完了出口: `setWorkflowStatus('success')` dispatch を削除し `runFinished(runId, 'success', 'success')` に統合。
+8. **`stopRun` の更新** — `setRunning(false)` + `setWorkflowStatus('paused')` を `runFinished(stopRunId, 'paused', 'cancelled')` 1 dispatch に置き換え。`stopRunId` は `executionGraph?.runId ?? pendingRunRef.current?.runId ?? ''` から取得。
+
+### 削除したもの
+
+- `wasRunningRef: useRef(false)` — 間接的な isRunning edge 検知 ref
+- `WorkflowRunStatus` の `AppShell.tsx` 内 import — reducer が runStatus を保持するため不要に
+
+### Browser QA 確認
+
+- `failed` 出口: 実行 → failed record 保存 ✓
+- `cancelled` 出口: 実行中に停止 → cancelled record 保存 ✓
+- `review_required` 出口: REVIEW サイクル → review_required record 保存 ✓
+- ランタイムエラーなし ✓
+- Storage タブの「実行履歴: N 件」が正しく更新される ✓
+
+### 追加・更新ファイル
+
+- Updated: `src/state/workflowActions.ts` — `WorkflowRunStatus` import, `runFinished` / `clearCompletedRun` actions
+- Updated: `src/state/workflowReducer.ts` — `WorkflowRunStatus` import, `completedRun` フィールド, `runFinished` / `clearCompletedRun` reducer cases
+- Updated: `src/components/AppShell.tsx` — `wasRunningRef` 削除, `workflowLogsRef` 追加, `useEffect([state.completedRun])` に置き換え, `runPlannedWorkflow` / `stopRun` exit dispatch 更新
+
+---
+
 ## Phase 1b: Durable Run History foundation
 
 - Branch: `feat/durable-run-history-foundation`

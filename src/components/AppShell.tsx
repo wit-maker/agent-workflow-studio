@@ -36,7 +36,6 @@ import {
   mapRunPlannerMode,
   type WorkflowRunHistory,
   type WorkflowRunMode,
-  type WorkflowRunStatus,
 } from '../domain/runHistory'
 import { appendRunRecord, loadRunHistory } from '../storage/runHistoryStorage'
 import {
@@ -239,7 +238,6 @@ export function AppShell() {
     plannedNodeCount: number
     plannedConnectionCount: number
   } | null>(null)
-  const wasRunningRef = useRef(false)
   const [runHistory, setRunHistory] = useState<WorkflowRunHistory>(() => loadRunHistory())
   const [connectorJobs, setConnectorJobs] = useState<ConnectorJob[]>([])
   const [isEvaluating, setIsEvaluating] = useState(false)
@@ -265,6 +263,8 @@ export function AppShell() {
   } = state
   const canUndo = state.past.length > 0
   const canRedo = state.future.length > 0
+  const workflowLogsRef = useRef(workflow.logs)
+  workflowLogsRef.current = workflow.logs
 
   const selectedNode = useMemo(
     () => selectSelectedNode(workflow, selectedNodeId),
@@ -300,25 +300,16 @@ export function AppShell() {
   }, [workflow, isRunning])
 
   useEffect(() => {
-    if (wasRunningRef.current && !isRunning && pendingRunRef.current) {
-      const pending = pendingRunRef.current
+    if (!state.completedRun) return
+    const pending = pendingRunRef.current
+    if (pending && pending.runId === state.completedRun.runId) {
       pendingRunRef.current = null
-      const runLogs = workflow.logs.filter((log) => log.runId === pending.runId)
-      const runStatus: WorkflowRunStatus =
-        workflow.status === 'success'
-          ? 'success'
-          : workflow.status === 'failed'
-            ? 'failed'
-            : workflow.status === 'review_required'
-              ? 'review_required'
-              : workflow.status === 'paused' || workflow.status === 'cancelled'
-                ? 'cancelled'
-                : 'success'
+      const runLogs = workflowLogsRef.current.filter((log) => log.runId === pending.runId)
       const record = createWorkflowRunRecord({
         runId: pending.runId,
         source: pending.workflowSnapshot,
         mode: pending.mode,
-        status: runStatus,
+        status: state.completedRun.runStatus,
         startedAt: pending.startedAt,
         finishedAt: new Date().toISOString(),
         nodeCount: pending.plannedNodeCount,
@@ -327,8 +318,8 @@ export function AppShell() {
       })
       setRunHistory(appendRunRecord(record))
     }
-    wasRunningRef.current = isRunning
-  }, [isRunning, workflow.logs, workflow.status])
+    dispatch({ type: 'clearCompletedRun' })
+  }, [state.completedRun])
 
   useEffect(() => {
     if (!importSuccessMessage) return
@@ -756,7 +747,12 @@ export function AppShell() {
             decisions.filter((item) => item.retryCandidate).length,
           ),
         })
-        dispatch({ type: 'setRunning', isRunning: false })
+        dispatch({
+          type: 'runFinished',
+          runId,
+          workflowStatus: decision.result === 'failed' ? 'failed' : 'review_required',
+          runStatus: decision.result === 'failed' ? 'failed' : 'review_required',
+        })
         return
       }
     }
@@ -774,12 +770,11 @@ export function AppShell() {
         decisions.filter((item) => item.retryCandidate).length,
       ),
     })
-    dispatch({ type: 'setWorkflowStatus', status: 'success' })
     dispatch({
       type: 'appendLog',
       log: makeLog(runId, 'Local run engine updated artifact and metrics.', undefined, 'metric'),
     })
-    dispatch({ type: 'setRunning', isRunning: false })
+    dispatch({ type: 'runFinished', runId, workflowStatus: 'success', runStatus: 'success' })
   }
 
   async function runMockWorkflow(mode: RunMode = 'all') {
@@ -788,8 +783,7 @@ export function AppShell() {
 
   function stopRun() {
     runTokenRef.current += 1
-    dispatch({ type: 'setRunning', isRunning: false })
-    dispatch({ type: 'setWorkflowStatus', status: 'paused' })
+    const stopRunId = executionGraph?.runId ?? pendingRunRef.current?.runId ?? ''
     if (executionGraph) {
       dispatch({
         type: 'appendLog',
@@ -801,6 +795,7 @@ export function AppShell() {
         ),
       })
     }
+    dispatch({ type: 'runFinished', runId: stopRunId, workflowStatus: 'paused', runStatus: 'cancelled' })
   }
 
   function handleReset() {
