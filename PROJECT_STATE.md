@@ -4,6 +4,134 @@ Last updated: 2026-05-26
 
 ---
 
+## Phase 1d: Situation Assistant briefing MVP
+
+- Branch: `feat/situation-assistant-briefing-mvp`
+- Date: 2026-05-26
+- Model: GPT-5.4 high（request metadata で確認）
+- Source specs consulted:
+  - `PROJECT_STATE.md`
+  - `AGENTS.md`
+  - `docs/project/PROJECT_GOAL.md`
+  - `docs/project/SOURCE_OF_TRUTH.md`
+  - `docs/project/PLAN_PROTOCOL.md`
+  - `docs/project/STOP_RULES.md`
+  - `docs/source-specs/00_ドキュメント体系_README.md`
+  - `docs/source-specs/01_要件定義書_完全版.md`
+  - `docs/source-specs/02_機能仕様書_完全版.md`
+  - `docs/source-specs/03_UI_UX_認知HUD設計書_完全版.md`
+  - `docs/source-specs/04_システム設計書_データモデル_実行基盤_完全版.md`
+  - `docs/source-specs/05_AIエージェント運用設計書_完全版.md`
+  - `docs/source-specs/06_QA_セキュリティ_受け入れ基準_完全版.md`
+  - `docs/source-specs/07_実装ロードマップ_完全版.md`
+  - `docs/source-specs/situation-assistant/00_ドキュメント体系_README.md`
+  - `docs/source-specs/situation-assistant/01_要件定義書_状況補佐官_完全版.md`
+  - `docs/source-specs/situation-assistant/02_機能仕様書_状況説明生成_完全版.md`
+  - `docs/source-specs/situation-assistant/03_UI_UX_状況ブリーフィング設計書_完全版.md`
+  - `docs/source-specs/situation-assistant/04_システム設計書_状況説明生成基盤_完全版.md`
+  - `docs/source-specs/situation-assistant/05_AIエージェント運用設計書_状況補佐官_完全版.md`
+  - `docs/source-specs/situation-assistant/06_QA_セキュリティ_受け入れ基準_状況説明生成_完全版.md`
+  - `docs/source-specs/situation-assistant/07_実装ロードマップ_状況補佐官_完全版.md`
+
+### 実装ファイル
+
+- Added: `src/domain/briefing.ts`
+- Added: `src/domain/briefingInputCollector.ts`
+- Added: `src/domain/briefingPromptBuilder.ts`
+- Added: `src/adapters/briefing/BriefingAdapter.ts`
+- Added: `src/adapters/briefing/MockBriefingAdapter.ts`
+- Added: `src/hooks/useBriefingGenerator.ts`
+- Added: `src/components/BriefingPanel.tsx`
+- Updated: `src/components/BottomMonitor.tsx`
+- Updated: `src/components/AppShell.tsx`
+- Updated: `src/storage/localAppSettings.ts`
+- Updated: `src/index.css`
+- Updated: `PROJECT_STATE.md`
+
+### 追加した domain vocabulary
+
+- `BriefingSeverity = 'info' | 'warn' | 'error'`
+- `BriefingStatus = 'idle' | 'generating' | 'done' | 'error'`
+- `BriefingInputMode = 'all' | 'latest-run' | 'errors-only'`
+- `BriefingResult` — `what / why / how / next / severity / isMock / generatedAt`
+- `BriefingState` — non-persistent な UI state。`result` / `error` / `generatedAt` / `inputMode` を保持。
+- `BriefingInput` — credential-safe に収集された workflow / metrics / execution / connectors / HUD / runHistory / logs / errors の読み取り専用入力。
+- `collectBriefingInput(args)` — workflow / executionGraph / connectorJobs / HUD / runHistory から安全な説明入力を導出する pure function。
+- `buildBriefingPrompt(input)` — 4D prompt を構築する pure function。
+
+### Adapter boundary
+
+- `BriefingAdapter.generate({ prompt, input })` で prompt 文字列と構造化入力を受ける future-compatible な境界を追加。
+- Phase 1d は `MockBriefingAdapter` のみを使用。UI / domain / adapter を分離したため、将来の実 AI adapter は同じ境界へ差し替え可能。
+
+### UI surface
+
+- BottomMonitor の既存タブ群は保持したまま末尾に `ブリーフィング` タブを追加。
+- `BriefingPanel` は empty state / input mode selector / generate button / generating state / error banner / severity badge / generatedAt / mock banner / 4D sections を表示。
+- state は `useBriefingGenerator` を BottomMonitor 内で保持し、tab を切り替えてもセッション中は維持、reload 後は消える。
+
+### Safety / credential filtering
+
+- `BriefingInputCollector` は `node.config` をまるごと収集対象外にした。
+- `payload` / artifact content / prompt 全文 / credential 値 / raw payload は briefing 入力にも UI 出力にも含めない。
+- `password`, `token`, `key`, `secret`, `apiKey`, `credential`, `authorization`, `bearer` を大文字小文字無視で含む文字列を skip するフィルタを実装。
+- UI は React text node のみで描画し、`dangerouslySetInnerHTML` は未使用。
+
+### 永続化への影響
+
+- 新しい localStorage key は追加していない。
+- BriefingState / briefing result の永続化はしていない。
+- Run History schema 変更なし。briefing result を run history へ保存しない。
+- `localAppSettings` は既存 `activeTab` の許容値に `Briefing` を追加したのみ。
+
+### build / lint / typecheck
+
+- `npm run build`: pass（bundle size warning は既存どおり）
+- `npm run lint`: pass
+- `npm run typecheck`: pass
+
+### Browser QA
+
+- Preview server: `http://127.0.0.1:4174/`
+- App load / reload: pass
+- 既存 BottomMonitor tabs: `認知HUD` / `ログ` / `ストレージ` を確認し regression なし
+- `ブリーフィング` tab 追加: pass
+- Empty state / generate / generating / 4D sections / severity badge / mock banner: pass
+- Input mode differences: pass
+  - `全ログ`: 参照ログ 33 件
+  - `最新 Run のみ`: 参照ログ 8 件
+  - `エラーのみ`: 参照ログ 2 件
+- Failed path briefing: `error` severity / failure-oriented copy を確認
+- Review-required path briefing: `warn` severity / review-oriented copy を確認
+- Storage tab run history count: `2 件` を確認
+- Cognitive HUD tab: `確認待ちが 1 件あります` を確認
+- Console error / warn: 0 件
+- External resource requests: 0 件（localhost 以外の resource entry なし）
+
+### Non-goals preserved
+
+- 実 AI API 接続なし
+- API key settings / SDK dependency 追加なし
+- briefing history persistence なし
+- Run History schema 変更なし
+- Tauri / SQLite / IndexedDB / Zustand / streaming / audio / video / avatar なし
+
+### Known risks
+
+- `latest-run` は latest run の最新ログ群に絞る挙動であり、full trace / step detail を保持するわけではない。trace store 導入後に richer input へ広げる余地がある。
+- mock briefing は deterministic template であり、自然言語の深い因果説明は将来の real adapter 導入待ち。
+- 現状の credential keyword filter は substring ベースで conservative に skip するため、`key` を含む無害な文字列も除外されうる。
+
+### 次の推奨Phase
+
+1. Phase SA-2: 実 AI adapter 境界の具体化前に credential-safety boundary を architecture docs と settings UX で確定する。
+2. Phase SA-3: trace store / run detail view と連動し、briefing input を log count から step-level evidence へ拡張する。
+3. HUD と Briefing の連携強化として focus target クリック連動を追加する。
+
+### PR
+
+- Pending
+
 ## Phase 1c: Cognitive HUD foundation
 
 - Branch: `feat/cognitive-hud-foundation`

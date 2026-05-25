@@ -2578,3 +2578,181 @@ button:disabled {
   font-size: 12px;
 }
 
+/* ---- Situation Briefing ---- */
+
+.briefing-tab-panel {
+  padding: 14px;
+}
+
+.briefing-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.briefing-mock-banner,
+.briefing-error-banner,
+.briefing-generating,
+.briefing-empty-state,
+.briefing-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.briefing-mock-banner {
+  border-color: rgba(169, 105, 18, 0.3);
+  background: #fff7e6;
+  color: var(--amber);
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.briefing-controls {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.briefing-mode-field {
+  margin-bottom: 0;
+  min-width: 200px;
+}
+
+.briefing-generating,
+.briefing-empty-state,
+.briefing-error-banner {
+  padding: 14px;
+}
+
+.briefing-generating {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+}
+
+.briefing-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(35, 78, 124, 0.15);
+  border-top-color: var(--accent);
+  border-radius: 999px;
+  animation: briefing-spin 0.8s linear infinite;
+}
+
+.briefing-error-banner {
+  border-color: rgba(190, 63, 59, 0.25);
+  background: var(--red-soft);
+  color: var(--red);
+  font-weight: 700;
+}
+
+.briefing-empty-state {
+  display: grid;
+  gap: 6px;
+}
+
+.briefing-empty-state p {
+  margin: 0;
+}
+
+.briefing-card {
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.briefing-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+  flex-wrap: wrap;
+}
+
+.briefing-card-header h3,
+.briefing-section h4,
+.briefing-section p {
+  margin: 0;
+}
+
+.briefing-eyebrow {
+  display: inline-block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.briefing-meta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.briefing-severity-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: lowercase;
+}
+
+.briefing-severity-badge.severity-info {
+  background: rgba(32, 68, 131, 0.08);
+  color: #234e7c;
+}
+
+.briefing-severity-badge.severity-warn {
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
+.briefing-severity-badge.severity-error {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.briefing-sections {
+  display: grid;
+  gap: 12px;
+}
+
+.briefing-section {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--surface-2);
+}
+
+.briefing-section p {
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+@keyframes briefing-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 900px) {
+  .briefing-controls {
+    align-items: stretch;
+  }
+
+  .briefing-controls .primary-button,
+  .briefing-mode-field {
+    width: 100%;
+  }
+}
+

@@ -1741,6 +1741,7 @@ export function AppShell() {
         onSelectArtifactVersion={handleSelectArtifactVersion}
         onResetStorage={handleResetStorage}
         runHistoryCount={runHistory.records.length}
+        runHistoryRecords={runHistory.records}
         hudSnapshot={hudSnapshot}
         settings={{
           ...appSettings,
