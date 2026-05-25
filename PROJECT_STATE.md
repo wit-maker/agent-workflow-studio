@@ -4,6 +4,78 @@ Last updated: 2026-05-26
 
 ---
 
+## Phase run-trace-step-evidence-foundation
+
+- Branch: `feat/run-trace-step-evidence-foundation`
+- Date: 2026-05-26
+- Model: GPT-5.5 xhigh (user-confirmed)
+- Scope: domain foundation for run / step evidence used by mock-only Situation Assistant briefing
+- Source alignment:
+  - `docs/project/PROJECT_GOAL.md`
+  - `docs/project/SOURCE_OF_TRUTH.md`
+  - `docs/architecture/credential-safety-boundary.md`
+  - `docs/architecture/real-connector-adapter-design.md`
+  - current `src/domain/briefingInputCollector.ts`
+  - current connector request / response / error / readiness / adapter boundary files
+
+### Updated files
+
+- Added: `src/domain/runStepEvidence.ts`
+- Added: `src/domain/runTrace.ts`
+- Added: `src/domain/runDetail.ts`
+- Updated: `src/domain/briefing.ts`
+- Updated: `src/domain/briefingInputCollector.ts`
+- Updated: `src/domain/briefingPromptBuilder.ts`
+- Updated: `src/adapters/briefing/MockBriefingAdapter.ts`
+- Added: `docs/architecture/run-trace-step-evidence.md`
+- Updated: `PROJECT_STATE.md`
+
+### Safety decisions
+
+- `RunTrace` is derived from current runtime state and is not persisted.
+- `RunStepEvidence` stores safe summaries only.
+- `node.config`, prompt body, raw provider payloads, raw log payloads, and artifact content are not collected as evidence.
+- Credential-like strings are excluded by the shared connector-sensitive keyword filter before evidence enters `BriefingInput`.
+- `RunDetailSummary` passes only selected safe evidence summaries, safety warnings, counts, and IDs into briefing.
+- Run History schema remains unchanged.
+- No new localStorage keys were added.
+- No real AI API connection or provider SDK was added.
+
+### Briefing evidence impact
+
+- Briefing input now includes `runDetail`.
+- `runDetail` contains current run id, step count, evidence count, excluded evidence count, safety warnings, selected step evidence, and step-level grouped summaries.
+- Mock briefing output now reflects step evidence counts and can cite safe step-level evidence for failed / review_required / retry paths.
+- Input modes still apply:
+  - `all`: includes broad safe evidence
+  - `latest-run`: focuses on the active/current run trace
+  - `errors-only`: filters toward error, warning, review, retry, and safety evidence
+
+### Validation
+
+- `npm run build`: pass (Vite chunk-size warning remains existing)
+- `npm run lint`: pass
+- `npm run typecheck`: pass
+- Browser QA: pass via preview server `http://127.0.0.1:4176/` and Codex in-app Browser
+  - App loaded and reload did not crash
+  - Briefing tab opened and mock briefing generated
+  - 4D sections rendered: What / Why / How / Next
+  - Input modes worked: `全ログ`, `最新 Run のみ`, `エラーのみ`
+  - Failed run path produced `error` severity with step-level failure evidence
+  - review_required path produced `warn` severity with step-level review evidence
+  - Credential-like value scan returned false for briefing UI and localStorage
+  - Browser console warn/error count: 0
+  - Real AI API request scan: 0
+  - Cognitive HUD tab still rendered
+  - Storage tab still rendered
+  - Connector readiness still rendered 7 cards with `real: no`
+
+### Next recommended phase
+
+1. Add a read-only run detail panel that can display `RunDetailSummary` without persistence.
+2. Add focused evidence links from Situation Assistant output to run / step detail.
+3. Only after secure credential resolution exists, allow real adapter sanitized evidence to enter the same boundary.
+
 ## Phase connector-adapter-boundary-foundation
 
 - Branch: `docs/credential-safety-boundary`
