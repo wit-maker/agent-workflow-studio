@@ -24,6 +24,18 @@
 | `07_実装ロードマップ_完全版.md` | 段階実装順序 |
 | `Codex_Task_Goal_Plan_v2_Source_Specs_Audit.md` | Phase 0監査タスクの記録 |
 
+## 状況補佐官 追加レイヤー仕様
+
+`docs/source-specs/situation-assistant/` に「状況補佐官 / 状況説明生成 / 4Dワークフロー・ブリーフィング」の参照仕様が追加されている。
+
+- 本体仕様（01〜07）を**上書きしない**追加レイヤーである。
+- 状況補佐官の仕様ファイルは PR #20 で docs-only として main に追加済み。
+- ただし、runtime / UI / 音声 / 動画 / アバター / real API 実装は PR #20 には含まれない。
+- 最初の実装対象は Run Log / Metrics / HUD Signal からの text briefing MVP とする。
+- 音声・動画・アバター実装は text briefing MVP の後続フェーズで扱う。
+
+詳細は `docs/source-specs/situation-assistant/00_ドキュメント体系_README.md` を参照。
+
 ## 次作業
 
 Phase 0 の Source of Truth 整備とMVP監査は完了済みである。次にCodexへ渡す作業は以下。

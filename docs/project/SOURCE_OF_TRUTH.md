@@ -36,6 +36,21 @@ New interpretation, audit, or implementation mapping belongs under `docs/project
 - If source specs conflict with each other, stop and create a plan or decision note before implementation.
 - If a behavior is not specified, prefer safe, visible, reusable operation.
 
+## 状況補佐官 追加レイヤー
+
+`docs/source-specs/situation-assistant/` は Agent Workflow Studio 本体仕様の**追加レイヤー**である。
+
+- 本体仕様（Priority 3〜9）を上書きしない。
+- 衝突が発生した場合は、本体仕様を優先し、差分ノートを `docs/project/` に追加する。
+- 実装は PR #20 には混ぜない。
+- 最初の実装対象: Run Log / Metrics / HUD Signal からの text briefing MVP。
+- 音声・動画・アバター実装は対象外。
+
+| Priority | Source | Role |
+|---:|---|---|
+| 3a | `docs/source-specs/situation-assistant/01_要件定義書_状況補佐官_完全版.md` | 状況補佐官 要件（本体仕様の追加） |
+| 3b | `docs/source-specs/situation-assistant/02〜07` | 状況補佐官 機能・設計・QA・ロードマップ |
+
 ## Current Audit Sources
 
 The current MVP audit is maintained in:
