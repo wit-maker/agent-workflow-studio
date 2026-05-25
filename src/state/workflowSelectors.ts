@@ -4,7 +4,7 @@ import {
   isKnownConnectionKind,
 } from '../domain/connectionRules'
 import { findPort, getInputPorts, getOutputPorts } from '../domain/portRules'
-import { connectionKinds } from '../domain/workflow'
+import { connectionKinds, normalizeNodeCategory } from '../domain/workflow'
 import type {
   ConnectionKind,
   Workflow,
@@ -64,6 +64,7 @@ const workflowNodeStatuses = [
   'skipped',
   'review_required',
   'blocked',
+  'cancelled',
 ] as const satisfies WorkflowNode['status'][]
 
 const workflowStatuses = [
@@ -76,6 +77,7 @@ const workflowStatuses = [
   'failed',
   'review_required',
   'archived',
+  'cancelled',
 ] as const satisfies Workflow['status'][]
 
 const connectionStatuses = [
@@ -290,7 +292,7 @@ export function validateWorkflowImport(value: unknown): {
     id: raw.id as string,
     type: typeof raw.type === 'string' ? raw.type : 'unknown',
     title: raw.title as string,
-    category: typeof raw.category === 'string' ? raw.category : 'その他',
+    category: normalizeNodeCategory(raw.category),
     description: typeof raw.description === 'string' ? raw.description : '',
     status: isWorkflowNodeStatus(raw.status) ? raw.status : 'idle',
     agentRole: raw.agentRole as WorkflowNode['agentRole'],
@@ -337,7 +339,7 @@ export function validateWorkflowImport(value: unknown): {
   const workflow: Workflow = {
     id: value.id.trim(),
     schemaVersion:
-      value.schemaVersion === '1.0' || value.schemaVersion === '1.1'
+      value.schemaVersion === '1.0' || value.schemaVersion === '1.1' || value.schemaVersion === '2.0'
         ? value.schemaVersion
         : '1.0',
     name: value.name.trim(),

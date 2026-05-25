@@ -1,9 +1,10 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react'
-import { agentRoleLabels, formatDataTypeLabel, statusLabels } from '../domain/displayLabels'
+import { agentRoleLabels, formatDataTypeLabel, nodeCategoryLabels, statusLabels } from '../domain/displayLabels'
 import {
   reactFlowNodeType,
   type ReactFlowWorkflowNode,
 } from '../domain/reactFlowAdapter'
+import type { NodeCategory } from '../domain/workflow'
 
 export function ReactFlowNode({
   data,
@@ -25,7 +26,7 @@ export function ReactFlowNode({
       aria-label={`${node.title} ノード`}
     >
       <div className="react-flow-node-header">
-        <span className="node-category">{node.category}</span>
+        <span className="node-category">{nodeCategoryLabels[node.category as NodeCategory] ?? node.category}</span>
         <span className="node-status">{statusLabels[node.status]}</span>
       </div>
       <strong>{node.title}</strong>

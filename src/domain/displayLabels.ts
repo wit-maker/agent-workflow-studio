@@ -4,12 +4,30 @@ import type {
   AgentRole,
   ConnectionKind,
   ConnectionStatus,
+  NodeCategory,
   WorkflowArtifact,
   WorkflowDataType,
   WorkflowNodeStatus,
   WorkflowRunLog,
   WorkflowStatus,
 } from './workflow'
+
+export const nodeCategoryLabels: Record<NodeCategory, string> = {
+  trigger: '起点',
+  input: '入力取得',
+  transform: '整形・前処理',
+  branch: '分岐・ルーティング',
+  execute: '実行',
+  check: '検査',
+  aggregate: '集約',
+  output: '出力',
+  record: '記録',
+  observe: '観測',
+  improve: '改善',
+  template: 'テンプレート',
+  safety: '安全・権限',
+  hud: '認知HUD',
+}
 
 export const workflowStatusLabels: Record<WorkflowStatus, string> = {
   draft: '下書き',
@@ -21,6 +39,7 @@ export const workflowStatusLabels: Record<WorkflowStatus, string> = {
   failed: '失敗',
   review_required: '確認待ち',
   archived: '保管済み',
+  cancelled: 'キャンセル',
 }
 
 export const statusLabels: Record<WorkflowNodeStatus, string> = {
@@ -33,6 +52,7 @@ export const statusLabels: Record<WorkflowNodeStatus, string> = {
   skipped: 'スキップ',
   review_required: '確認待ち',
   blocked: '停止中',
+  cancelled: 'キャンセル',
 }
 
 export const executionStepStatusLabels: Record<ExecutionStepStatus, string> = {

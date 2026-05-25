@@ -4,6 +4,97 @@ Last updated: 2026-05-25
 
 ---
 
+## Phase 1: Workflow Domain Model Hardening
+
+- Branch: `feat/workflow-domain-model-hardening`
+- Date: 2026-05-25
+- Model: claude-sonnet-4-6（許容モデル範囲内で続行。型追加・migration placeholder 中心の作業のため適切と判断）
+
+### 実施内容
+
+Source Spec §1〜§4 に照らし、現行 MVP の domain model を additive に硬化した。
+`Workflow` 型は置き換えず、`WorkflowDocument` を保存・実行・監査用の新規上位形式として追加。
+
+1. **WorkflowDocument 型整備** — `src/domain/workflowDocument.ts` を新規作成。`WorkflowDocument` / `WorkflowDocumentMetadata` / `WorkflowViewport` / `WorkflowRunConfig` / `WorkflowMigrationResult` / `CURRENT_WORKFLOW_SCHEMA_VERSION = '2.0'` を定義。
+2. **NodeCategory 正規化** — `NodeCategory` 型（英語内部キー 14種）と `normalizeNodeCategory()` を `workflow.ts` に追加。旧 Japanese カテゴリを migration placeholder で吸収。
+3. **状態語彙追加** — `RunState` / `RiskState` / `HudState` / `ReviewState` / `ApprovalState` を `workflow.ts` に追加。将来の Run History / Cognitive HUD / Situation Assistant の接続点を確保。
+4. **`cancelled` ステータス追加** — `WorkflowStatus` / `WorkflowNodeStatus` に `cancelled` を追加。`workflowStatusLabels` / `statusLabels` / `workflowStatuses` / `workflowNodeStatuses` を同期更新。
+5. **Migration placeholder** — `normalizeWorkflowDocument()` / `migrateWorkflowDocument()` を実装。`schemaVersion` なし旧形式・1.0・1.1・不明バージョンを安全に受け付け、`2.0` へ補完。不正データは `success: false` + `error` を返す。
+6. **Import 正規化** — `validateWorkflowImport` が `normalizeNodeCategory()` を呼ぶよう更新。`schemaVersion '2.0'` を受け付けるよう拡張。
+7. **localStorage 正規化** — `loadCurrentWorkflow()` がロード時に全ノードの category を `normalizeNodeCategory()` で正規化。旧 Japanese カテゴリを持つ既存データも自動変換される。
+8. **UI display 更新** — `NodeCard` / `ReactFlowNode` / `PartsPalette` が `nodeCategoryLabels` を使って日本語表示。内部フィルタは英語キーのまま維持。
+
+### 追加・更新ファイル
+
+- Added: `src/domain/workflowDocument.ts`
+- Updated: `src/domain/workflow.ts` — `NodeCategory` / `normalizeNodeCategory()` / `RunState` / `RiskState` / `HudState` / `ReviewState` / `ApprovalState` / `cancelled` を追加、`WorkflowSchemaVersion` を名前付き型として export
+- Updated: `src/domain/displayLabels.ts` — `nodeCategoryLabels` 追加、`workflowStatusLabels` / `statusLabels` に `cancelled` 追加
+- Updated: `src/domain/sampleWorkflow.ts` — category を英語内部キーへ正規化
+- Updated: `src/state/workflowSelectors.ts` — `normalizeNodeCategory` import、`cancelled` をバリデーター配列に追加、schemaVersion '2.0' 受け付け、category 正規化
+- Updated: `src/storage/localWorkflowState.ts` — `loadCurrentWorkflow` でロード時 category 正規化
+- Updated: `src/components/NodeCard.tsx` — `nodeCategoryLabels` 使用
+- Updated: `src/components/ReactFlowNode.tsx` — `nodeCategoryLabels` 使用
+- Updated: `src/components/PartsPalette.tsx` — `nodeCategoryLabels` 使用、`getCategoryLabel()` ヘルパー追加
+- Updated: `PROJECT_STATE.md`
+
+### build / lint / typecheck
+
+- `npm run build`: pass（531.02 kB / gzip 159.06 kB、chunk size warning は既存）
+- `npm run lint`: pass（0 errors）
+- `npm run typecheck`: script なし → `npm run build` の `tsc -b` を代替として確認済み
+
+### Browser QA
+
+- Dev server: `http://127.0.0.1:5173/`
+- 初期ワークフロー 12ノード表示: pass
+- PartsPalette カテゴリボタン（起点 / 入力取得 / 整形・前処理 / 分岐・ルーティング / 実行）: pass
+- ノードカード category ラベル正規化: pass
+- ノード選択: pass（Inspect で確認）
+- Run All（34ログ、ステータス更新）: pass
+- Storage タブ（55.1 KB、各キー保存済み）: pass
+- localStorage に英語カテゴリキー保存確認: pass
+- Console errors: none
+
+### import/export compatibility
+
+- 旧 schemaVersion なし JSON → `normalizeWorkflowDocument` で `2.0` 補完、安全に処理
+- 旧 Japanese category（開始/入力/変換 etc.）→ `normalizeNodeCategory` で英語キーへ変換
+- 不正 JSON → 既存 reject パスを維持
+- 既存 bundle（schemaVersion 1.0）→ `validateWorkflowImport` 内で `1.0` として受け入れ継続
+
+### 旧 Japanese カテゴリ → 英語キー 対応表
+
+| 旧表示 | 英語内部キー | 新表示 |
+|---|---|---|
+| 開始 | trigger | 起点 |
+| 入力 | input | 入力取得 |
+| 変換 | transform | 整形・前処理 |
+| 制御 | branch | 分岐・ルーティング |
+| 実行 | execute | 実行 |
+| 接続 | execute | 実行 |
+| 品質 | check | 検査 |
+| 回収 | aggregate | 集約 |
+| 出力 | output | 出力 |
+| 記録 | record | 記録 |
+| テンプレート | template | テンプレート |
+| その他 | execute | 実行 |
+
+### 未解決リスク
+
+- `WorkflowDocument` は `Workflow` と並存しており、まだ実行・保存フローの中心にはなっていない。将来 Phase で `Workflow` → `WorkflowDocument` へ統一するかどうかを判断する必要がある。
+- `edges` / `connections` の命名統一は未判断（`normalizeWorkflowDocument` で両方を受け付けることで回避中）。
+- `loadCurrentWorkflow` のカテゴリ正規化はワークフロー本体のみ。テンプレート内のノード category は保存時のまま（`normalizeSavedWorkflowTemplate` を将来拡張すると完全）。
+- chunk size warning は既存問題で今回は対象外。
+
+### 次の推奨作業
+
+1. **Phase 1b**: Durable Run History foundation — `RunState` を使った run record の永続化モデル設計
+2. **Phase 1c**: Cognitive HUD foundation — `HudState` / `RiskState` を使った state model 実装
+3. **Situation Assistant text briefing MVP** — `WorkflowDocument` / run logs / metrics を入力とするブリーフィング基盤
+4. `WorkflowDocument` を実際の保存・復元フローに組み込む（`Workflow` からの変換関数追加）
+
+---
+
 ## Goal / Plan v2 Source Specs and MVP Audit
 
 - Branch: `docs/source-specs-goal-plan-v2`
