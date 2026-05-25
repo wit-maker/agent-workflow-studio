@@ -4,6 +4,65 @@ Last updated: 2026-05-26
 
 ---
 
+## Phase connector-adapter-boundary-foundation
+
+- Branch: `docs/credential-safety-boundary`
+- Date: 2026-05-26
+- Model: GPT-5.5 xhigh (user-confirmed)
+- Scope: domain-only real connector adapter boundary hardening after credential-safety boundary
+- Source alignment:
+  - `docs/project/PROJECT_GOAL.md`
+  - `docs/project/SOURCE_OF_TRUTH.md`
+  - `docs/architecture/credential-safety-boundary.md`
+  - `docs/architecture/real-connector-adapter-design.md`
+  - `docs/architecture/connector-implementation-order.md`
+  - `docs/audit/missing-systems.md`
+  - `docs/audit/technical-debt.md`
+  - `docs/source-specs/04_システム設計書_データモデル_実行基盤_完全版.md`
+
+### Updated files
+
+- Added: `src/domain/credentialRef.ts`
+- Added: `src/domain/connectorSafety.ts`
+- Updated: `src/domain/connectorRequest.ts`
+- Updated: `src/domain/connectorError.ts`
+- Updated: `src/domain/connectorReadiness.ts`
+- Updated: `src/domain/realConnectorAdapter.ts`
+- Updated: `docs/architecture/real-connector-adapter-design.md`
+- Updated: `PROJECT_STATE.md`
+
+### Boundary decisions
+
+- `CredentialRef` is now a first-class non-secret domain type.
+- `ConnectorRequest` carries safe input summaries/content, sanitized metadata, and optional `CredentialRef`.
+- `ConnectorError` diagnostics are restricted to sanitized scalar values.
+- `ConnectorReadiness` now includes credential requirement metadata without credential values.
+- `BaseRealConnectorAdapter` returns sanitized failed responses for wrong-adapter routing, not-ready adapters, and missing `CredentialRef`.
+
+### Preserved non-goals
+
+- No real AI API integration
+- No API key input UI
+- No credential persistence
+- No provider SDK dependency
+- No Tauri / SQLite / secure-store implementation
+- No execution path is wired to live providers
+
+### Validation
+
+- `npm run build`: pass
+- `npm run lint`: pass
+- `npm run typecheck`: pass
+- Direct safety check: pass (`makeConnectorRequest`, `makeConnectorError`, and `BaseRealConnectorAdapter` not-ready path redact credential-like values)
+- Browser QA: pass via preview server `http://127.0.0.1:4175/` and headless Edge/CDP
+  - App shell loaded
+  - Roadmap tab opened
+  - Connector readiness rendered 7 cards
+  - `real: yes` count stayed 0
+  - not-configured count stayed 5
+  - credential-like value scan returned false
+  - console entries / runtime exceptions: 0
+
 ## Phase credential-safety-boundary
 
 - Branch: `docs/credential-safety-boundary`

@@ -1,104 +1,137 @@
 # Real Connector Adapter Design
 
-## 目的
+Last updated: 2026-05-26
 
-実API接続の前に、real connector adapter の共通 interface を確定する。
+## Purpose
 
-**今回は実APIを呼ばない。Credentialも保存しない。.envも作らない。**
+This document defines the common connector adapter contract before any real API or CLI integration is enabled.
 
----
+This phase does not call real APIs, does not add API key UI, does not create `.env` files, and does not persist credentials.
 
-## 設計原則
+## Design Rules
 
-1. **Mock first** — `canRunReal: false` の間は必ずローカルモックで実行する
-2. **Readiness check** — 実行前に `getReadiness()` を呼び、`canRunReal` が true のときのみ real 実行
-3. **No credential in browser** — API key はブラウザに保存しない。OS環境変数またはローカルCLI経由
-4. **Interface-first** — real adapter を実装する前に interface を確定する
+1. Mock remains available by default.
+2. Real execution is disabled unless readiness says `canRunReal: true`.
+3. Credential values never enter browser state, logs, metrics, prompts, workflow JSON, templates, or localStorage.
+4. Real adapters receive safe request input plus `CredentialRef` metadata only.
+5. Not-ready execution returns sanitized `ConnectorResponse` errors.
+6. Provider-specific request payloads are created inside the adapter boundary, not in UI state.
 
----
+## Current Domain Files
 
-## 型の全体像
-
-```
-ConnectorRequest ──→ IRealConnectorAdapter.execute() ──→ ConnectorResponse
-                              │
-                         getReadiness()
-                              │
-                         ConnectorReadiness
-                         ├── mode: 'mock' | 'real-ready' | 'not-configured'
-                         ├── canRunMock: boolean
-                         ├── canRunReal: boolean
-                         ├── missingRequirements: string[]
-                         └── warnings: string[]
-```
-
----
-
-## ConnectorMode 状態遷移
-
-```
-not-configured ──(設定完了)──→ real-ready
-      │                              │
-      └──→ mock (常に利用可能)  ←───┘
-```
-
-- `not-configured`: APIキー未設定、CLIミッシング等
-- `real-ready`: 全必要条件が揃っており、実API呼び出し可能
-- `mock`: ローカルモックのみ（デフォルト状態）
-
----
-
-## ファイル構成
-
-| ファイル | 役割 |
+| File | Role |
 |---|---|
-| `src/domain/connectorRequest.ts` | Request 型と factory |
-| `src/domain/connectorResponse.ts` | Response 型と factory |
-| `src/domain/connectorError.ts` | Error 型と error code 定義 |
-| `src/domain/connectorReadiness.ts` | Readiness 型・ConnectorProfile・既知コネクター一覧 |
-| `src/domain/realConnectorAdapter.ts` | `IRealConnectorAdapter` interface と `BaseRealConnectorAdapter` |
+| `src/domain/credentialRef.ts` | Defines `CredentialRef`, credential source, and credential readiness metadata. |
+| `src/domain/connectorSafety.ts` | Redacts credential-like text and restricts adapter diagnostics to safe values. |
+| `src/domain/connectorRequest.ts` | Defines sanitized connector request input and optional `CredentialRef`. |
+| `src/domain/connectorResponse.ts` | Defines connector response and usage summary. |
+| `src/domain/connectorError.ts` | Defines sanitized connector error codes and diagnostics. |
+| `src/domain/connectorReadiness.ts` | Defines readiness state, connector profiles, and mock/not-configured status. |
+| `src/domain/realConnectorAdapter.ts` | Defines `IRealConnectorAdapter` and guarded `BaseRealConnectorAdapter`. |
 
----
+## Request Boundary
 
-## ConnectorError code 分類
+`ConnectorRequest` carries:
 
-| code | retryable | 説明 |
-|---|---|---|
-| `timeout` | ✓ | タイムアウト |
-| `rate_limit` | ✓ | レート制限（retryAfterMs あり） |
-| `network_error` | ✓ | ネットワーク障害 |
-| `model_unavailable` | ✓ | モデルが一時的に利用不可 |
-| `auth_failed` | ✗ | 認証失敗（設定変更が必要） |
-| `not_configured` | ✗ | 接続未設定 |
-| `quota_exceeded` | ✗ | クォータ超過 |
-| `invalid_response` | ✗ | レスポンスフォーマット不正 |
-| `input_too_large` | ✗ | 入力トークン超過 |
-| `unknown` | ✗ | 不明なエラー |
+- job id
+- node id
+- connector id
+- safe input summary/content
+- safe context summary
+- optional `CredentialRef`
+- timeout and retry limits
+- sanitized metadata
 
----
+It must not carry:
 
-## 既知コネクタープロファイル
+- credential values
+- auth headers
+- raw provider payloads
+- raw `node.config`
+- unfiltered logs or artifacts
 
-| connectorId | CLI必要 | APIキー必要 | ブラウザ自動化 |
-|---|---|---|---|
-| human-review | ✗ | ✗ | ✗ |
-| local-mock | ✗ | ✗ | ✗ |
-| claude-cli | ✓ | ✗ | ✗ |
-| codex-cli | ✓ | ✗ | ✗ |
-| gemini-cli | ✓ | ✗ | ✗ |
-| hermes-gateway | ✓ | ✗ | ✗ |
-| grok-search | ✓ | ✗ | ✗ |
+## Readiness Boundary
 
----
+`ConnectorReadiness` explains whether real execution can run.
 
-## 実装制約（現時点）
+Modes:
 
-- `IRealConnectorAdapter.execute()` を実際に呼ぶコードはまだ存在しない
-- 既存の `agentConnectors.ts` はこの interface に準拠していないが、将来的に近づける
-- `BaseRealConnectorAdapter` の `execute()` は readiness チェックを内包しているため、サブクラスは `executeInternal()` のみ実装すればよい
+- `mock`: local mock execution is available; real execution is not configured.
+- `not-configured`: mock is available; real execution is blocked by missing requirements.
+- `real-ready`: all requirements are present and real execution may run.
 
----
+Readiness includes safe credential metadata:
 
-## 次のステップ
+- whether a credential is required
+- expected source such as `cli-managed`, `environment`, `os-credential-store`, or `tauri-secure-store`
+- whether a `CredentialRef` exists
+- availability state
 
-Connector実装順序は `connector-implementation-order.md` を参照。
+Readiness must never expose credential values.
+
+## Error Boundary
+
+Adapter errors must be safe to show in UI, logs, and run summaries.
+
+Allowed:
+
+- stable error code
+- sanitized message
+- retryable flag
+- retry-after delay
+- sanitized diagnostic fields
+
+Forbidden:
+
+- auth header values
+- API key values
+- bearer tokens
+- raw provider request/response dumps
+- unfiltered exception objects
+
+## Base Adapter Guard
+
+`BaseRealConnectorAdapter.execute()` enforces:
+
+1. request connector id must match the adapter id
+2. readiness must allow real execution
+3. credential-required adapters must receive `CredentialRef`
+4. blocked paths return sanitized failed `ConnectorResponse`
+
+The guard prevents not-ready adapters from reaching provider or CLI invocation code.
+
+## Connector Order
+
+The safest implementation order remains:
+
+1. Human Review adapter contract
+2. Manual Connector / Local Mock adapter contract
+3. Claude CLI style local adapter
+4. Codex CLI style local adapter
+5. Gemini CLI style local adapter
+6. Hermes local gateway
+7. Grok/X Search through Hermes
+8. Direct Cloud APIs only after secure credential storage exists
+
+Direct browser-side cloud API calls remain blocked.
+
+## Implementation Gate
+
+A connector may move toward real execution only when:
+
+- request/response/error/readiness contracts are used
+- `CredentialRef` is the only credential-related value crossing into adapter input
+- credential resolution happens outside normal browser storage
+- readiness explains missing requirements
+- cancellation and failure behavior are visible
+- logs and run history remain credential-free
+- build, lint, typecheck, and Browser QA pass
+
+## Non-Goals
+
+- no real API calls
+- no API key settings
+- no SDK dependency for live providers
+- no Tauri secure store implementation
+- no SQLite implementation
+- no browser localStorage credential storage
