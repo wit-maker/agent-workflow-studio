@@ -71,12 +71,12 @@ function trimTextList(entries: readonly string[], maxChars: number): TrimTextLis
       continue
     }
 
-    kept.unshift(entry)
+    kept.push(entry)
     charsUsed += cost
   }
 
   return {
-    entries: kept,
+    entries: kept.reverse(),
     truncated,
     charsUsed,
   }
@@ -130,7 +130,7 @@ function summarizeWorkflow(workflow: Workflow): BriefingWorkflowSummary {
 
   return {
     workflowId: workflow.id,
-    workflowName: workflow.name,
+    workflowName: sanitizeBriefingText(workflow.name) ?? '名称なし',
     overallStatus: workflow.status,
     nodeCount: workflow.nodes.length,
     connectionCount: workflow.connections.length,
@@ -230,13 +230,12 @@ function summarizeExecution(
 
   const retryCandidates = executionGraph.retryCandidates
     .map((candidateId) => executionGraph.steps.find((step) => step.id === candidateId))
-    .map((step) =>
-      sanitizeBriefingText(
-        step?.nodeTitle ??
-          workflow.nodes.find((node) => node.id === step?.nodeId)?.title ??
-          null,
-      ),
-    )
+    .map((step) => {
+      if (!step) return null
+      return sanitizeBriefingText(
+        step.nodeTitle ?? workflow.nodes.find((node) => node.id === step.nodeId)?.title ?? null,
+      )
+    })
     .filter((step): step is string => step !== null)
 
   if (mode === 'errors-only') {
@@ -290,10 +289,14 @@ function summarizeConnectors(
 
   const selectedEntries = scopedJobs
     .map((job) => {
-      const message =
+      const statusLabel =
         job.status === 'failed'
-          ? `${job.connectorLabel} / ${job.nodeTitle}: ${job.error ?? '失敗しました。'}`
-          : `${job.connectorLabel} / ${job.nodeTitle}: ${job.status}`
+          ? '失敗'
+          : job.status === 'review_required'
+            ? '確認待ち'
+            : job.status
+      const details = job.status === 'failed' ? (job.error ?? '失敗しました。') : statusLabel
+      const message = `${job.connectorLabel} / ${job.nodeTitle} (${statusLabel}): ${details}`
       return sanitizeBriefingText(message)
     })
     .filter((entry): entry is string => entry !== null)
@@ -382,12 +385,24 @@ function buildErrorEntries(
     errorEntries.push(`確認待ちステップ: ${stepTitle}`)
   }
   for (const connectorEntry of connectors.selectedEntries) {
-    if (connectorEntry.includes('failed') || connectorEntry.includes('失敗')) {
+    if (
+      connectorEntry.includes('failed') ||
+      connectorEntry.includes('失敗') ||
+      connectorEntry.includes('review_required') ||
+      connectorEntry.includes('確認待ち')
+    ) {
       errorEntries.push(connectorEntry)
     }
   }
   for (const signal of hud.selectedSignals) {
-    if (signal.includes('失敗') || signal.includes('確認待ち') || signal.includes('停止')) {
+    if (
+      signal.includes('失敗') ||
+      signal.includes('確認待ち') ||
+      signal.includes('停止') ||
+      signal.includes('failed') ||
+      signal.includes('review') ||
+      signal.includes('blocked')
+    ) {
       errorEntries.push(signal)
     }
   }
@@ -471,7 +486,7 @@ export function collectBriefingInput(args: CollectBriefingInputArgs): BriefingIn
   )
 
   const staticChars =
-    args.workflow.name.length +
+    workflowSummary.workflowName.length +
     hud.summary.length +
     hud.recommendedAction.length +
     workflowSummary.visibleNodes.join('').length
