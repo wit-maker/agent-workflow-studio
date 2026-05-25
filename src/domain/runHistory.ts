@@ -88,11 +88,11 @@ export function isWorkflowRunStatus(value: unknown): value is WorkflowRunStatus 
 }
 
 /**
- * RunPlanner 側の RunMode (`'all' | 'selected' | 'fromSelected' | 'dryRun' | 'validate'`)
- * を Run History 用 `WorkflowRunMode` に変換する。
+ * RunPlanner 側の RunMode を Run History 用 WorkflowRunMode に変換する。
+ * 型シグネチャを RunMode に絞ることで exhaustive mapping を保証する。
  */
 export function mapRunPlannerMode(
-  mode: 'all' | 'selected' | 'fromSelected' | 'dryRun' | 'validate' | string,
+  mode: 'all' | 'selected' | 'fromSelected' | 'dryRun',
 ): WorkflowRunMode {
   switch (mode) {
     case 'all':
@@ -102,10 +102,26 @@ export function mapRunPlannerMode(
       return 'partial'
     case 'dryRun':
       return 'dryRun'
-    case 'validate':
-      return 'validate'
+  }
+}
+
+/**
+ * WorkflowStatus → WorkflowRunStatus マッピング。
+ * 不明なステータスは success に昇格させず failed にフォールバックする。
+ */
+export function mapWorkflowStatusToRunStatus(status: string): WorkflowRunStatus {
+  switch (status) {
+    case 'success':
+      return 'success'
+    case 'failed':
+      return 'failed'
+    case 'review_required':
+      return 'review_required'
+    case 'paused':
+    case 'cancelled':
+      return 'cancelled'
     default:
-      return isWorkflowRunMode(mode) ? mode : 'mock'
+      return 'failed'
   }
 }
 

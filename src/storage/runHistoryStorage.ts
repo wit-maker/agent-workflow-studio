@@ -34,8 +34,8 @@ function readRawHistory(): unknown {
 function writeHistory(history: WorkflowRunHistory): void {
   try {
     window.localStorage.setItem(STORAGE_KEYS.RUN_HISTORY, JSON.stringify(history))
-  } catch {
-    // localStorage unavailable / quota exceeded — silently ignore.
+  } catch (e) {
+    console.warn('[runHistoryStorage] Failed to save run history (localStorage unavailable or quota exceeded):', e)
   }
 }
 

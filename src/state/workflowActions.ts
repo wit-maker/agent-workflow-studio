@@ -1,5 +1,6 @@
 import type { EvaluationResult, HumanReviewState, RebuildRequest, ArtifactVersion, ReviewDecision } from '../domain/evaluation'
 import type { ExecutionRoute, ExecutionStep } from '../domain/executionGraph'
+import type { WorkflowRunStatus } from '../domain/runHistory'
 import type {
   Workflow,
   WorkflowArtifact,
@@ -86,5 +87,7 @@ export type WorkflowAction =
   | { type: 'addArtifactVersion'; version: ArtifactVersion }
   | { type: 'selectArtifactVersion'; versionId: string }
   | { type: 'clearEvaluation' }
+  | { type: 'runFinished'; runId: string; workflowStatus: WorkflowStatus; runStatus: WorkflowRunStatus }
+  | { type: 'clearCompletedRun' }
   | { type: 'undo' }
   | { type: 'redo' }

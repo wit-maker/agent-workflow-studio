@@ -1,6 +1,7 @@
 import type { ArtifactVersion, EvaluationResult, HumanReviewState, RebuildRequest } from '../domain/evaluation'
 import type { ExecutionGraph, ExecutionStep } from '../domain/executionGraph'
 import { createEmptyExecutionGraph } from '../domain/executionGraph'
+import type { WorkflowRunStatus } from '../domain/runHistory'
 import type { Workflow } from '../domain/workflow'
 import type { WorkflowAction } from './workflowActions'
 
@@ -23,6 +24,7 @@ export type WorkflowState = {
   rebuildRequests: RebuildRequest[]
   artifactVersions: ArtifactVersion[]
   selectedArtifactVersionId?: string
+  completedRun: { runId: string; runStatus: WorkflowRunStatus } | null
 }
 
 const maxHistoryDepth = 50
@@ -136,6 +138,7 @@ export function createWorkflowState(workflow: Workflow): WorkflowState {
     rebuildRequests: [],
     artifactVersions: [],
     selectedArtifactVersionId: undefined,
+    completedRun: null,
   }
 }
 
@@ -693,6 +696,21 @@ export function workflowReducer(
         evaluation: undefined,
         humanReview: undefined,
       }
+
+    case 'runFinished':
+      return {
+        ...state,
+        isRunning: false,
+        completedRun: { runId: action.runId, runStatus: action.runStatus },
+        workflow: {
+          ...state.workflow,
+          status: action.workflowStatus,
+          updatedAt: new Date().toISOString(),
+        },
+      }
+
+    case 'clearCompletedRun':
+      return { ...state, completedRun: null }
 
     case 'undo': {
       const previous = state.past[state.past.length - 1]

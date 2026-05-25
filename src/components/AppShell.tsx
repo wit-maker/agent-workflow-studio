@@ -34,9 +34,9 @@ import type {
 import {
   createWorkflowRunRecord,
   mapRunPlannerMode,
+  mapWorkflowStatusToRunStatus,
   type WorkflowRunHistory,
   type WorkflowRunMode,
-  type WorkflowRunStatus,
 } from '../domain/runHistory'
 import { appendRunRecord, loadRunHistory } from '../storage/runHistoryStorage'
 import {
@@ -81,6 +81,14 @@ import { WorkflowCanvas } from './WorkflowCanvas'
 import { storageAdapter } from '../storage/storageAdapter'
 
 const delay = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms))
+
+function countPlannedConnections(workflow: Workflow, plannedNodes: WorkflowNode[]): number {
+  const plannedIds = new Set(plannedNodes.map((node) => node.id))
+  return workflow.connections.filter(
+    (connection) =>
+      plannedIds.has(connection.sourceNodeId) && plannedIds.has(connection.targetNodeId),
+  ).length
+}
 
 function toCanvasMode(savedMode: SavedCanvasMode | null): CanvasMode {
   return savedMode === 'react-flow' ? 'reactFlow' : 'standard'
@@ -239,7 +247,6 @@ export function AppShell() {
     plannedNodeCount: number
     plannedConnectionCount: number
   } | null>(null)
-  const wasRunningRef = useRef(false)
   const [runHistory, setRunHistory] = useState<WorkflowRunHistory>(() => loadRunHistory())
   const [connectorJobs, setConnectorJobs] = useState<ConnectorJob[]>([])
   const [isEvaluating, setIsEvaluating] = useState(false)
@@ -300,20 +307,11 @@ export function AppShell() {
   }, [workflow, isRunning])
 
   useEffect(() => {
-    if (wasRunningRef.current && !isRunning && pendingRunRef.current) {
-      const pending = pendingRunRef.current
-      pendingRunRef.current = null
-      const runLogs = workflow.logs.filter((log) => log.runId === pending.runId)
-      const runStatus: WorkflowRunStatus =
-        workflow.status === 'success'
-          ? 'success'
-          : workflow.status === 'failed'
-            ? 'failed'
-            : workflow.status === 'review_required'
-              ? 'review_required'
-              : workflow.status === 'paused' || workflow.status === 'cancelled'
-                ? 'cancelled'
-                : 'success'
+    if (!state.completedRun) return
+    const { runId, runStatus } = state.completedRun
+    const pending = pendingRunRef.current
+    if (pending && pending.runId === runId) {
+      const runLogs = workflow.logs.filter((log) => log.runId === runId)
       const record = createWorkflowRunRecord({
         runId: pending.runId,
         source: pending.workflowSnapshot,
@@ -326,9 +324,14 @@ export function AppShell() {
         logs: runLogs,
       })
       setRunHistory(appendRunRecord(record))
+      // Keep pendingRunRef alive for review_required so the continuation
+      // can replace this interim record with the final terminal-state record.
+      if (runStatus !== 'review_required') {
+        pendingRunRef.current = null
+      }
     }
-    wasRunningRef.current = isRunning
-  }, [isRunning, workflow.logs, workflow.status])
+    dispatch({ type: 'clearCompletedRun' })
+  }, [state.completedRun, workflow.logs])
 
   useEffect(() => {
     if (!importSuccessMessage) return
@@ -615,7 +618,7 @@ export function AppShell() {
       mode: mapRunPlannerMode(mode),
       workflowSnapshot: workflow,
       plannedNodeCount: plan.nodes.length,
-      plannedConnectionCount: workflow.connections.length,
+      plannedConnectionCount: countPlannedConnections(workflow, plan.nodes),
     }
     const plannedHasCheck = plan.nodes.some((node) => node.type === 'check')
     const outcome = mode === 'dryRun' || !plannedHasCheck ? 'PASS' : calculateOutcomeByRunCount()
@@ -691,6 +694,10 @@ export function AppShell() {
       })
       executedNodes.push(node)
 
+      if (runTokenRef.current !== runToken) {
+        return
+      }
+
       // M13: update connector job status after execution
       const jobAfterExec = jobMap.get(node.id)
       if (jobAfterExec) {
@@ -756,7 +763,13 @@ export function AppShell() {
             decisions.filter((item) => item.retryCandidate).length,
           ),
         })
-        dispatch({ type: 'setRunning', isRunning: false })
+        if (runTokenRef.current !== runToken) return
+        dispatch({
+          type: 'runFinished',
+          runId,
+          workflowStatus: decision.result === 'failed' ? 'failed' : 'review_required',
+          runStatus: decision.result === 'failed' ? 'failed' : 'review_required',
+        })
         return
       }
     }
@@ -774,12 +787,12 @@ export function AppShell() {
         decisions.filter((item) => item.retryCandidate).length,
       ),
     })
-    dispatch({ type: 'setWorkflowStatus', status: 'success' })
     dispatch({
       type: 'appendLog',
       log: makeLog(runId, 'Local run engine updated artifact and metrics.', undefined, 'metric'),
     })
-    dispatch({ type: 'setRunning', isRunning: false })
+    if (runTokenRef.current !== runToken) return
+    dispatch({ type: 'runFinished', runId, workflowStatus: 'success', runStatus: 'success' })
   }
 
   async function runMockWorkflow(mode: RunMode = 'all') {
@@ -788,8 +801,7 @@ export function AppShell() {
 
   function stopRun() {
     runTokenRef.current += 1
-    dispatch({ type: 'setRunning', isRunning: false })
-    dispatch({ type: 'setWorkflowStatus', status: 'paused' })
+    const stopRunId = executionGraph?.runId ?? pendingRunRef.current?.runId ?? ''
     if (executionGraph) {
       dispatch({
         type: 'appendLog',
@@ -801,6 +813,7 @@ export function AppShell() {
         ),
       })
     }
+    dispatch({ type: 'runFinished', runId: stopRunId, workflowStatus: 'paused', runStatus: 'cancelled' })
   }
 
   function handleReset() {
@@ -1201,11 +1214,13 @@ export function AppShell() {
       type: 'updateMetrics',
       metrics: buildMetrics(executedNodes, 'PASS', workflow.metrics.retryCount),
     })
+    const continuationStatus = isCompleted ? 'success' : 'review_required'
     dispatch({
-      type: 'setWorkflowStatus',
-      status: isCompleted ? 'success' : 'review_required',
+      type: 'runFinished',
+      runId: executionGraph.runId,
+      workflowStatus: continuationStatus,
+      runStatus: mapWorkflowStatusToRunStatus(continuationStatus),
     })
-    dispatch({ type: 'setRunning', isRunning: false })
   }
 
   function handleReturnReviewStep(stepId: string) {
@@ -1251,6 +1266,14 @@ export function AppShell() {
         note: '差し戻しにより再試行候補へ追加しました。',
       }),
     })
+    // runNodeFailed sets isRunning:false; also fire runFinished so the
+    // pending run record is finalized as failed (replaces interim review_required record).
+    dispatch({
+      type: 'runFinished',
+      runId: executionGraph.runId,
+      workflowStatus: 'failed',
+      runStatus: 'failed',
+    })
   }
 
   function handleSkipReviewStep(stepId: string) {
@@ -1284,8 +1307,12 @@ export function AppShell() {
       type: 'addExecutionRoute',
       route: createRoute('skip', reviewStep.nodeId, undefined, '人間確認でスキップ'),
     })
-    dispatch({ type: 'setWorkflowStatus', status: 'paused' })
-    dispatch({ type: 'setRunning', isRunning: false })
+    dispatch({
+      type: 'runFinished',
+      runId: executionGraph.runId,
+      workflowStatus: 'paused',
+      runStatus: 'cancelled',
+    })
   }
 
   async function handleRetryExecutionStep(stepId: string) {
