@@ -1307,8 +1307,12 @@ export function AppShell() {
       type: 'addExecutionRoute',
       route: createRoute('skip', reviewStep.nodeId, undefined, '人間確認でスキップ'),
     })
-    dispatch({ type: 'setWorkflowStatus', status: 'paused' })
-    dispatch({ type: 'setRunning', isRunning: false })
+    dispatch({
+      type: 'runFinished',
+      runId: executionGraph.runId,
+      workflowStatus: 'paused',
+      runStatus: 'cancelled',
+    })
   }
 
   async function handleRetryExecutionStep(stepId: string) {
