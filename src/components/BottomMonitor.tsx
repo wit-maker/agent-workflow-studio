@@ -4,16 +4,20 @@ import {
   statusLabels,
 } from '../domain/displayLabels'
 import type { HudSnapshot } from '../domain/cognitiveHud'
+import type { WorkflowRunRecord } from '../domain/runHistory'
 import type { ArtifactVersion, EvaluationResult, HumanReviewState, RebuildRequest, ReviewDecision } from '../domain/evaluation'
 import type { ExecutionGraph } from '../domain/executionGraph'
 import type { ConnectorJob } from '../domain/connectorQueue'
 import type { Workflow } from '../domain/workflow'
+import { MockBriefingAdapter } from '../adapters/briefing/MockBriefingAdapter'
+import { useBriefingGenerator } from '../hooks/useBriefingGenerator'
 import type { AppSettings } from '../storage/localAppSettings'
 import type { SavedWorkflowTemplate } from '../storage/localTemplates'
 import type { SavedWorkflowSnapshot } from '../storage/localWorkflowHistory'
 import { selectActiveQueueNodes, selectBottleneckNode } from '../state/workflowSelectors'
 import { AgentConnectorPanel } from './AgentConnectorPanel'
 import { ArtifactVersionHistory } from './ArtifactVersionHistory'
+import { BriefingPanel } from './BriefingPanel'
 import { CognitiveHudPanel } from './CognitiveHudPanel'
 import { ConnectorQueuePanel } from './ConnectorQueuePanel'
 import { ConnectorRoadmapPanel } from './ConnectorRoadmapPanel'
@@ -69,6 +73,7 @@ type BottomMonitorProps = {
   onSelectArtifactVersion: (versionId: string) => void
   onResetStorage: () => void
   runHistoryCount: number
+  runHistoryRecords: WorkflowRunRecord[]
   hudSnapshot: HudSnapshot
   settings: AppSettings
   onChangeActiveTab: (tab: string) => void
@@ -90,6 +95,9 @@ type MonitorTab =
   | 'Agent'
   | 'Storage'
   | 'Roadmap'
+  | 'Briefing'
+
+const briefingAdapter = new MockBriefingAdapter()
 
 function normalizeMonitorTab(value: string): MonitorTab {
   const validTabs: MonitorTab[] = [
@@ -103,6 +111,7 @@ function normalizeMonitorTab(value: string): MonitorTab {
     'Agent',
     'Storage',
     'Roadmap',
+    'Briefing',
   ]
 
   return validTabs.includes(value as MonitorTab) ? (value as MonitorTab) : 'HUD'
@@ -144,12 +153,21 @@ export function BottomMonitor({
   onSelectArtifactVersion,
   onResetStorage,
   runHistoryCount,
+  runHistoryRecords,
   hudSnapshot,
   settings,
   onChangeActiveTab,
   onImportBundle,
 }: BottomMonitorProps) {
   const activeTab = normalizeMonitorTab(settings.activeTab)
+  const briefing = useBriefingGenerator({
+    workflow,
+    executionGraph,
+    connectorJobs,
+    hudSnapshot,
+    runHistoryRecords,
+    adapter: briefingAdapter,
+  })
 
   const tabLabels = {
     HUD: '認知HUD',
@@ -162,6 +180,7 @@ export function BottomMonitor({
     Agent: 'エージェント',
     Storage: 'ストレージ',
     Roadmap: 'Roadmap',
+    Briefing: 'ブリーフィング',
   } as const
 
   const bottleneck = selectBottleneckNode(workflow)
@@ -176,7 +195,7 @@ export function BottomMonitor({
   return (
     <footer className="bottom-monitor" aria-label="メトリクスとログ">
       <section className="monitor-tabs">
-        {(['HUD', 'Logs', 'Metrics', 'Queue', 'Output', 'Execution', 'Evaluation', 'Agent', 'Storage', 'Roadmap'] as const).map((tab) => (
+        {(['HUD', 'Logs', 'Metrics', 'Queue', 'Output', 'Execution', 'Evaluation', 'Agent', 'Storage', 'Roadmap', 'Briefing'] as const).map((tab) => (
           <button
             key={tab}
             type="button"
@@ -427,6 +446,16 @@ export function BottomMonitor({
         {activeTab === 'Roadmap' ? (
           <div className="roadmap-tab-panel">
             <ConnectorRoadmapPanel />
+          </div>
+        ) : null}
+
+        {activeTab === 'Briefing' ? (
+          <div className="briefing-tab-panel">
+            <BriefingPanel
+              state={briefing.state}
+              onGenerate={briefing.generate}
+              onInputModeChange={briefing.setInputMode}
+            />
           </div>
         ) : null}
       </section>
