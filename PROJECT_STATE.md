@@ -4,6 +4,108 @@ Last updated: 2026-05-26
 
 ---
 
+## Phase connector-adapter-boundary-foundation
+
+- Branch: `docs/credential-safety-boundary`
+- Date: 2026-05-26
+- Model: GPT-5.5 xhigh (user-confirmed)
+- Scope: domain-only real connector adapter boundary hardening after credential-safety boundary
+- Source alignment:
+  - `docs/project/PROJECT_GOAL.md`
+  - `docs/project/SOURCE_OF_TRUTH.md`
+  - `docs/architecture/credential-safety-boundary.md`
+  - `docs/architecture/real-connector-adapter-design.md`
+  - `docs/architecture/connector-implementation-order.md`
+  - `docs/audit/missing-systems.md`
+  - `docs/audit/technical-debt.md`
+  - `docs/source-specs/04_システム設計書_データモデル_実行基盤_完全版.md`
+
+### Updated files
+
+- Added: `src/domain/credentialRef.ts`
+- Added: `src/domain/connectorSafety.ts`
+- Updated: `src/domain/connectorRequest.ts`
+- Updated: `src/domain/connectorError.ts`
+- Updated: `src/domain/connectorReadiness.ts`
+- Updated: `src/domain/realConnectorAdapter.ts`
+- Updated: `docs/architecture/real-connector-adapter-design.md`
+- Updated: `PROJECT_STATE.md`
+
+### Boundary decisions
+
+- `CredentialRef` is now a first-class non-secret domain type.
+- `ConnectorRequest` carries safe input summaries/content, sanitized metadata, and optional `CredentialRef`.
+- `ConnectorError` diagnostics are restricted to sanitized scalar values.
+- `ConnectorReadiness` now includes credential requirement metadata without credential values.
+- `BaseRealConnectorAdapter` returns sanitized failed responses for wrong-adapter routing, not-ready adapters, and missing `CredentialRef`.
+
+### Preserved non-goals
+
+- No real AI API integration
+- No API key input UI
+- No credential persistence
+- No provider SDK dependency
+- No Tauri / SQLite / secure-store implementation
+- No execution path is wired to live providers
+
+### Validation
+
+- `npm run build`: pass
+- `npm run lint`: pass
+- `npm run typecheck`: pass
+- Direct safety check: pass (`makeConnectorRequest`, `makeConnectorError`, and `BaseRealConnectorAdapter` not-ready path redact credential-like values)
+- Browser QA: pass via preview server `http://127.0.0.1:4175/` and headless Edge/CDP
+  - App shell loaded
+  - Roadmap tab opened
+  - Connector readiness rendered 7 cards
+  - `real: yes` count stayed 0
+  - not-configured count stayed 5
+  - credential-like value scan returned false
+  - console entries / runtime exceptions: 0
+
+## Phase credential-safety-boundary
+
+- Branch: `docs/credential-safety-boundary`
+- Date: 2026-05-26
+- Model: GPT-5.4 high (user-reported requirement baseline; runtime metadata not exposed in this workspace)
+- Scope: architecture clarification before any real AI adapter work
+- Source alignment:
+  - `docs/project/PROJECT_GOAL.md`
+  - `docs/project/SOURCE_OF_TRUTH.md`
+  - `docs/source-specs/01_要件定義書_完全版.md`
+  - `docs/source-specs/04_システム設計書_データモデル_実行基盤_完全版.md`
+  - `docs/source-specs/06_QA_セキュリティ_受け入れ基準_完全版.md`
+  - `docs/source-specs/situation-assistant/05_AIエージェント運用設計書_状況補佐官_完全版.md`
+
+### Updated files
+
+- Updated: `docs/architecture/credential-safety-boundary.md`
+- Updated: `PROJECT_STATE.md`
+
+### Decision summary
+
+- Credential values are not ordinary app data and remain outside normal browser-side product state.
+- Workflow JSON, template data, run history, logs, metrics, prompts, UI state, localStorage, and exported bundles must not persist credential values.
+- Future real adapters must receive `CredentialRef` only; raw credential values must be resolved inside a secure boundary.
+- Mock remains the default mode until readiness, prompt boundary, log boundary, and secure resolution are all in place.
+- This phase stays architecture-only: no real API connection, no API key UI, no persistence change, no Tauri, no SQLite.
+
+### localStorage policy
+
+- Allowed: non-secret UI settings, workflow draft state, non-secret template data, non-secret run history summaries
+- Forbidden: credential values, auth headers, API key settings, raw provider payloads, prompt bodies with secrets, free-text `node.config`
+
+### Browser QA checklist defined
+
+- Added explicit pre-real-adapter checks for UI, console, localStorage, workflow export, templates, run history, logs, metrics, prompt generation, `node.config` exclusion, mock fallback, and readiness-safe status display.
+- Browser QA execution: not run in this phase because the change is documentation-only; the checklist is defined for the next real-adapter gate.
+
+### Validation
+
+- `npm run build`: pass
+- `npm run lint`: pass
+- `npm run typecheck`: pass
+
 ## Phase 1d: Situation Assistant briefing MVP
 
 - Branch: `feat/situation-assistant-briefing-mvp`

@@ -1,44 +1,28 @@
 import type { ConnectorRequest } from './connectorRequest'
+import { makeConnectorError } from './connectorError'
 import type { ConnectorResponse } from './connectorResponse'
+import { makeFailedResponse } from './connectorResponse'
 import type { ConnectorReadiness } from './connectorReadiness'
 
 /**
- * Interface that every real connector adapter must implement.
- *
- * The mock adapter (agentConnectors.ts) is not required to implement this interface yet,
- * but real adapters must conform to it before any live API call is made.
+ * Interface that every real connector adapter must implement before live execution.
  *
  * Design constraints:
- * - No credential storage in the browser — credentials come from the OS environment or local CLI.
- * - All adapters must report readiness before execution is attempted.
- * - Adapters must not make any network calls unless canRunReal is true in readiness.
+ * - Browser state never receives credential values.
+ * - Real adapters receive safe request input plus CredentialRef metadata only.
+ * - Every execution path checks readiness before provider or CLI invocation.
+ * - Not-ready paths return sanitized ConnectorResponse errors.
  */
 export interface IRealConnectorAdapter {
   readonly connectorId: string
 
-  /**
-   * Returns the current readiness of this connector.
-   * Called before every execution to decide mock vs. real path.
-   */
   getReadiness(): ConnectorReadiness
 
-  /**
-   * Executes the connector with the given request.
-   * Must not be called when canRunReal is false — callers are responsible for checking readiness.
-   */
   execute(request: ConnectorRequest): Promise<ConnectorResponse>
 
-  /**
-   * Cancels an in-flight request by jobId, if supported.
-   * Returns true if cancellation was initiated, false if not supported or already finished.
-   */
   cancel?(jobId: string): boolean
 }
 
-/**
- * Base class helper for real connector adapters.
- * Provides a safe execute guard that checks readiness before delegating.
- */
 export abstract class BaseRealConnectorAdapter implements IRealConnectorAdapter {
   abstract readonly connectorId: string
   abstract getReadiness(): ConnectorReadiness
@@ -46,11 +30,44 @@ export abstract class BaseRealConnectorAdapter implements IRealConnectorAdapter 
 
   async execute(request: ConnectorRequest): Promise<ConnectorResponse> {
     const readiness = this.getReadiness()
-    if (!readiness.canRunReal) {
-      throw new Error(
-        `Connector "${this.connectorId}" is not ready for real execution. Missing: ${readiness.missingRequirements.join(', ')}`,
+
+    if (request.connectorId !== this.connectorId) {
+      return makeFailedResponse(
+        request.jobId,
+        makeConnectorError('invalid_response', 'Connector request was routed to the wrong adapter.', {
+          details: {
+            expectedConnectorId: this.connectorId,
+            requestConnectorId: request.connectorId,
+          },
+        }),
       )
     }
+
+    if (!readiness.canRunReal) {
+      return makeFailedResponse(
+        request.jobId,
+        makeConnectorError('not_configured', 'Connector is not ready for real execution.', {
+          details: {
+            connectorId: this.connectorId,
+            mode: readiness.mode,
+            missingRequirements: readiness.missingRequirements.join('; '),
+          },
+        }),
+      )
+    }
+
+    if (readiness.credential.required && !request.credentialRef) {
+      return makeFailedResponse(
+        request.jobId,
+        makeConnectorError('not_configured', 'Connector requires a safe reference before real execution.', {
+          details: {
+            connectorId: this.connectorId,
+            source: readiness.credential.source,
+          },
+        }),
+      )
+    }
+
     return this.executeInternal(request)
   }
 }

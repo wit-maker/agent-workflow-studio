@@ -1,3 +1,9 @@
+import {
+  sanitizeConnectorSafeRecord,
+  sanitizeConnectorText,
+  type ConnectorSafeRecord,
+} from './connectorSafety'
+
 export type ConnectorErrorCode =
   | 'timeout'
   | 'rate_limit'
@@ -15,21 +21,21 @@ export type ConnectorError = {
   message: string
   retryable: boolean
   retryAfterMs?: number
-  details?: unknown
+  details?: ConnectorSafeRecord
 }
 
 export function makeConnectorError(
   code: ConnectorErrorCode,
   message: string,
-  options?: { retryable?: boolean; retryAfterMs?: number; details?: unknown },
+  options?: { retryable?: boolean; retryAfterMs?: number; details?: Record<string, unknown> },
 ): ConnectorError {
   const retryable = options?.retryable ?? isRetryableByDefault(code)
   return {
     code,
-    message,
+    message: sanitizeConnectorText(message) ?? 'Connector error.',
     retryable,
     retryAfterMs: options?.retryAfterMs,
-    details: options?.details,
+    details: sanitizeConnectorSafeRecord(options?.details),
   }
 }
 
