@@ -26,8 +26,8 @@ PR #23 で導入した `wasRunningRef + useEffect([isRunning, workflow.logs, wor
    - `runFinished` で `{ runId, runStatus }` をセット。
    - `clearCompletedRun` で `null` に戻す。
 4. **`runNodeFailed` の変更なし** — `handleReturnReviewStep` が `runNodeFailed` 経由で `isRunning: false` を設定するため現状維持。
-5. **`workflowLogsRef`** — `workflowLogsRef.current = workflow.logs` を毎レンダーで更新する ref を追加。`useEffect` 内でのログアクセスを lint-safe かつ stale-closure-free にする。
-6. **`useEffect([state.completedRun])` に置き換え** — 旧 `useEffect([isRunning, workflow.logs, workflow.status])` + `wasRunningRef` を削除し、`state.completedRun` だけを監視する単一 `useEffect` に変更。
+5. **`workflowLogsRef` は不使用** — `react-hooks/refs` lint ルールが render 中の `ref.current` 書き込みを禁止するため、`workflowLogsRef` は追加しなかった。`useEffect` は `workflow.logs` を直接参照する。
+6. **`useEffect([state.completedRun, workflow.logs])` に置き換え** — 旧 `useEffect([isRunning, workflow.logs, workflow.status])` + `wasRunningRef` を削除し、`state.completedRun` を主要監視対象とする単一 `useEffect` に変更。`workflow.logs` も依存配列に含めるが、`state.completedRun` が null のときは early return するため log-only の再発火は no-op になる。
    - `state.completedRun.runId === pendingRunRef.current?.runId` を確認してから record を保存。
    - 保存後、`clearCompletedRun` を dispatch。
 7. **`runPlannedWorkflow` の exit point を更新** —

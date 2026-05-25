@@ -763,6 +763,7 @@ export function AppShell() {
             decisions.filter((item) => item.retryCandidate).length,
           ),
         })
+        if (runTokenRef.current !== runToken) return
         dispatch({
           type: 'runFinished',
           runId,
@@ -790,6 +791,7 @@ export function AppShell() {
       type: 'appendLog',
       log: makeLog(runId, 'Local run engine updated artifact and metrics.', undefined, 'metric'),
     })
+    if (runTokenRef.current !== runToken) return
     dispatch({ type: 'runFinished', runId, workflowStatus: 'success', runStatus: 'success' })
   }
 
