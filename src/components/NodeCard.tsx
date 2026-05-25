@@ -1,6 +1,6 @@
-import { agentRoleLabels, formatDataTypeLabel, statusLabels } from '../domain/displayLabels'
+import { agentRoleLabels, formatDataTypeLabel, nodeCategoryLabels, statusLabels } from '../domain/displayLabels'
 import { getInputPorts, getOutputPorts } from '../domain/portRules'
-import type { WorkflowNode } from '../domain/workflow'
+import type { NodeCategory, WorkflowNode } from '../domain/workflow'
 
 type NodeCardProps = {
   node: WorkflowNode
@@ -17,7 +17,7 @@ export function NodeCard({ node, isSelected, onSelect }: NodeCardProps) {
       onClick={() => onSelect(node.id)}
     >
       <span className="node-header">
-        <span className="node-category">{node.category}</span>
+        <span className="node-category">{nodeCategoryLabels[node.category as NodeCategory] ?? node.category}</span>
         <span className="node-status">{statusLabels[node.status]}</span>
       </span>
       <strong>{node.title}</strong>

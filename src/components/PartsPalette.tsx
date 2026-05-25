@@ -1,6 +1,12 @@
 import { useMemo, useState } from 'react'
-import { agentRoleLabels, formatDataTypeLabel } from '../domain/displayLabels'
-import type { WorkflowNode } from '../domain/workflow'
+import { agentRoleLabels, formatDataTypeLabel, nodeCategoryLabels } from '../domain/displayLabels'
+import type { NodeCategory, WorkflowNode } from '../domain/workflow'
+
+const ALL_LABEL = 'すべて'
+
+function getCategoryLabel(category: string): string {
+  return nodeCategoryLabels[category as NodeCategory] ?? category
+}
 
 type PartsPaletteProps = {
   parts: WorkflowNode[]
@@ -16,17 +22,18 @@ export function PartsPalette({
   onAddNode,
 }: PartsPaletteProps) {
   const [query, setQuery] = useState('')
-  const [category, setCategory] = useState('すべて')
+  const [category, setCategory] = useState(ALL_LABEL)
 
   const categories = useMemo(
-    () => ['すべて', ...Array.from(new Set(parts.map((part) => part.category)))],
+    () => [ALL_LABEL, ...Array.from(new Set(parts.map((part) => part.category)))],
     [parts],
   )
 
   const filteredParts = parts.filter((part) => {
-    const text = `${part.title} ${part.category} ${part.description}`.toLowerCase()
+    const categoryLabel = getCategoryLabel(part.category)
+    const text = `${part.title} ${categoryLabel} ${part.description}`.toLowerCase()
     return (
-      (category === 'すべて' || part.category === category) &&
+      (category === ALL_LABEL || part.category === category) &&
       text.includes(query.trim().toLowerCase())
     )
   })
@@ -53,7 +60,7 @@ export function PartsPalette({
             className={item === category ? 'active' : ''}
             onClick={() => setCategory(item)}
           >
-            {item}
+            {item === ALL_LABEL ? ALL_LABEL : getCategoryLabel(item)}
           </button>
         ))}
       </div>
@@ -67,7 +74,7 @@ export function PartsPalette({
           >
             <span className="part-title">{part.title}</span>
             <span className="part-meta">
-              {part.category} / {part.agentRole ? agentRoleLabels[part.agentRole] : '未割当'}
+              {getCategoryLabel(part.category)} / {part.agentRole ? agentRoleLabels[part.agentRole] : '未割当'}
             </span>
             <span className="port-row">
               {part.inputTypes.map(formatDataTypeLabel).join(', ') || '開始'} から{' '}

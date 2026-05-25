@@ -1,3 +1,54 @@
+// ---- Node category vocabulary (Source Spec 準拠の英語内部キー) ----
+
+export type NodeCategory =
+  | 'trigger'    // 起点
+  | 'input'      // 入力取得
+  | 'transform'  // 整形・前処理
+  | 'branch'     // 分岐・ルーティング
+  | 'execute'    // 実行
+  | 'check'      // 検査
+  | 'aggregate'  // 集約
+  | 'output'     // 出力
+  | 'record'     // 記録
+  | 'observe'    // 観測
+  | 'improve'    // 改善
+  | 'template'   // テンプレート
+  | 'safety'     // 安全・権限
+  | 'hud'        // 認知HUD
+
+const nodeCategoryKeys: readonly NodeCategory[] = [
+  'trigger', 'input', 'transform', 'branch', 'execute',
+  'check', 'aggregate', 'output', 'record', 'observe',
+  'improve', 'template', 'safety', 'hud',
+]
+
+const legacyCategoryMap: Record<string, NodeCategory> = {
+  '開始': 'trigger',
+  '入力': 'input',
+  '変換': 'transform',
+  '制御': 'branch',
+  '実行': 'execute',
+  '接続': 'execute',
+  '品質': 'check',
+  '回収': 'aggregate',
+  '出力': 'output',
+  '記録': 'record',
+  'テンプレート': 'template',
+  'その他': 'execute',
+}
+
+export function normalizeNodeCategory(raw: unknown): NodeCategory {
+  if (typeof raw !== 'string') return 'execute'
+  if ((nodeCategoryKeys as readonly string[]).includes(raw)) return raw as NodeCategory
+  return legacyCategoryMap[raw] ?? 'execute'
+}
+
+// ---- Workflow schema version ----
+
+export type WorkflowSchemaVersion = '1.0' | '1.1' | '2.0'
+
+// ---- Port types ----
+
 export type WorkflowPortDirection = 'input' | 'output'
 
 export type WorkflowPort = {
@@ -50,6 +101,7 @@ export type WorkflowNodeStatus =
   | 'skipped'
   | 'review_required'
   | 'blocked'
+  | 'cancelled'
 
 export type WorkflowStatus =
   | 'draft'
@@ -61,6 +113,7 @@ export type WorkflowStatus =
   | 'failed'
   | 'review_required'
   | 'archived'
+  | 'cancelled'
 
 export type ConnectionKind =
   | 'data'
@@ -217,7 +270,7 @@ export type WorkflowTemplateMetadata = {
 
 export type Workflow = {
   id: string
-  schemaVersion?: '1.0' | '1.1'
+  schemaVersion?: WorkflowSchemaVersion
   name: string
   description: string
   version: number
@@ -229,6 +282,50 @@ export type Workflow = {
   artifact: WorkflowArtifact
   createdAt: string
   updatedAt: string
+}
+
+// ---- Foundation state vocabulary ----
+// These types are not yet used in the full UI but provide the shared vocabulary
+// for durable run history, Cognitive HUD, Situation Assistant, and approval gates.
+
+export type RunState = {
+  runId: string
+  status: WorkflowNodeStatus | WorkflowStatus
+  startedAt?: string
+  finishedAt?: string
+  triggeredBy?: string
+  mode?: 'all' | 'selected' | 'fromSelected' | 'dryRun' | 'validate'
+}
+
+export type RiskState = {
+  level: 0 | 1 | 2 | 3 | 4 | 5
+  reason?: string
+  flaggedAt?: string
+  resolvedAt?: string
+}
+
+export type HudState = {
+  priority: 'normal' | 'watch' | 'alert' | 'critical'
+  visible: boolean
+  focused: boolean
+  depth: 0 | 1 | 2 | 3
+  alertLevel: RiskState['level']
+}
+
+export type ReviewState = {
+  required: boolean
+  reviewedBy?: string
+  reviewedAt?: string
+  decision?: 'approved' | 'rejected' | 'escalated' | 'skipped'
+  reason?: string
+}
+
+export type ApprovalState = {
+  gateId: string
+  status: 'pending' | 'approved' | 'rejected' | 'bypassed'
+  approvedBy?: string
+  approvedAt?: string
+  reason?: string
 }
 
 export { agentRoleLabels, statusLabels } from './displayLabels'

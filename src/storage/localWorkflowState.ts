@@ -1,4 +1,5 @@
 import type { Workflow } from '../domain/workflow'
+import { normalizeNodeCategory } from '../domain/workflow'
 import { STORAGE_KEYS } from './storageKeys'
 
 function isString(value: unknown): value is string {
@@ -48,7 +49,16 @@ export function loadCurrentWorkflow(): Workflow | null {
       return null
     }
 
-    return parsed
+    // Normalize node categories from legacy Japanese strings to canonical English keys
+    const normalized: Workflow = {
+      ...parsed,
+      nodes: parsed.nodes.map((node) => ({
+        ...node,
+        category: normalizeNodeCategory(node.category),
+      })),
+    }
+
+    return normalized
   } catch {
     return null
   }

@@ -22,7 +22,7 @@ export const mvpPartDefinitions: PartDefinition[] = [
   {
     type: 'manual-trigger',
     title: '手動開始',
-    category: '開始',
+    category: 'trigger',
     description: '人間の明示的な操作でワークフローを開始します。',
     agentRole: 'human',
     inputTypes: [],
@@ -31,7 +31,7 @@ export const mvpPartDefinitions: PartDefinition[] = [
   {
     type: 'text-input',
     title: 'テキスト入力',
-    category: '入力',
+    category: 'input',
     description: '人が入力したテキストを受け取り、次へ渡します。',
     agentRole: 'human',
     inputTypes: ['Trigger'],
@@ -40,7 +40,7 @@ export const mvpPartDefinitions: PartDefinition[] = [
   {
     type: 'file-input',
     title: 'ファイル入力',
-    category: '入力',
+    category: 'input',
     description: '外部アップロードなしのローカルファイル入力を表します。',
     agentRole: 'human',
     inputTypes: ['Trigger'],
@@ -49,7 +49,7 @@ export const mvpPartDefinitions: PartDefinition[] = [
   {
     type: 'normalize',
     title: '正規化',
-    category: '変換',
+    category: 'transform',
     description: 'テキストとファイル入力を再利用可能なコンテキストへ整えます。',
     agentRole: 'lightwork_ai',
     inputTypes: ['Text', 'File'],
@@ -58,7 +58,7 @@ export const mvpPartDefinitions: PartDefinition[] = [
   {
     type: 'route',
     title: 'ルーティング',
-    category: '制御',
+    category: 'branch',
     description: 'コンテキストとリスクに応じてモック実行経路を選びます。',
     agentRole: 'sub_leader_ai',
     inputTypes: ['Context'],
@@ -67,7 +67,7 @@ export const mvpPartDefinitions: PartDefinition[] = [
   {
     type: 'ai-execute',
     title: 'AI実行',
-    category: '実行',
+    category: 'execute',
     description: '将来的な Codex、Hermes、Grok、Claude、Gemini 実行をモックします。',
     agentRole: 'programmer_ai',
     inputTypes: ['Prompt', 'Context', 'Decision'],
@@ -76,7 +76,7 @@ export const mvpPartDefinitions: PartDefinition[] = [
   {
     type: 'external-connector',
     title: '外部コネクタ',
-    category: '接続',
+    category: 'execute',
     description: 'APIを呼ばずに外部接続状態だけを表示します。',
     agentRole: 'research_ai',
     inputTypes: ['Context'],
@@ -85,7 +85,7 @@ export const mvpPartDefinitions: PartDefinition[] = [
   {
     type: 'check',
     title: 'チェック',
-    category: '品質',
+    category: 'check',
     description: '品質、セキュリティ、出典、仕様照合をモックします。',
     agentRole: 'qa_ai',
     inputTypes: ['Result', 'Evidence'],
@@ -94,7 +94,7 @@ export const mvpPartDefinitions: PartDefinition[] = [
   {
     type: 'aggregate',
     title: '集約',
-    category: '回収',
+    category: 'aggregate',
     description: 'チェック済みの結果を1つの成果物候補へまとめます。',
     agentRole: 'dev_leader_ai',
     inputTypes: ['Decision', 'Error', 'Result', 'Evidence'],
@@ -103,7 +103,7 @@ export const mvpPartDefinitions: PartDefinition[] = [
   {
     type: 'output',
     title: '出力',
-    category: '出力',
+    category: 'output',
     description: 'Markdown、JSON、Diff、プレビューをローカル表示します。',
     agentRole: 'human',
     inputTypes: ['Artifact'],
@@ -112,7 +112,7 @@ export const mvpPartDefinitions: PartDefinition[] = [
   {
     type: 'run-log',
     title: '実行ログ',
-    category: '記録',
+    category: 'record',
     description: '各実行ステップ、メトリクスイベント、安全判断を記録します。',
     agentRole: 'recorder_ai',
     inputTypes: ['Log'],
@@ -121,7 +121,7 @@ export const mvpPartDefinitions: PartDefinition[] = [
   {
     type: 'template-save',
     title: 'テンプレート保存',
-    category: 'テンプレート',
+    category: 'template',
     description: '成功したワークフローを再利用テンプレートとして保存する挙動をモックします。',
     agentRole: 'recorder_ai',
     inputTypes: ['Artifact', 'Log', 'Metric'],
