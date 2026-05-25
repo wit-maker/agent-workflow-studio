@@ -130,7 +130,8 @@ Last updated: 2026-05-26
 
 ### PR
 
-- Pending
+- PR #26 — `feat: add situation assistant briefing MVP`
+- https://github.com/wit-maker/agent-workflow-studio/pull/26
 
 ## Phase 1c: Cognitive HUD foundation
 
