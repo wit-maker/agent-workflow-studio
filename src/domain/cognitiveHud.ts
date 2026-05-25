@@ -11,6 +11,7 @@
 
 import type { ConnectorJob } from './connectorQueue'
 import type { ExecutionGraph } from './executionGraph'
+import { canRetry } from './retryPolicy'
 import type {
   HudState,
   RiskState,
@@ -133,7 +134,18 @@ function nodeLabel(node: WorkflowNode | undefined, fallback: string): string {
   return node?.title ?? fallback
 }
 
-function countNodes(workflow: Workflow): HudCounts {
+type NodeStatusCounts = Pick<
+  HudCounts,
+  | 'totalNodes'
+  | 'runningNodes'
+  | 'queuedNodes'
+  | 'failedNodes'
+  | 'reviewRequiredNodes'
+  | 'blockedNodes'
+  | 'retryReadyNodes'
+>
+
+function countNodesByStatus(workflow: Workflow): NodeStatusCounts {
   let running = 0
   let queued = 0
   let failed = 0
@@ -172,10 +184,6 @@ function countNodes(workflow: Workflow): HudCounts {
     reviewRequiredNodes: review,
     blockedNodes: blocked,
     retryReadyNodes: retry,
-    connectorJobsFailed: 0,
-    connectorJobsReviewRequired: 0,
-    connectorJobsRetryable: 0,
-    runHistoryCount: 0,
   }
 }
 
@@ -444,6 +452,7 @@ function summarizeSnapshot(
   level: HudAlertLevel,
   counts: HudCounts,
   workflow: Workflow,
+  executionGraph: ExecutionGraph | null,
 ): { summary: string; recommendedAction: string } {
   if (!topSignal || level === 0) {
     const baseline =
@@ -464,9 +473,23 @@ function summarizeSnapshot(
   switch (topSignal.kind) {
     case 'workflow_status':
       if (workflow.status === 'failed') {
+        if (counts.failedNodes > 0) {
+          return {
+            summary: `ワークフローが失敗しました（失敗ノード ${counts.failedNodes} 件）。`,
+            recommendedAction: '失敗ノードを開いてエラー内容を確認してください。',
+          }
+        }
+        const failedStep =
+          executionGraph?.steps.find((step) => step.id === executionGraph.failedStepId) ?? null
+        if (failedStep) {
+          return {
+            summary: `ワークフローが失敗しました（失敗ステップ: ${failedStep.nodeTitle}）。`,
+            recommendedAction: '実行グラフ タブで失敗ステップの詳細を確認してください。',
+          }
+        }
         return {
-          summary: `ワークフローが失敗しました（失敗ノード ${counts.failedNodes} 件）。`,
-          recommendedAction: '失敗ノードを開いてエラー内容を確認してください。',
+          summary: 'ワークフローが失敗しました。',
+          recommendedAction: 'ログと実行グラフ タブで失敗原因を確認してください。',
         }
       }
       return {
@@ -525,15 +548,15 @@ function summarizeSnapshot(
  */
 export function deriveHudSnapshot(input: HudInput): HudSnapshot {
   const signals = collectSignals(input)
-  const baseCounts = countNodes(input.workflow)
+  const nodeCounts = countNodesByStatus(input.workflow)
   const counts: HudCounts = {
-    ...baseCounts,
+    ...nodeCounts,
     connectorJobsFailed: input.connectorJobs.filter((job) => job.status === 'failed').length,
     connectorJobsReviewRequired: input.connectorJobs.filter(
       (job) => job.status === 'review_required',
     ).length,
     connectorJobsRetryable: input.connectorJobs.filter(
-      (job) => job.status === 'failed' && job.retryCount < 3,
+      (job) => job.status === 'failed' && canRetry(job.retryCount),
     ).length,
     runHistoryCount: input.runHistoryCount,
   }
@@ -546,6 +569,7 @@ export function deriveHudSnapshot(input: HudInput): HudSnapshot {
     alertLevel,
     counts,
     input.workflow,
+    input.executionGraph,
   )
 
   return {

@@ -83,11 +83,15 @@ Last updated: 2026-05-26
 - Reload 後: アプリ起動 / 認知HUD タブ存在 / Run History count 2 件保持
 - Console runtime error: なし（React Flow の width/height warning は pre-existing）
 
+### Gemini review 対応 (2026-05-26)
+
+- **comment_id=3298946166**: `countNodes` が `HudCounts` 全部を返してダミー 0 で埋めていた点を解消。`countNodesByStatus(workflow)` に改名し、ノード由来カウントだけを返す `NodeStatusCounts` 型を返す。connector / runHistory 系は `deriveHudSnapshot` 側で組み立てる。
+- **comment_id=3298946171**: `connectorJobsRetryable` の `< 3` マジックナンバーを廃止。`retryPolicy.canRetry(job.retryCount)` を import して `DEFAULT_RETRY_POLICY` と同期。
+- **comment_id=3298946176**: workflow が `failed` で `counts.failedNodes === 0` のとき、`executionGraph.failedStepId` を見て該当ステップの `nodeTitle` を summary に出すように改善。ステップも不明な場合は汎用 fallback。Browser で「ワークフローが失敗しました（失敗ステップ: チェック）。」を確認。
+
 ### 未解決リスク
 
-- L5 critical の `workflow-failed` シグナル時、`counts.failedNodes` が `0` のケースがある。失敗 outcome 中に node status が `failed` 以外（例: 直前まで running のみ）で run が早期終了するパスでは、summary の括弧書き `（失敗ノード N 件）` が `N=0` になり情報量が落ちる。HUD signal 自体は正しく出ているので致命ではないが、Phase 1d 以降で `executionGraph.failedStepId` も summary 集計対象にすると改善する。
 - `runHistoryCount` のみを受け取り、最新 record の `status` までは見ていない。将来 Run History detail view を入れる際に直近 run の sentiment も HUD に反映できる。
-- `connectorJobsRetryable` のしきい値（retryCount < 3）はマジックナンバー。`recoveryActions.ts` 側の max retry と統一すると整合が取れる。
 - HUD タブはこのフェーズでは read-only。Focus target をクリックして Canvas / Inspector / Queue へジャンプする動線は未実装（Phase 1d 以降の候補）。
 
 ### 次の推奨Phase
