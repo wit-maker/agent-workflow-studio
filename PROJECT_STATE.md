@@ -39,7 +39,16 @@ PR #23 で導入した `wasRunningRef + useEffect([isRunning, workflow.logs, wor
 ### 削除したもの
 
 - `wasRunningRef: useRef(false)` — 間接的な isRunning edge 検知 ref
-- `WorkflowRunStatus` の `AppShell.tsx` 内 import — reducer が runStatus を保持するため不要に
+- `WorkflowRunStatus` の `AppShell.tsx` 内 inline import — reducer が runStatus を保持するため不要に
+
+### PR #23 reviewer 留意事項 #1 以外の追加修正 (task doc 6 fixes)
+
+1. **Fix 1: 不明ステータス → success 昇格を禁止** — `mapWorkflowStatusToRunStatus` helper を `runHistory.ts` に追加。不明 status は `failed` にフォールバック。
+2. **Fix 2: `review_required` で pending run を早期クリアしない** — `useEffect` で `runStatus === 'review_required'` のとき `pendingRunRef.current` を null にしない。`handleApproveReviewStep` / `handleReturnReviewStep` に `runFinished` dispatch を追加し、同一 `runId` で record を上書き（`appendRunRecord` の dedup を意図的に利用）。
+3. **Fix 3: キャンセル後の late async dispatch を防止** — `runPlannedWorkflow` の for ループ内、`await executeNodeStep(...)` の直後に `runToken` ガードを追加。
+4. **Fix 4: `plannedConnectionCount` をプラン範囲にスコープ** — `countPlannedConnections(workflow, plan.nodes)` helper を追加。selected/fromSelected 実行時に全接続を数えず、両端が planned node set 内の接続のみカウント。
+5. **Fix 5: localStorage 書き込みエラーを可視化** — `writeHistory` の catch を `console.warn` に変更。
+6. **Fix 6: 不明 planner mode → mock フォールバックを廃止** — `mapRunPlannerMode` の型シグネチャを `'all' | 'selected' | 'fromSelected' | 'dryRun'` に絞り、exhaustive switch に変更。
 
 ### Browser QA 確認
 
@@ -53,7 +62,13 @@ PR #23 で導入した `wasRunningRef + useEffect([isRunning, workflow.logs, wor
 
 - Updated: `src/state/workflowActions.ts` — `WorkflowRunStatus` import, `runFinished` / `clearCompletedRun` actions
 - Updated: `src/state/workflowReducer.ts` — `WorkflowRunStatus` import, `completedRun` フィールド, `runFinished` / `clearCompletedRun` reducer cases
-- Updated: `src/components/AppShell.tsx` — `wasRunningRef` 削除, `workflowLogsRef` 追加, `useEffect([state.completedRun])` に置き換え, `runPlannedWorkflow` / `stopRun` exit dispatch 更新
+- Updated: `src/domain/runHistory.ts` — `mapRunPlannerMode` 型を絞る, `mapWorkflowStatusToRunStatus` helper 追加
+- Updated: `src/storage/runHistoryStorage.ts` — `writeHistory` catch に `console.warn` 追加
+- Updated: `src/components/AppShell.tsx` — `wasRunningRef` 削除, `countPlannedConnections` helper 追加, `useEffect([state.completedRun, workflow.logs])` に置き換え, `runPlannedWorkflow` / `stopRun` / `handleApproveReviewStep` / `handleReturnReviewStep` の exit dispatch 更新
+
+### 未解決リスク
+
+- `continueMainSequence` 内に `runToken` ガードなし — `handleApproveReviewStep` 経由の continuation は停止操作を受け付けない（既存の制限）。Phase 1c 以降での対応を推奨。
 
 ---
 

@@ -34,6 +34,7 @@ import type {
 import {
   createWorkflowRunRecord,
   mapRunPlannerMode,
+  mapWorkflowStatusToRunStatus,
   type WorkflowRunHistory,
   type WorkflowRunMode,
 } from '../domain/runHistory'
@@ -80,6 +81,14 @@ import { WorkflowCanvas } from './WorkflowCanvas'
 import { storageAdapter } from '../storage/storageAdapter'
 
 const delay = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms))
+
+function countPlannedConnections(workflow: Workflow, plannedNodes: WorkflowNode[]): number {
+  const plannedIds = new Set(plannedNodes.map((node) => node.id))
+  return workflow.connections.filter(
+    (connection) =>
+      plannedIds.has(connection.sourceNodeId) && plannedIds.has(connection.targetNodeId),
+  ).length
+}
 
 function toCanvasMode(savedMode: SavedCanvasMode | null): CanvasMode {
   return savedMode === 'react-flow' ? 'reactFlow' : 'standard'
@@ -299,15 +308,15 @@ export function AppShell() {
 
   useEffect(() => {
     if (!state.completedRun) return
+    const { runId, runStatus } = state.completedRun
     const pending = pendingRunRef.current
-    if (pending && pending.runId === state.completedRun.runId) {
-      pendingRunRef.current = null
-      const runLogs = workflow.logs.filter((log) => log.runId === pending.runId)
+    if (pending && pending.runId === runId) {
+      const runLogs = workflow.logs.filter((log) => log.runId === runId)
       const record = createWorkflowRunRecord({
         runId: pending.runId,
         source: pending.workflowSnapshot,
         mode: pending.mode,
-        status: state.completedRun.runStatus,
+        status: runStatus,
         startedAt: pending.startedAt,
         finishedAt: new Date().toISOString(),
         nodeCount: pending.plannedNodeCount,
@@ -315,6 +324,11 @@ export function AppShell() {
         logs: runLogs,
       })
       setRunHistory(appendRunRecord(record))
+      // Keep pendingRunRef alive for review_required so the continuation
+      // can replace this interim record with the final terminal-state record.
+      if (runStatus !== 'review_required') {
+        pendingRunRef.current = null
+      }
     }
     dispatch({ type: 'clearCompletedRun' })
   }, [state.completedRun, workflow.logs])
@@ -604,7 +618,7 @@ export function AppShell() {
       mode: mapRunPlannerMode(mode),
       workflowSnapshot: workflow,
       plannedNodeCount: plan.nodes.length,
-      plannedConnectionCount: workflow.connections.length,
+      plannedConnectionCount: countPlannedConnections(workflow, plan.nodes),
     }
     const plannedHasCheck = plan.nodes.some((node) => node.type === 'check')
     const outcome = mode === 'dryRun' || !plannedHasCheck ? 'PASS' : calculateOutcomeByRunCount()
@@ -679,6 +693,10 @@ export function AppShell() {
         result: decision.result,
       })
       executedNodes.push(node)
+
+      if (runTokenRef.current !== runToken) {
+        return
+      }
 
       // M13: update connector job status after execution
       const jobAfterExec = jobMap.get(node.id)
@@ -1194,11 +1212,13 @@ export function AppShell() {
       type: 'updateMetrics',
       metrics: buildMetrics(executedNodes, 'PASS', workflow.metrics.retryCount),
     })
+    const continuationStatus = isCompleted ? 'success' : 'review_required'
     dispatch({
-      type: 'setWorkflowStatus',
-      status: isCompleted ? 'success' : 'review_required',
+      type: 'runFinished',
+      runId: executionGraph.runId,
+      workflowStatus: continuationStatus,
+      runStatus: mapWorkflowStatusToRunStatus(continuationStatus),
     })
-    dispatch({ type: 'setRunning', isRunning: false })
   }
 
   function handleReturnReviewStep(stepId: string) {
@@ -1243,6 +1263,14 @@ export function AppShell() {
         failedNodeTitle: reviewStep.nodeTitle,
         note: '差し戻しにより再試行候補へ追加しました。',
       }),
+    })
+    // runNodeFailed sets isRunning:false; also fire runFinished so the
+    // pending run record is finalized as failed (replaces interim review_required record).
+    dispatch({
+      type: 'runFinished',
+      runId: executionGraph.runId,
+      workflowStatus: 'failed',
+      runStatus: 'failed',
     })
   }
 
