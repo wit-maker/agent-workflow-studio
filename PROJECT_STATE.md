@@ -4,6 +4,140 @@ Last updated: 2026-05-25
 
 ---
 
+## Phase 1b: Durable Run History foundation
+
+- Branch: `feat/durable-run-history-foundation`
+- Date: 2026-05-25
+- Model: Claude Opus 4.7 (推奨モデル相当)
+
+### 実装内容
+
+PR #22 で導入した `RunState` / `WorkflowDocument` / 既存 `WorkflowRunLog` を土台に、
+将来の実行履歴 / 監査ログ / 状況補佐官 / 認知HUD が参照できる **Run Record の型と最小保存導線** を additive に追加した。
+
+1. **Run History domain model** — `src/domain/runHistory.ts` を新規追加。
+   - `WorkflowRunMode` = `'validate' | 'mock' | 'dryRun' | 'partial' | 'full' | 'replay'`
+   - `WorkflowRunStatus` = `'queued' | 'running' | 'success' | 'failed' | 'cancelled' | 'review_required'`
+   - `WorkflowRunRecord` 型に `runId / workflowId / workflowTitle / workflowSchemaVersion / mode / status / startedAt / finishedAt / durationMs / nodeCount / connectionCount / logCount / errorCount / warningCount / artifactId / sourceWorkflowDocument` を定義。
+   - `WorkflowRunHistory` 型に `schemaVersion '1.0' / records[] / updatedAt` を定義。
+   - `CURRENT_RUN_HISTORY_SCHEMA_VERSION = '1.0'` を export。
+2. **Run Record 作成 pure 関数** — `createWorkflowRunRecord(input)` を実装。
+   - `Workflow` でも `WorkflowDocument` でも入力可。
+   - `logs` を渡せば `logCount / errorCount / warningCount` を自動集計。
+   - `startedAt / finishedAt` から `durationMs` を導出。
+   - 外部API / ブラウザAPI / 時計に依存しない。テスト容易な deterministic 構造。
+   - `mapRunPlannerMode(...)` で既存 `RunMode`（`'all' | 'selected' | 'fromSelected' | 'dryRun' | 'validate'`）を `WorkflowRunMode` に変換。
+3. **localStorage 保存層** — `src/storage/runHistoryStorage.ts` を新規追加。
+   - `loadRunHistory()` / `saveRunHistory(history)` / `appendRunRecord(record)` / `clearRunHistory()`。
+   - 上限 `MAX_RUN_HISTORY_ENTRIES = 50`（最新50件で切り詰め）。
+   - 不正JSONは安全に破棄し empty history を返す。
+   - 同じ `runId` が既にある場合は新しい record で置換。
+   - localStorage は暫定保存。将来 Tauri / SQLite に移行可能な分離構造。
+4. **Storage key 登録** — `STORAGE_KEYS.RUN_HISTORY = 'agent-workflow-studio.run-history.v1'` を追加し、`storageValidation` / `PersistencePanel` / `localStorageAdapter.clearAll()` に反映。
+5. **Run All 完了後の record 追加** — `AppShell.tsx` で:
+   - `runPlannedWorkflow` 起動時に `pendingRunRef` に `runId / startedAt / mode / workflowSnapshot / plannedNodeCount / plannedConnectionCount` を記録。
+   - `useEffect([isRunning, workflow.logs, workflow.status])` 内で `isRunning` が true→false に遷移したら、`workflow.logs.filter(runId === pending.runId)` から集計値を作り、`workflow.status` から `WorkflowRunStatus` を判定して `appendRunRecord(...)` を呼ぶ。
+   - `workflow.status === 'paused' / 'cancelled'` → `cancelled` record として保存（停止ボタン経由を含む）。
+6. **Storage タブに 1 行表示** — `BottomMonitor` に `runHistoryCount: number` プロパティを追加し、Storage タブで `実行履歴: N 件（localStorage 暫定保存 / 最新 50 件）` を表示。既存ログ表示 / Persistence パネル / ImportExport は壊さない。
+7. **Storage 全リセット連動** — `handleResetStorage()` で `pendingRunRef.current = null` と `setRunHistory(loadRunHistory())` を実施。
+
+### 追加・更新ファイル
+
+- Added: `src/domain/runHistory.ts`
+- Added: `src/storage/runHistoryStorage.ts`
+- Updated: `src/storage/storageKeys.ts` — `RUN_HISTORY` キー追加
+- Updated: `src/storage/localStorageAdapter.ts` — `clearAll()` から `clearRunHistory()` を呼ぶ
+- Updated: `src/storage/storageValidation.ts` — `RUN_HISTORY` を JSON 形式として登録、ラベル `実行履歴`
+- Updated: `src/components/PersistencePanel.tsx` — `RUN_HISTORY` ラベル追加
+- Updated: `src/components/BottomMonitor.tsx` — `runHistoryCount` prop 追加、Storage タブに 1 行表示
+- Updated: `src/components/AppShell.tsx` — `pendingRunRef` / `wasRunningRef` / `runHistory` state、Run 完了時の `useEffect` で record 保存、`runPlannedWorkflow` 起動時の pending 登録、`handleResetStorage` 連動
+- Updated: `PROJECT_STATE.md`
+
+### Run History の保存形式
+
+```json
+{
+  "schemaVersion": "1.0",
+  "records": [
+    {
+      "runId": "run-2026-05-25T10:12:05.498Z",
+      "workflowId": "workflow-bootstrap-mvp",
+      "workflowTitle": "Agent Workflow Studio Bootstrap MVP",
+      "workflowSchemaVersion": "1.0",
+      "mode": "full",
+      "status": "failed",
+      "startedAt": "2026-05-25T10:12:05.498Z",
+      "finishedAt": "2026-05-25T10:12:21.203Z",
+      "durationMs": 15705,
+      "nodeCount": 12,
+      "connectionCount": 13,
+      "logCount": 33,
+      "errorCount": 2,
+      "warningCount": 0
+    }
+  ],
+  "updatedAt": "2026-05-25T10:12:21.210Z"
+}
+```
+
+`sourceWorkflowDocument` フィールドは入力が `WorkflowDocument` の場合のみ自動付与される（現状の `Workflow` 入力では undefined）。
+
+### Credential / Prompt 保存回避の説明
+
+Run Record に含まれるのは **集計値とメタデータのみ**：
+- `runId / workflowId / workflowTitle / workflowSchemaVersion / mode / status / startedAt / finishedAt / durationMs`
+- `nodeCount / connectionCount / logCount / errorCount / warningCount`
+- `artifactId`（参照のみ。本体は保存しない）
+- `sourceWorkflowDocument`（workflowId / schemaVersion / title のみ）
+
+明示的に保存しないもの：
+- Credential / API key / token
+- Prompt 全文
+- ノード config の中身
+- `WorkflowRunLog.message` / `WorkflowRunLog.payload` 本文
+- `WorkflowArtifact.content` 本文
+
+`logs` 全文は `appendRunRecord` 経由では永続化されない。`createWorkflowRunRecord` は logs を **集計してから捨てる**（参照は保持しない）。
+
+### build / lint
+
+- `npm run build`: pass (536.24 kB / gzip 160.41 kB、chunk size warning は既存)
+- `npm run lint`: pass (0 errors, 0 warnings)
+- `npm run typecheck`: script なし → `npm run build` 内の `tsc -b` を代替として確認済み
+
+### Browser QA
+
+- Dev server: `http://localhost:5173/`
+- アプリ起動: pass（12 ノード初期表示）
+- ストレージタブ初期表示: pass（`実行履歴: 0 件` 表示）
+- Run All 実行 1 回目: pass（`failed` outcome → record 1 件追加、`実行履歴: 1 件`）
+- Record 内容確認: `runId / workflowId / mode='full' / status='failed' / durationMs=15705 / nodeCount=12 / connectionCount=13 / logCount=33 / errorCount=2 / warningCount=0`（credential / prompt / log message 本文は含まれない）
+- 停止ボタン: pass（`cancelled` record 追加、合計 2 件）
+- Reload: pass（2 件保持）
+- 再度 Run All: pass（3 件目 record 追加）
+- Storage タブ整合性: pass（StorageBoundaryPanel / ImportExportPanel / PersistencePanel すべて表示）
+- Persistence テーブルに「実行履歴 1.2 KB 保存済み」: pass
+- Console error: なし
+- 既存 Run All の挙動: 変更なし（ログ / メトリクス / 成果物 / status 推移は従来通り）
+
+### 未解決リスク
+
+- `runPlannedWorkflow` の `useEffect`-based 終了検知は `isRunning` の遷移に依存。reducer が `isRunning` を経由しない終了パス（将来追加されるなら）には漏れる可能性がある。
+- Run All のサンプル ワークフローは `runCountRef.current % 3` で outcome 周期的に切り替わるため、Browser QA で `PASS` outcome を観測するには 2 回連続で実行する必要がある（既存挙動）。
+- Run record は localStorage に最新50件のみ保存。多くの実行を高速に積むと古い record から失われる。
+- Run record は logs / artifact 本文を参照しない設計のため、後から詳細 trace を遡るには Phase 1c 以降で別途 trace store が必要。
+- 既存 Workflow 入力では `sourceWorkflowDocument` フィールドは undefined。`WorkflowDocument` 中心の保存導線が整ったら自動付与に切替できる。
+
+### 次の推奨Phase
+
+1. **Phase 1c**: Cognitive HUD foundation — `HudState` / `RiskState` を使った状態モデル実装
+2. **Run History detail view**: 履歴 record の一覧UI、詳細プレビュー、絞り込み（mode / status / time）
+3. **Trace store foundation**: 各 record に紐づく logs / steps / artifact の暫定スナップショット（localStorage / IndexedDB のどちらかで）
+4. **Situation Assistant text briefing MVP** — `WorkflowDocument` / Run History / metrics を入力とするブリーフィング基盤
+5. **`WorkflowDocument` を Run Record 生成入力へ統一** — `Workflow` → `WorkflowDocument` 変換関数追加後、`createWorkflowRunRecord` 入力を `WorkflowDocument` 中心に切替
+
+---
+
 ## Phase 1: Workflow Domain Model Hardening
 
 - Branch: `feat/workflow-domain-model-hardening`

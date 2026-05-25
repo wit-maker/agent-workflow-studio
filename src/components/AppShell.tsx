@@ -32,6 +32,14 @@ import type {
   WorkflowStatus,
 } from '../domain/workflow'
 import {
+  createWorkflowRunRecord,
+  mapRunPlannerMode,
+  type WorkflowRunHistory,
+  type WorkflowRunMode,
+  type WorkflowRunStatus,
+} from '../domain/runHistory'
+import { appendRunRecord, loadRunHistory } from '../storage/runHistoryStorage'
+import {
   duplicateWorkflowTemplate,
   loadWorkflowTemplate,
   type SavedWorkflowTemplate,
@@ -223,6 +231,16 @@ export function AppShell() {
   )
   const runTokenRef = useRef(0)
   const runCountRef = useRef(0)
+  const pendingRunRef = useRef<{
+    runId: string
+    startedAt: string
+    mode: WorkflowRunMode
+    workflowSnapshot: Workflow
+    plannedNodeCount: number
+    plannedConnectionCount: number
+  } | null>(null)
+  const wasRunningRef = useRef(false)
+  const [runHistory, setRunHistory] = useState<WorkflowRunHistory>(() => loadRunHistory())
   const [connectorJobs, setConnectorJobs] = useState<ConnectorJob[]>([])
   const [isEvaluating, setIsEvaluating] = useState(false)
   const [importSuccessMessage, setImportSuccessMessage] = useState<string | null>(null)
@@ -280,6 +298,37 @@ export function AppShell() {
       saveCurrentWorkflow(workflow)
     }
   }, [workflow, isRunning])
+
+  useEffect(() => {
+    if (wasRunningRef.current && !isRunning && pendingRunRef.current) {
+      const pending = pendingRunRef.current
+      pendingRunRef.current = null
+      const runLogs = workflow.logs.filter((log) => log.runId === pending.runId)
+      const runStatus: WorkflowRunStatus =
+        workflow.status === 'success'
+          ? 'success'
+          : workflow.status === 'failed'
+            ? 'failed'
+            : workflow.status === 'review_required'
+              ? 'review_required'
+              : workflow.status === 'paused' || workflow.status === 'cancelled'
+                ? 'cancelled'
+                : 'success'
+      const record = createWorkflowRunRecord({
+        runId: pending.runId,
+        source: pending.workflowSnapshot,
+        mode: pending.mode,
+        status: runStatus,
+        startedAt: pending.startedAt,
+        finishedAt: new Date().toISOString(),
+        nodeCount: pending.plannedNodeCount,
+        connectionCount: pending.plannedConnectionCount,
+        logs: runLogs,
+      })
+      setRunHistory(appendRunRecord(record))
+    }
+    wasRunningRef.current = isRunning
+  }, [isRunning, workflow.logs, workflow.status])
 
   useEffect(() => {
     if (!importSuccessMessage) return
@@ -557,8 +606,17 @@ export function AppShell() {
   async function runPlannedWorkflow(mode: RunMode) {
     const runToken = runTokenRef.current + 1
     runTokenRef.current = runToken
-    const runId = `run-${new Date().toISOString()}`
+    const startedAt = new Date().toISOString()
+    const runId = `run-${startedAt}`
     const plan = planWorkflowRun(workflow, mode, selectedNodeId)
+    pendingRunRef.current = {
+      runId,
+      startedAt,
+      mode: mapRunPlannerMode(mode),
+      workflowSnapshot: workflow,
+      plannedNodeCount: plan.nodes.length,
+      plannedConnectionCount: workflow.connections.length,
+    }
     const plannedHasCheck = plan.nodes.some((node) => node.type === 'check')
     const outcome = mode === 'dryRun' || !plannedHasCheck ? 'PASS' : calculateOutcomeByRunCount()
     const executedNodes: WorkflowNode[] = []
@@ -755,6 +813,8 @@ export function AppShell() {
     storageAdapter.clearAll()
     runTokenRef.current += 1
     artifactVersionCountRef.current = 0
+    pendingRunRef.current = null
+    setRunHistory(loadRunHistory())
     // Reset in-memory UI state to defaults after clearing persisted storage
     setAppSettings(DEFAULT_APP_SETTINGS)
     setCanvasMode(toCanvasMode(null))
@@ -1642,6 +1702,7 @@ export function AppShell() {
         onCancelRebuild={handleCancelRebuild}
         onSelectArtifactVersion={handleSelectArtifactVersion}
         onResetStorage={handleResetStorage}
+        runHistoryCount={runHistory.records.length}
         settings={{
           ...appSettings,
           canvasMode: toSavedCanvasMode(canvasMode),
