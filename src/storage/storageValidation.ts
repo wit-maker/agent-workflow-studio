@@ -23,6 +23,7 @@ const KEY_LABELS: Record<string, string> = {
   [STORAGE_KEYS.CANVAS_MODE]: 'キャンバスモード',
   [STORAGE_KEYS.REACT_FLOW_POSITIONS]: 'React Flow 位置情報',
   [STORAGE_KEYS.APP_SETTINGS]: 'アプリ設定',
+  [STORAGE_KEYS.RUN_HISTORY]: '実行履歴',
 }
 
 const KEY_FORMATS: Record<string, 'json' | 'plain-string'> = {
@@ -32,6 +33,7 @@ const KEY_FORMATS: Record<string, 'json' | 'plain-string'> = {
   [STORAGE_KEYS.CANVAS_MODE]: 'plain-string',
   [STORAGE_KEYS.REACT_FLOW_POSITIONS]: 'json',
   [STORAGE_KEYS.APP_SETTINGS]: 'json',
+  [STORAGE_KEYS.RUN_HISTORY]: 'json',
 }
 
 function isLocalStorageAvailable(): boolean {

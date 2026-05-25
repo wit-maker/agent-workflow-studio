@@ -7,6 +7,7 @@ export const STORAGE_KEYS = {
   TEMPLATES: 'agent-workflow-studio.templates.v1',
   CURRENT_WORKFLOW: 'agent-workflow-studio.workflow.current.v1',
   APP_SETTINGS: 'agent-workflow-studio.app-settings.v1',
+  RUN_HISTORY: 'agent-workflow-studio.run-history.v1',
 } as const
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS]

@@ -66,6 +66,7 @@ type BottomMonitorProps = {
   onCancelRebuild: (requestId: string) => void
   onSelectArtifactVersion: (versionId: string) => void
   onResetStorage: () => void
+  runHistoryCount: number
   settings: AppSettings
   onChangeActiveTab: (tab: string) => void
   onImportBundle: (bundle: {
@@ -137,6 +138,7 @@ export function BottomMonitor({
   onCancelRebuild,
   onSelectArtifactVersion,
   onResetStorage,
+  runHistoryCount,
   settings,
   onChangeActiveTab,
   onImportBundle,
@@ -396,6 +398,9 @@ export function BottomMonitor({
         {activeTab === 'Storage' ? (
           <div className="storage-tab-panel">
             <StorageBoundaryPanel />
+            <div className="run-history-summary muted">
+              実行履歴: {runHistoryCount} 件（localStorage 暫定保存 / 最新 50 件）
+            </div>
             <ImportExportPanel
               workflow={workflow}
               templates={templates}

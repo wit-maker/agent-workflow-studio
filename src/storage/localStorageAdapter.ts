@@ -15,6 +15,7 @@ import {
   saveWorkflowTemplate,
 } from './localTemplates'
 import { clearCurrentWorkflow, loadCurrentWorkflow, saveCurrentWorkflow } from './localWorkflowState'
+import { clearRunHistory } from './runHistoryStorage'
 import { getStorageHealth } from './storageValidation'
 import type { IStorageAdapter } from './storageAdapter'
 
@@ -69,6 +70,7 @@ export const localStorageAdapter: IStorageAdapter = {
     clearCurrentWorkflow()
     clearAppSettings()
     clearReactFlowPositions()
+    clearRunHistory()
   },
 
   getStorageHealth() {
