@@ -11,6 +11,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
 }
 
 const VALID_MONITOR_TABS = new Set([
+  'HUD',
   'Logs',
   'Metrics',
   'Queue',
