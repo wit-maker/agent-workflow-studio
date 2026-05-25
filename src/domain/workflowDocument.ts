@@ -106,11 +106,16 @@ function normalizeRunConfig(raw: unknown): WorkflowRunConfig | undefined {
 function normalizeNodes(raw: unknown): WorkflowNode[] {
   if (!Array.isArray(raw)) return []
   return raw
-    .filter((item) => isRecord(item) && typeof item.id === 'string' && typeof item.title === 'string')
+    .filter(
+      (item) =>
+        isRecord(item) &&
+        typeof item.id === 'string' && item.id.trim() !== '' &&
+        typeof item.title === 'string' && item.title.trim() !== '',
+    )
     .map((item: Record<string, unknown>) => ({
-      id: item.id as string,
+      id: (item.id as string).trim(),
       type: typeof item.type === 'string' ? item.type : 'unknown',
-      title: item.title as string,
+      title: (item.title as string).trim(),
       category: normalizeNodeCategory(item.category),
       description: typeof item.description === 'string' ? item.description : '',
       status: 'idle' as const,
@@ -128,9 +133,23 @@ function normalizeNodes(raw: unknown): WorkflowNode[] {
     }))
 }
 
+function uniqueConnectionId(rawId: unknown, index: number, usedIds: Set<string>): string {
+  const base =
+    typeof rawId === 'string' && rawId.trim() ? rawId.trim() : `conn-doc-${index}`
+  let candidate = base
+  let suffix = 1
+  while (usedIds.has(candidate)) {
+    candidate = `${base}-${suffix}`
+    suffix += 1
+  }
+  usedIds.add(candidate)
+  return candidate
+}
+
 function normalizeConnections(raw: unknown, nodeIds: Set<string>): WorkflowConnection[] {
   // Accept both 'connections' (current app) and 'edges' (source-spec naming)
   const items = Array.isArray(raw) ? raw : []
+  const usedIds = new Set<string>()
   return items
     .filter(
       (item) =>
@@ -141,7 +160,7 @@ function normalizeConnections(raw: unknown, nodeIds: Set<string>): WorkflowConne
         nodeIds.has(item.targetNodeId as string),
     )
     .map((item: Record<string, unknown>, index) => ({
-      id: typeof item.id === 'string' && item.id.trim() ? item.id.trim() : `conn-doc-${index}`,
+      id: uniqueConnectionId(item.id, index, usedIds),
       sourceNodeId: item.sourceNodeId as string,
       sourcePort: typeof item.sourcePort === 'string' ? item.sourcePort : undefined,
       sourcePortId: typeof item.sourcePortId === 'string' ? item.sourcePortId : undefined,
@@ -186,7 +205,8 @@ function detectSchemaVersion(raw: Record<string, unknown>): string {
 
 // normalizeWorkflowDocument converts any unknown raw value into a WorkflowDocument
 // at CURRENT_WORKFLOW_SCHEMA_VERSION. Returns null if the input is not a valid workflow object.
-export function normalizeWorkflowDocument(raw: unknown): WorkflowDocument | null {
+// `now` can be injected for deterministic testing; defaults to the current time.
+export function normalizeWorkflowDocument(raw: unknown, now = new Date().toISOString()): WorkflowDocument | null {
   if (!isRecord(raw)) return null
 
   const idField = raw.workflowId ?? raw.id
@@ -194,8 +214,6 @@ export function normalizeWorkflowDocument(raw: unknown): WorkflowDocument | null
 
   const titleField = raw.title ?? raw.name
   if (typeof titleField !== 'string' || !titleField.trim()) return null
-
-  const now = new Date().toISOString()
 
   const rawNodes = raw.nodes ?? []
   const nodes = normalizeNodes(rawNodes)
@@ -244,7 +262,7 @@ export function migrateWorkflowDocument(raw: unknown): WorkflowMigrationResult {
     warnings.push(`未知の schemaVersion "${fromVersion}" です。最善の正規化を試みます。`)
   }
 
-  const document = normalizeWorkflowDocument(raw)
+  const document = normalizeWorkflowDocument(raw, new Date().toISOString())
   if (!document) {
     return {
       success: false,
