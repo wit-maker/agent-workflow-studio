@@ -32,6 +32,14 @@ export type WorkflowDocumentMetadata = {
   sourceRunId?: string
 }
 
+export type WorkflowDocumentTemplateReference = {
+  templateId: string
+  title: string
+  version?: number
+  sourceWorkflowId?: string
+  sourceRunId?: string
+}
+
 // WorkflowDocument is the canonical persisted/audited form of a workflow.
 // The runtime app still uses the Workflow type internally; this type targets
 // save / restore / execution / audit / template use cases.
@@ -41,6 +49,7 @@ export type WorkflowDocument = {
   title: string
   nodes: WorkflowNode[]
   connections: WorkflowConnection[]
+  templates: WorkflowDocumentTemplateReference[]
   status?: WorkflowStatus
   viewport?: WorkflowViewport
   runConfig?: WorkflowRunConfig
@@ -146,6 +155,28 @@ function normalizeConnections(raw: unknown, nodeIds: Set<string>): WorkflowConne
     }))
 }
 
+function normalizeTemplates(raw: unknown): WorkflowDocumentTemplateReference[] {
+  if (!Array.isArray(raw)) return []
+
+  return raw
+    .filter((item) => isRecord(item))
+    .map((item, index) => ({
+      templateId:
+        typeof item.templateId === 'string' && item.templateId.trim()
+          ? item.templateId.trim()
+          : `template-doc-${index}`,
+      title:
+        typeof item.title === 'string' && item.title.trim()
+          ? item.title.trim()
+          : 'Imported Template',
+      version: isFiniteNumber(item.version) ? item.version : undefined,
+      sourceWorkflowId:
+        typeof item.sourceWorkflowId === 'string' ? item.sourceWorkflowId : undefined,
+      sourceRunId:
+        typeof item.sourceRunId === 'string' ? item.sourceRunId : undefined,
+    }))
+}
+
 function detectSchemaVersion(raw: Record<string, unknown>): string {
   if (typeof raw.schemaVersion === 'string' && raw.schemaVersion.trim()) {
     return raw.schemaVersion.trim()
@@ -183,6 +214,7 @@ export function normalizeWorkflowDocument(raw: unknown): WorkflowDocument | null
     title: titleField.trim(),
     nodes,
     connections,
+    templates: normalizeTemplates(raw.templates),
     status: typeof raw.status === 'string' ? (raw.status as WorkflowStatus) : undefined,
     viewport: normalizeViewport(raw.viewport),
     runConfig: normalizeRunConfig(raw.runConfig),
