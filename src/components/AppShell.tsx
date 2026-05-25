@@ -39,6 +39,7 @@ import {
   type WorkflowRunMode,
 } from '../domain/runHistory'
 import { appendRunRecord, loadRunHistory } from '../storage/runHistoryStorage'
+import { deriveHudSnapshot } from '../domain/cognitiveHud'
 import {
   duplicateWorkflowTemplate,
   loadWorkflowTemplate,
@@ -293,6 +294,16 @@ export function AppShell() {
     [pendingDeleteNodeId, workflow.connections],
   )
   const connectionValidation = useMemo(() => validateConnections(workflow), [workflow])
+  const hudSnapshot = useMemo(
+    () =>
+      deriveHudSnapshot({
+        workflow,
+        executionGraph,
+        connectorJobs,
+        runHistoryCount: runHistory.records.length,
+      }),
+    [workflow, executionGraph, connectorJobs, runHistory.records.length],
+  )
 
   useEffect(() => {
     const savedCanvasMode = toSavedCanvasMode(canvasMode)
@@ -1730,6 +1741,7 @@ export function AppShell() {
         onSelectArtifactVersion={handleSelectArtifactVersion}
         onResetStorage={handleResetStorage}
         runHistoryCount={runHistory.records.length}
+        hudSnapshot={hudSnapshot}
         settings={{
           ...appSettings,
           canvasMode: toSavedCanvasMode(canvasMode),

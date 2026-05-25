@@ -2386,3 +2386,195 @@ button:disabled {
   padding: 8px;
   background: var(--surface);
 }
+
+/* ---- Cognitive HUD ---- */
+
+.cognitive-hud-tab-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.cognitive-hud-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.cognitive-hud-header {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.cognitive-hud-header.hud-priority-critical {
+  border-color: rgba(190, 63, 59, 0.5);
+  background: var(--red-soft);
+}
+
+.cognitive-hud-header.hud-priority-alert {
+  border-color: rgba(169, 105, 18, 0.5);
+  background: var(--amber-soft);
+}
+
+.cognitive-hud-header.hud-priority-watch {
+  border-color: rgba(47, 111, 189, 0.4);
+  background: var(--blue-soft);
+}
+
+.cognitive-hud-header.hud-priority-normal {
+  border-color: rgba(24, 129, 90, 0.35);
+  background: var(--green-soft);
+}
+
+.cognitive-hud-headline {
+  display: grid;
+  gap: 4px;
+}
+
+.cognitive-hud-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.cognitive-hud-headline strong {
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.cognitive-hud-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.cognitive-hud-meta div {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--surface);
+}
+
+.cognitive-hud-focus-type {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 12px;
+}
+
+.cognitive-hud-action {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-size: 13px;
+}
+
+.cognitive-hud-counts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.cognitive-hud-count {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--surface);
+}
+
+.cognitive-hud-count strong {
+  font-size: 18px;
+}
+
+.cognitive-hud-count-failed {
+  border-color: rgba(190, 63, 59, 0.4);
+  background: var(--red-soft);
+}
+
+.cognitive-hud-count-review {
+  border-color: rgba(169, 105, 18, 0.4);
+  background: var(--amber-soft);
+}
+
+.cognitive-hud-count-retry {
+  border-color: rgba(117, 84, 201, 0.4);
+  background: var(--purple-soft);
+}
+
+.cognitive-hud-signals h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+
+.cognitive-hud-signal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.cognitive-hud-signal {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--surface);
+}
+
+.cognitive-hud-signal.hud-priority-critical {
+  border-color: rgba(190, 63, 59, 0.45);
+  background: var(--red-soft);
+}
+
+.cognitive-hud-signal.hud-priority-alert {
+  border-color: rgba(169, 105, 18, 0.45);
+  background: var(--amber-soft);
+}
+
+.cognitive-hud-signal.hud-priority-watch {
+  border-color: rgba(47, 111, 189, 0.35);
+  background: var(--blue-soft);
+}
+
+.cognitive-hud-signal.hud-priority-normal {
+  border-color: rgba(24, 129, 90, 0.3);
+  background: var(--green-soft);
+}
+
+.cognitive-hud-signal-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cognitive-hud-signal-level {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(23, 32, 42, 0.08);
+  color: var(--text);
+}
+
+.cognitive-hud-signal-kind {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.cognitive-hud-signal p {
+  margin: 0;
+  font-size: 12px;
+}
+

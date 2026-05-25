@@ -3,6 +3,7 @@ import {
   metricLabels,
   statusLabels,
 } from '../domain/displayLabels'
+import type { HudSnapshot } from '../domain/cognitiveHud'
 import type { ArtifactVersion, EvaluationResult, HumanReviewState, RebuildRequest, ReviewDecision } from '../domain/evaluation'
 import type { ExecutionGraph } from '../domain/executionGraph'
 import type { ConnectorJob } from '../domain/connectorQueue'
@@ -13,6 +14,7 @@ import type { SavedWorkflowSnapshot } from '../storage/localWorkflowHistory'
 import { selectActiveQueueNodes, selectBottleneckNode } from '../state/workflowSelectors'
 import { AgentConnectorPanel } from './AgentConnectorPanel'
 import { ArtifactVersionHistory } from './ArtifactVersionHistory'
+import { CognitiveHudPanel } from './CognitiveHudPanel'
 import { ConnectorQueuePanel } from './ConnectorQueuePanel'
 import { ConnectorRoadmapPanel } from './ConnectorRoadmapPanel'
 import { CredentialBoundaryPanel } from './CredentialBoundaryPanel'
@@ -67,6 +69,7 @@ type BottomMonitorProps = {
   onSelectArtifactVersion: (versionId: string) => void
   onResetStorage: () => void
   runHistoryCount: number
+  hudSnapshot: HudSnapshot
   settings: AppSettings
   onChangeActiveTab: (tab: string) => void
   onImportBundle: (bundle: {
@@ -77,6 +80,7 @@ type BottomMonitorProps = {
 }
 
 type MonitorTab =
+  | 'HUD'
   | 'Logs'
   | 'Metrics'
   | 'Queue'
@@ -89,6 +93,7 @@ type MonitorTab =
 
 function normalizeMonitorTab(value: string): MonitorTab {
   const validTabs: MonitorTab[] = [
+    'HUD',
     'Logs',
     'Metrics',
     'Queue',
@@ -100,7 +105,7 @@ function normalizeMonitorTab(value: string): MonitorTab {
     'Roadmap',
   ]
 
-  return validTabs.includes(value as MonitorTab) ? (value as MonitorTab) : 'Logs'
+  return validTabs.includes(value as MonitorTab) ? (value as MonitorTab) : 'HUD'
 }
 
 export function BottomMonitor({
@@ -139,6 +144,7 @@ export function BottomMonitor({
   onSelectArtifactVersion,
   onResetStorage,
   runHistoryCount,
+  hudSnapshot,
   settings,
   onChangeActiveTab,
   onImportBundle,
@@ -146,6 +152,7 @@ export function BottomMonitor({
   const activeTab = normalizeMonitorTab(settings.activeTab)
 
   const tabLabels = {
+    HUD: '認知HUD',
     Logs: 'ログ',
     Metrics: 'メトリクス',
     Queue: 'キュー',
@@ -169,7 +176,7 @@ export function BottomMonitor({
   return (
     <footer className="bottom-monitor" aria-label="メトリクスとログ">
       <section className="monitor-tabs">
-        {(['Logs', 'Metrics', 'Queue', 'Output', 'Execution', 'Evaluation', 'Agent', 'Storage', 'Roadmap'] as const).map((tab) => (
+        {(['HUD', 'Logs', 'Metrics', 'Queue', 'Output', 'Execution', 'Evaluation', 'Agent', 'Storage', 'Roadmap'] as const).map((tab) => (
           <button
             key={tab}
             type="button"
@@ -189,6 +196,12 @@ export function BottomMonitor({
       </section>
 
       <section className="monitor-panel">
+        {activeTab === 'HUD' ? (
+          <div className="cognitive-hud-tab-panel">
+            <CognitiveHudPanel snapshot={hudSnapshot} />
+          </div>
+        ) : null}
+
         {activeTab === 'Logs' ? (
           <div className="log-list">
             {workflow.logs.length === 0 ? (

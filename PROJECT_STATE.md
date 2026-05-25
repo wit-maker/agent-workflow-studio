@@ -1,6 +1,105 @@
 # Project State
 
-Last updated: 2026-05-25
+Last updated: 2026-05-26
+
+---
+
+## Phase 1c: Cognitive HUD foundation
+
+- Branch: `feat/cognitive-hud-foundation`
+- Date: 2026-05-26
+- Model: Claude Opus 4.7 (推奨モデル)
+- PR #23 / #24 で整った Run History 基盤に乗せて、現在状態から「今、何を見るべきか / どこが詰まっているか / どこが危険か / 次に何をすべきか」を導出する Cognitive HUD foundation を read-only view layer として追加。
+
+### 変更ファイル
+
+- Added: `src/domain/cognitiveHud.ts` — `HudSnapshot` / `HudSignal` / `HudCounts` / `deriveHudSnapshot(input)` を定義する pure 関数群。
+- Added: `src/components/CognitiveHudPanel.tsx` — HUD snapshot を表示する read-only UI panel。
+- Updated: `src/components/BottomMonitor.tsx` — `HUD` (`認知HUD`) タブを先頭に追加。`hudSnapshot` prop を受け取り `CognitiveHudPanel` を表示。
+- Updated: `src/components/AppShell.tsx` — `useMemo` で `deriveHudSnapshot({ workflow, executionGraph, connectorJobs, runHistoryCount })` を計算して BottomMonitor へ渡す。
+- Updated: `src/storage/localAppSettings.ts` — `VALID_MONITOR_TABS` に `'HUD'` を追加（永続化 tab 一覧）。
+- Updated: `src/index.css` — `.cognitive-hud-*` クラスのスタイル追加。
+- Updated: `PROJECT_STATE.md`
+
+### 追加した domain vocabulary
+
+`src/domain/cognitiveHud.ts`:
+
+- `HudAlertLevel = 0 | 1 | 2 | 3 | 4 | 5` (`RiskState['level']` と整合)
+- `HudPriority = 'normal' | 'watch' | 'alert' | 'critical'` (`HudState['priority']` と整合)
+- `HudFocusTargetType = 'node' | 'step' | 'workflow' | 'connector' | 'storage' | 'none'`
+- `HudSignalKind = 'workflow_status' | 'node_failure' | 'review_required' | 'bottleneck' | 'queue_pressure' | 'connector_attention' | 'storage_notice' | 'run_history'`
+- `HudSignal` — 単一シグナルの読み取り専用表現。`alertLevel` / `priority` / `kind` / `title` / `detail` / `targetType` / `targetId` / `targetLabel` を保持。
+- `HudCounts` — 派生したカウント値 (`totalNodes` / `runningNodes` / `queuedNodes` / `failedNodes` / `reviewRequiredNodes` / `blockedNodes` / `retryReadyNodes` / `connectorJobsFailed` / `connectorJobsReviewRequired` / `connectorJobsRetryable` / `runHistoryCount`)。
+- `HudSnapshot` — `alertLevel` / `priority` / `summary` / `recommendedAction` / `focusTarget*` / `signals[]` / `counts`。
+- `deriveHudSnapshot(input)` — `{ workflow, executionGraph, connectorJobs, runHistoryCount }` のみから snapshot を導出する pure function。localStorage / React state / 外部 API / 時計に依存しない。
+- `mapAlertLevelToPriority(level)` / `hudPriorityLabels` / `hudSignalKindLabels` — ラベル変換ヘルパー。
+
+### Signal priority
+
+- L5 critical: workflow `failed` / 失敗ノードあり
+- L4 critical: workflow `review_required` / 確認待ちノード / 確認待ちステップ / `blocked` ノード
+- L3 alert: ボトルネック / コネクタージョブ failed / コネクタージョブ review_required / 再試行候補
+- L2 watch: 実行中ノード / 待機列 / `retryCount >= 2`
+- L1 watch: 実行履歴あり / paused or cancelled workflow
+- L0 normal: いずれも該当なし
+
+シグナルは `alertLevel` 降順 → priority rank 降順 → `id` 安定順でソートし、先頭シグナルから `focusTarget*` / `summary` / `recommendedAction` を導出する。
+
+### 追加した UI surface
+
+- BottomMonitor タブ `認知HUD` を先頭に追加（既存タブ順は維持）。
+- `CognitiveHudPanel` 表示要素:
+  - ヘッダー: priority に応じて color band (`hud-priority-critical/alert/watch/normal`)、`summary`、alert level、priority label、focus target、signal count
+  - 推奨アクション 1 行
+  - カウントタイル: ノード合計 / 実行中 / 待機列 / 確認待ち / 失敗 / 停止 / 再試行可 / コネクター失敗 / コネクター確認 / 実行履歴
+  - 主要シグナル一覧（上位 6 件、超過分は件数で表示）
+
+### 保存しないもの
+
+このフェーズでは追加の永続化を行わない。HUD snapshot は現在状態から都度導出する view であり、保存モデルではない。
+
+- 新しい localStorage キーなし
+- Run History schema 変更なし
+- Trace store / Situation Assistant briefing / 外部 API / Tauri / SQLite / IndexedDB / Credential / Prompt 本文 / Log 本文 / Artifact 本文 / node config の HUD 保存 — いずれも未着手
+
+### build / lint / typecheck
+
+- `npm run build`: pass (549.80 kB / gzip 163.70 kB、chunk size warning は既存)
+- `npm run lint`: pass (0 errors, 0 warnings)
+- `npm run typecheck`: pass (`tsc -b`)
+
+### Browser QA
+
+- Dev server: `http://localhost:5173/`
+- アプリ起動: pass
+- 初期ワークフロー表示: pass（12 ノード）
+- BottomMonitor に `認知HUD` タブ: pass（先頭タブとして追加）
+- 実行前 sample workflow: L3 alert / priority 警戒 / 主要シグナル「ボトルネック: チェック」（初期 metrics の bottleneckNodeId 由来。HUD は正しく導出）
+- Run All 1 回目（failed 出口）: L5 critical / priority 危険 / 主要シグナル `workflow-failed` / `connector-failed: Claude Mock` / `retry-candidate: チェック` / `queue-pressure` / `run-history: 1 件`
+- Run All 2 回目（review_required 出口）: L4 critical / priority 危険 / 主要シグナル `node-review: チェック` / `step-review: チェック` / `workflow-review-required` / `bottleneck` / `connector-review` / `queue-pressure`
+- 承認して続行 後: L4 → L3 alert へ更新、review シグナル消失、`run-history: 2 件` に更新
+- Storage タブ: `実行履歴: 2 件（localStorage 暫定保存 / 最新 50 件）` 維持
+- Reload 後: アプリ起動 / 認知HUD タブ存在 / Run History count 2 件保持
+- Console runtime error: なし（React Flow の width/height warning は pre-existing）
+
+### Gemini review 対応 (2026-05-26)
+
+- **comment_id=3298946166**: `countNodes` が `HudCounts` 全部を返してダミー 0 で埋めていた点を解消。`countNodesByStatus(workflow)` に改名し、ノード由来カウントだけを返す `NodeStatusCounts` 型を返す。connector / runHistory 系は `deriveHudSnapshot` 側で組み立てる。
+- **comment_id=3298946171**: `connectorJobsRetryable` の `< 3` マジックナンバーを廃止。`retryPolicy.canRetry(job.retryCount)` を import して `DEFAULT_RETRY_POLICY` と同期。
+- **comment_id=3298946176**: workflow が `failed` で `counts.failedNodes === 0` のとき、`executionGraph.failedStepId` を見て該当ステップの `nodeTitle` を summary に出すように改善。ステップも不明な場合は汎用 fallback。Browser で「ワークフローが失敗しました（失敗ステップ: チェック）。」を確認。
+
+### 未解決リスク
+
+- `runHistoryCount` のみを受け取り、最新 record の `status` までは見ていない。将来 Run History detail view を入れる際に直近 run の sentiment も HUD に反映できる。
+- HUD タブはこのフェーズでは read-only。Focus target をクリックして Canvas / Inspector / Queue へジャンプする動線は未実装（Phase 1d 以降の候補）。
+
+### 次の推奨Phase
+
+1. Cognitive HUD interactivity — `focusTarget` クリックで Canvas / Inspector / Queue へジャンプ
+2. Trace store foundation — 各 Run record に紐づく logs / steps / artifact の暫定スナップショット
+3. Situation Assistant text briefing MVP — `WorkflowDocument` / Run History / HUD snapshot を入力とするブリーフィング基盤
+4. Run History detail view — 履歴 record 一覧、詳細プレビュー、絞り込み
 
 ---
 
