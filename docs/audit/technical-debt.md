@@ -21,6 +21,15 @@ These are not bugs — the code works — but the **naming and structure** make 
 
 These items do not block SA-1, but they should be tracked so that SA-5 onward does not have to invent the missing structure under time pressure.
 
+## UI Shell Debt (Issue #34) — newly introduced by the cognitive workspace migration
+
+- The legacy BottomMonitor and all its tabs (認知HUD / ブリーフィング / 実行詳細 / etc.) are now wrapped by `DetailDrawerDock` for compatibility but visually duplicate the right panel and overlay. Need a phased deprecation plan once the right panel + overlay reach parity, otherwise contributors will keep adding logic to the Drawer side.
+- The legacy `.app-shell` / `.workspace-grid` / `.top-bar` CSS rules and the `TopBar.tsx` component are no longer rendered but remain in the tree. They should be removed once we are confident no other surface depends on them.
+- `WorkspaceLeftRail` Workflow Library / Templates tabs are scaffold placeholders. The full library/template UX should land before the WIP badges become stale.
+- `CurrentStateStrip` "推奨モデル / 現在モデル" is a static string. It must read from settings once the model selection lives in product state.
+- `CognitiveHudOverlay` renders a single central card. The Issue #34 spec also calls for per-node badges, edge state overlays, focus highlight, and dim of irrelevant paths. None of those are implemented in this foundation phase — only the overlay layer's *receiver* exists.
+- `node-hud-badge` covers four statuses (failed / review_required / blocked / retry_ready). The full HUD badge spec includes severity, priority, human-gate, and failure-cause variants on top of status.
+
 
 
 ## Data Model Debt

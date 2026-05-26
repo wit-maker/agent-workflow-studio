@@ -74,12 +74,8 @@ import {
   validateWorkflowImport,
 } from '../state/workflowSelectors'
 import { BottomMonitor } from './BottomMonitor'
-import { Inspector } from './Inspector'
-import { PartsPalette } from './PartsPalette'
-import { ReactFlowCanvas } from './ReactFlowCanvas'
-import { StagePreview } from './StagePreview'
-import { TopBar, type CanvasMode } from './TopBar'
-import { WorkflowCanvas } from './WorkflowCanvas'
+import { type CanvasMode } from './TopBar'
+import { CognitiveWorkspaceShell } from './workspace/CognitiveWorkspaceShell'
 import { storageAdapter } from '../storage/storageAdapter'
 
 const delay = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms))
@@ -1621,147 +1617,133 @@ export function AppShell() {
     }
   }
 
-  return (
-    <div className="app-shell">
-        <TopBar
-          workflowName={workflow.name}
-          status={workflow.status as WorkflowStatus}
-          isRunning={isRunning}
-          canvasMode={canvasMode}
-          canUndo={canUndo}
-          canRedo={canRedo}
-          onRun={runMockWorkflow}
-          onRunSelected={() => runMockWorkflow('selected')}
-          onRunFromSelected={() => runMockWorkflow('fromSelected')}
-          onDryRun={() => runMockWorkflow('dryRun')}
-          onStop={stopRun}
-          onReset={handleReset}
-          onUndo={() => dispatch({ type: 'undo' })}
-          onRedo={() => dispatch({ type: 'redo' })}
-          onExportJson={exportJson}
-          onImportJson={importJson}
-          onChangeCanvasMode={handleChangeCanvasMode}
-        />
+  const flashSlot = (
+    <>
       {importError ? <div className="import-error">{importError}</div> : null}
-      {!importError && importSuccessMessage ? <div className="import-success">{importSuccessMessage}</div> : null}
-      {pendingDeleteNode ? (
-        <section className="confirm-panel" aria-label="Node delete confirmation">
-          <div>
-            <strong>Delete node "{pendingDeleteNode.title}"?</strong>
-            <p>
-              {pendingDeleteConnectionCount} related connection(s) will also be deleted.
-            </p>
-          </div>
-          <div className="confirm-actions">
-            <button type="button" className="primary-button danger-action" onClick={confirmDeleteNode}>
-              Delete node
-            </button>
-            <button
-              type="button"
-              className="icon-button"
-              onClick={() => setPendingDeleteNodeId(null)}
-            >
-              Cancel
-            </button>
-          </div>
-        </section>
+      {!importError && importSuccessMessage ? (
+        <div className="import-success">{importSuccessMessage}</div>
       ) : null}
-      <div className="workspace-grid">
-        <PartsPalette
-          parts={workflow.nodes}
-          selectedNodeId={selectedNodeId}
-          onSelectNode={(nodeId) => dispatch({ type: 'selectNode', nodeId })}
-          onAddNode={handleAddNode}
-        />
-        <div className="center-stack">
-          {canvasMode === 'standard' ? (
-            <WorkflowCanvas
-              workflow={workflow}
-              selectedNodeId={selectedNodeId}
-              onSelectNode={(nodeId) => dispatch({ type: 'selectNode', nodeId })}
-              connectionValidation={connectionValidation}
-            />
-          ) : (
-            <ReactFlowCanvas
-              workflow={workflow}
-              selectedNodeId={selectedNodeId}
-              onSelectNode={(nodeId) => dispatch({ type: 'selectNode', nodeId })}
-              connectionValidation={connectionValidation}
-              onCreateConnection={createConnectionFromDraft}
-              onDeleteConnection={handleDeleteConnection}
-              onDeleteNode={handleDeleteNode}
-              onMoveNode={handleMoveNode}
-              onResetPositions={handleResetReactFlowPositions}
-            />
-          )}
-          <StagePreview
-            artifact={workflow.artifact}
-            checkOutcome={checkOutcome}
-            workflow={workflow}
-            selectedNode={selectedNode}
-            executionGraph={executionGraph}
-            evaluation={evaluation}
-            humanReview={humanReview}
-          />
-        </div>
-        <Inspector
-          selectedNode={selectedNode}
-          nodes={workflow.nodes}
-          connections={workflow.connections}
-          connectionValidation={connectionValidation}
-          onSaveNode={handleSaveNode}
-          onCreateConnection={handleCreateConnection}
-          onDeleteConnection={handleDeleteConnection}
-          onDeleteNode={handleDeleteNode}
-          onMoveNode={handleMoveNode}
-        />
+    </>
+  )
+
+  const confirmSlot = pendingDeleteNode ? (
+    <section className="confirm-panel" aria-label="Node delete confirmation">
+      <div>
+        <strong>Delete node "{pendingDeleteNode.title}"?</strong>
+        <p>
+          {pendingDeleteConnectionCount} related connection(s) will also be deleted.
+        </p>
       </div>
-      <BottomMonitor
-        workflow={workflow}
-        executionGraph={executionGraph}
-        connectorJobs={connectorJobs}
-        onRetryConnectorJob={handleRetryConnectorJob}
-        onMarkConnectorJobReviewed={handleMarkConnectorJobReviewed}
-        onSkipConnectorJob={handleSkipConnectorJob}
-        onCancelConnectorJob={handleCancelConnectorJob}
-        templates={templates}
-        snapshots={snapshots}
-        onSaveTemplate={handleSaveTemplate}
-        onLoadTemplate={handleLoadTemplate}
-        onDuplicateTemplate={handleDuplicateTemplate}
-        onDeleteTemplate={handleDeleteTemplate}
-        onSaveSnapshot={handleSaveSnapshot}
-        onLoadSnapshot={handleLoadSnapshot}
-        onDeleteSnapshot={handleDeleteSnapshot}
-        onRetryExecutionStep={handleRetryExecutionStep}
-        onApproveReviewStep={handleApproveReviewStep}
-        onReturnReviewStep={handleReturnReviewStep}
-        onSkipReviewStep={handleSkipReviewStep}
-        evaluation={evaluation}
-        humanReview={humanReview}
-        rebuildRequests={rebuildRequests}
-        artifactVersions={artifactVersions}
-        selectedArtifactVersionId={selectedArtifactVersionId}
-        canEvaluate={!!executionGraph && !isRunning}
-        isEvaluating={isEvaluating}
-        onEvaluate={handleEvaluate}
-        onHumanReviewDecide={handleHumanReviewDecide}
-        onRequestRebuild={handleRequestRebuild}
-        onStartRebuild={handleStartRebuild}
-        onCancelRebuild={handleCancelRebuild}
-        onSelectArtifactVersion={handleSelectArtifactVersion}
-        onResetStorage={handleResetStorage}
-        runHistoryCount={runHistory.records.length}
-        runHistoryRecords={runHistory.records}
-        hudSnapshot={hudSnapshot}
-        runTrace={runTrace}
-        settings={{
-          ...appSettings,
-          canvasMode: toSavedCanvasMode(canvasMode),
-        }}
-        onChangeActiveTab={handleChangeActiveTab}
-        onImportBundle={handleImportBundle}
-      />
-    </div>
+      <div className="confirm-actions">
+        <button type="button" className="primary-button danger-action" onClick={confirmDeleteNode}>
+          Delete node
+        </button>
+        <button
+          type="button"
+          className="icon-button"
+          onClick={() => setPendingDeleteNodeId(null)}
+        >
+          Cancel
+        </button>
+      </div>
+    </section>
+  ) : null
+
+  const detailDrawerSlot = (
+    <BottomMonitor
+      workflow={workflow}
+      executionGraph={executionGraph}
+      connectorJobs={connectorJobs}
+      onRetryConnectorJob={handleRetryConnectorJob}
+      onMarkConnectorJobReviewed={handleMarkConnectorJobReviewed}
+      onSkipConnectorJob={handleSkipConnectorJob}
+      onCancelConnectorJob={handleCancelConnectorJob}
+      templates={templates}
+      snapshots={snapshots}
+      onSaveTemplate={handleSaveTemplate}
+      onLoadTemplate={handleLoadTemplate}
+      onDuplicateTemplate={handleDuplicateTemplate}
+      onDeleteTemplate={handleDeleteTemplate}
+      onSaveSnapshot={handleSaveSnapshot}
+      onLoadSnapshot={handleLoadSnapshot}
+      onDeleteSnapshot={handleDeleteSnapshot}
+      onRetryExecutionStep={handleRetryExecutionStep}
+      onApproveReviewStep={handleApproveReviewStep}
+      onReturnReviewStep={handleReturnReviewStep}
+      onSkipReviewStep={handleSkipReviewStep}
+      evaluation={evaluation}
+      humanReview={humanReview}
+      rebuildRequests={rebuildRequests}
+      artifactVersions={artifactVersions}
+      selectedArtifactVersionId={selectedArtifactVersionId}
+      canEvaluate={!!executionGraph && !isRunning}
+      isEvaluating={isEvaluating}
+      onEvaluate={handleEvaluate}
+      onHumanReviewDecide={handleHumanReviewDecide}
+      onRequestRebuild={handleRequestRebuild}
+      onStartRebuild={handleStartRebuild}
+      onCancelRebuild={handleCancelRebuild}
+      onSelectArtifactVersion={handleSelectArtifactVersion}
+      onResetStorage={handleResetStorage}
+      runHistoryCount={runHistory.records.length}
+      runHistoryRecords={runHistory.records}
+      hudSnapshot={hudSnapshot}
+      runTrace={runTrace}
+      settings={{
+        ...appSettings,
+        canvasMode: toSavedCanvasMode(canvasMode),
+      }}
+      onChangeActiveTab={handleChangeActiveTab}
+      onImportBundle={handleImportBundle}
+    />
+  )
+
+  return (
+    <CognitiveWorkspaceShell
+      workflow={workflow}
+      workflowStatus={workflow.status as WorkflowStatus}
+      isRunning={isRunning}
+      canvasMode={canvasMode}
+      canUndo={canUndo}
+      canRedo={canRedo}
+      selectedNodeId={selectedNodeId}
+      selectedNode={selectedNode}
+      nodes={workflow.nodes}
+      connections={workflow.connections}
+      connectionValidation={connectionValidation}
+      executionGraph={executionGraph}
+      connectorJobs={connectorJobs}
+      evaluation={evaluation}
+      humanReview={humanReview}
+      hudSnapshot={hudSnapshot}
+      runHistoryRecords={runHistory.records}
+      runHistoryCount={runHistory.records.length}
+      checkOutcome={checkOutcome}
+      onRun={() => runMockWorkflow()}
+      onRunSelected={() => runMockWorkflow('selected')}
+      onRunFromSelected={() => runMockWorkflow('fromSelected')}
+      onDryRun={() => runMockWorkflow('dryRun')}
+      onStop={stopRun}
+      onReset={handleReset}
+      onUndo={() => dispatch({ type: 'undo' })}
+      onRedo={() => dispatch({ type: 'redo' })}
+      onExportJson={exportJson}
+      onImportJson={importJson}
+      onChangeCanvasMode={handleChangeCanvasMode}
+      onSelectNode={(nodeId) => dispatch({ type: 'selectNode', nodeId })}
+      onAddNode={handleAddNode}
+      onSaveNode={handleSaveNode}
+      onCreateConnection={handleCreateConnection}
+      onCreateConnectionDraft={createConnectionFromDraft}
+      onDeleteConnection={handleDeleteConnection}
+      onDeleteNode={handleDeleteNode}
+      onMoveNode={handleMoveNode}
+      onResetReactFlowPositions={handleResetReactFlowPositions}
+      onHumanReviewDecide={handleHumanReviewDecide}
+      onRequestRebuild={handleRequestRebuild}
+      detailDrawerSlot={detailDrawerSlot}
+      flashSlot={flashSlot}
+      confirmSlot={confirmSlot}
+    />
   )
 }

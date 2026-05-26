@@ -4,6 +4,21 @@ Last updated: 2026-05-26
 
 This map records what the current MVP actually contains. It does not redefine the full product goal.
 
+## UI Shell Migration (Issue #34)
+
+The UI shell migrated from **panel-first** (TopBar + .workspace-grid: Palette / Canvas+StagePreview / Inspector + BottomMonitor) to **cognitive workspace shell**:
+
+```
+Top    : GlobalRunControl + CurrentStateStrip
+Left   : WorkspaceLeftRail (Components / WorkflowLibrary[WIP] / Templates[WIP])
+Center : CognitiveWorkflowCanvas (= WorkflowCanvas|ReactFlowCanvas + CognitiveHudOverlay)
+Right  : WorkspaceRightPanel (Situation / Inspector / Assistant / HumanReview)
+Bottom : DetailDrawerDock (collapsible — wraps the old BottomMonitor as Detail Surface)
+Overlay: CognitiveHudOverlay (canvas) + CriticalOverlay (root)
+```
+
+`BottomMonitor` is no longer the primary authoring surface. Its tabs (認知HUD / ブリーフィング / 実行詳細 / etc.) remain available but are **Detail Surfaces**, not the cognitive HUD or situation assistant proper.
+
 ## Concept Layer Note (Issue #31)
 
 > See `docs/project/concept-layer-correction.md` for the authoritative concept definitions.
@@ -24,18 +39,19 @@ These MVP surfaces are useful and intentional. They are listed here so that "imp
 
 | Area | Current implementation | Notes |
 |---|---|---|
-| Top bar | `TopBar` exposes save/import/export, run modes, reset, and canvas mode controls. | Stop/validate are not full runtime controls yet. |
-| Left sidebar | `PartsPalette` and `TemplateLibrary` provide searchable MVP parts and local templates. | Parts are based on the current 12-node sample definitions. |
-| Main canvas | `WorkflowCanvas` and `ReactFlowCanvas` coexist. React Flow mode supports port handles, edge details, invalid connection feedback, and position persistence. | Full React Flow editing, minimap, auto layout, and DnD node creation are incomplete. |
-| Right inspector | `Inspector` edits title, description, agent role, config JSON, ports, and connections. | Prompt, tools, security, test run, and settings history are not first-class panels yet. |
-| Bottom monitor | `BottomMonitor` includes logs, metrics, queue, output, execution graph, evaluation, agent, and storage tabs. | Trace and durable audit log are not implemented. |
+| Top | `GlobalRunControl` consolidates Run/Selected/FromSelected/Dry/Stop/Reset/Undo/Redo/Export/Import/CanvasMode. `CurrentStateStrip` shows execution state, top attention, focus target, recommended model, safety state. | Recommended/current model is static placeholder text; future settings hookup. |
+| Left | `WorkspaceLeftRail` exposes Components (`PartsPalette`) plus WIP scaffold tabs for Workflow Library and Templates. | Library/Templates tabs are scaffold; existing data still reachable via Detail Drawer. |
+| Center | `CognitiveWorkflowCanvas` wraps `WorkflowCanvas` / `ReactFlowCanvas` and overlays `CognitiveHudOverlay`. `StagePreview` remains rendered inline below the canvas. | Edge-level HUD overlay (flow health, delay, retry, error route) is not implemented. |
+| Right | `WorkspaceRightPanel` switches between Situation / Inspector / Assistant / Human Review. | Inspector is the existing component reused as one mode. |
+| Bottom | `DetailDrawerDock` wraps `BottomMonitor` as a collapsible Detail Surface (default collapsed). All existing tabs preserved for compatibility. | Tabs are no longer the primary surface for HUD / Briefing / Run Detail. |
+| Overlay | `CognitiveHudOverlay` shows central HUD card + focus when HUD priority ≠ normal. `CriticalOverlay` foregrounds a banner only at priority=critical. | Node/edge highlighting and dimming logic, and critical short-tone audio, are not implemented. |
 | Stage/output | `StagePreview`, evaluation, rebuild, human review, and artifact version panels expose local output review. | Diff and publish preparation remain partial or missing. |
 
 ## Components
 
 | Component group | Files / modules | Current role |
 |---|---|---|
-| App shell and layout | `src/components/AppShell.tsx`, `src/components/TopBar.tsx` | Owns reducer state, run actions, connector queue state, persistence hooks, and layout composition. |
+| App shell and layout | `src/components/AppShell.tsx` (state owner), `src/components/workspace/CognitiveWorkspaceShell.tsx` (layout), `src/components/workspace/GlobalRunControl.tsx`, `src/components/workspace/CurrentStateStrip.tsx`, `src/components/workspace/WorkspaceLeftRail.tsx`, `src/components/workspace/WorkspaceRightPanel.tsx`, `src/components/workspace/DetailDrawerDock.tsx`, `src/components/workspace/CognitiveWorkflowCanvas.tsx`, `src/components/workspace/CognitiveHudOverlay.tsx`, `src/components/workspace/CriticalOverlay.tsx`, `src/components/workspace/SituationPanel.tsx`, `src/components/workspace/AssistantPanel.tsx`, legacy `src/components/TopBar.tsx` (unused but kept for now) | AppShell owns reducer state, run actions, connector queue state, persistence hooks, and renders the new workspace shell. The shell arranges Top/Left/Center/Right/Bottom/Overlay regions. |
 | Canvas | `WorkflowCanvas.tsx`, `ReactFlowCanvas.tsx`, `ReactFlowNode.tsx`, `NodeCard.tsx`, `ConnectionLine.tsx` | Displays nodes, edges, statuses, port handles, and validation feedback. |
 | Editing | `Inspector.tsx`, `ConnectionEditor.tsx`, `workflowActions.ts`, `workflowReducer.ts` | Handles node field edits, JSON validation, connection create/delete, undo/redo state, import/reset paths. |
 | Execution and recovery | `runPlanner.ts`, `runEngine.ts`, `nodeExecutors.ts`, `executionGraph.ts`, `connectorQueue.ts`, `recoveryActions.ts` | Provides local mock run planning, execution summaries, graph state, connector jobs, retry/review/skip/cancel actions. |

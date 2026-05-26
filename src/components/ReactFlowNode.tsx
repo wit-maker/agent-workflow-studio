@@ -4,7 +4,23 @@ import {
   reactFlowNodeType,
   type ReactFlowWorkflowNode,
 } from '../domain/reactFlowAdapter'
-import type { NodeCategory } from '../domain/workflow'
+import type { NodeCategory, WorkflowNode } from '../domain/workflow'
+
+// HUD overlay badge — issue #34. Same silence-on-normal policy as NodeCard.
+function nodeHudBadge(status: WorkflowNode['status']): { label: string; tone: string } | null {
+  switch (status) {
+    case 'failed':
+      return { label: '失敗', tone: 'failed' }
+    case 'review_required':
+      return { label: '確認待ち', tone: 'review' }
+    case 'blocked':
+      return { label: '停止', tone: 'failed' }
+    case 'retry_ready':
+      return { label: '再試行可', tone: 'retry' }
+    default:
+      return null
+  }
+}
 
 export function ReactFlowNode({
   data,
@@ -20,11 +36,18 @@ export function ReactFlowNode({
     connectionCount,
   } = data
 
+  const badge = nodeHudBadge(node.status)
+
   return (
     <div
       className={`react-flow-node node-${node.status} ${selected ? 'selected' : ''}`}
       aria-label={`${node.title} ノード`}
     >
+      {badge ? (
+        <span className={`node-hud-badge node-hud-badge-${badge.tone}`} aria-label={`HUD: ${badge.label}`}>
+          {badge.label}
+        </span>
+      ) : null}
       <div className="react-flow-node-header">
         <span className="node-category">{nodeCategoryLabels[node.category as NodeCategory] ?? node.category}</span>
         <span className="node-status">{statusLabels[node.status]}</span>
