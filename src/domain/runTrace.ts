@@ -262,7 +262,7 @@ function appendLogEvidence(trace: RunTrace, log: WorkflowRunLog): number {
 export function buildRunTrace(input: BuildRunTraceInput): RunTrace {
   const runId = selectActiveRunId(input)
   const latestRecord =
-    input.runHistoryRecords.findLast((record) => record.runId === runId) ??
+    input.runHistoryRecords.filter((record) => record.runId === runId).pop() ??
     input.runHistoryRecords[input.runHistoryRecords.length - 1]
   const steps = input.executionGraph
     ? input.executionGraph.steps.map(createStepFromExecutionStep)
@@ -292,23 +292,25 @@ export function buildRunTrace(input: BuildRunTraceInput): RunTrace {
     trace.excludedEvidenceCount += appendLogEvidence(trace, log)
   }
 
-  const artifactEvidence = makeRunStepEvidence({
-    id: `${runId}-artifact-summary`,
-    runId,
-    kind: 'artifact_summary',
-    severity:
-      input.workflow.artifact.status === 'failed'
-        ? 'error'
-        : input.workflow.artifact.status === 'review_required'
-          ? 'warn'
-          : 'info',
-    title: input.workflow.artifact.title,
-    summary: `Artifact format is ${input.workflow.artifact.format}; status is ${input.workflow.artifact.status}.`,
-  })
-  if (artifactEvidence) {
-    trace.runEvidence.push(artifactEvidence)
-  } else {
-    trace.excludedEvidenceCount += 1
+  if (input.workflow.artifact) {
+    const artifactEvidence = makeRunStepEvidence({
+      id: `${runId}-artifact-summary`,
+      runId,
+      kind: 'artifact_summary',
+      severity:
+        input.workflow.artifact.status === 'failed'
+          ? 'error'
+          : input.workflow.artifact.status === 'review_required'
+            ? 'warn'
+            : 'info',
+      title: input.workflow.artifact.title,
+      summary: `Artifact format is ${input.workflow.artifact.format}; status is ${input.workflow.artifact.status}.`,
+    })
+    if (artifactEvidence) {
+      trace.runEvidence.push(artifactEvidence)
+    } else {
+      trace.excludedEvidenceCount += 1
+    }
   }
 
   const metricEvidence = makeRunStepEvidence({
