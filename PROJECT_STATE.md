@@ -4,6 +4,81 @@ Last updated: 2026-05-26
 
 ---
 
+## Phase read-only-run-detail-panel
+
+- Branch: `feat/read-only-run-detail-panel`
+- Date: 2026-05-26
+- Model: Claude Sonnet 4.6 High
+- Scope: read-only Run Detail panel UI foundation — safe step-level evidence inspection + Situation Assistant evidence navigation foundation
+
+### Files changed
+
+- Added: `src/components/RunDetailPanel.tsx`
+- Updated: `src/components/BottomMonitor.tsx` — `RunDetail` tab, `runTrace` prop, Briefing evidence reference count
+- Updated: `src/components/AppShell.tsx` — `useMemo` for `buildRunTrace`, `runTrace` passed to `BottomMonitor`
+- Updated: `src/storage/localAppSettings.ts` — `RunDetail` added to `VALID_MONITOR_TABS`
+- Updated: `src/index.css` — `.run-detail-*` styles, `.briefing-evidence-reference` style
+- Added: `docs/architecture/read-only-run-detail-panel.md`
+- Updated: `PROJECT_STATE.md`
+
+### Safety decisions
+
+- `RunDetailPanel` renders only sanitized `RunDetailSummary` fields (counts, titles, evidence summaries).
+- Evidence summaries are already filtered by `containsConnectorSensitiveKeyword` and truncated at 240 chars in `makeRunStepEvidence`.
+- `node.config` free text, prompt body, raw provider payload, full log payload, and artifact content are structurally absent from `RunDetailSummary`.
+- `excludedEvidenceCount` and `safetyWarnings` are shown when evidence was filtered.
+- No new localStorage keys added.
+- No real AI API connection added.
+- No run trace persistence added.
+
+### Validation
+
+- `npm run typecheck`: pass
+- `npm run lint`: pass
+- `npm run build`: pass (chunk size warning is pre-existing)
+
+### Browser QA
+
+- Preview server: `http://localhost:5173/`
+- App starts without runtime errors: pass
+- 実行詳細 tab visible in BottomMonitor: pass
+- Run ID displayed in panel header: pass (run-2026-05-26T05:02:34.852Z)
+- Step count, evidence count, excluded count, briefing reference count all shown: pass
+- Step evidence grouped per node: pass (8 step cards)
+- evidence kinds shown as tags (node_status, connector_job, log_entry, human_review): pass
+- review_required step shows warn severity badge: pass (チェック step)
+- Briefing tab evidence reference count shown: pass ("step evidence 参照可能件数: 46 件")
+- No new runtime errors after key fix (React fiber key confirmed as numeric index `"0"`): pass
+- Connector readiness still shows real: no: pass
+- No credential-like string in evidence entries: pass (sanitized text only)
+- No real AI API request made: pass
+- Existing tabs (認知HUD, ブリーフィング, ストレージ) unaffected: pass
+
+### What is intentionally not implemented
+
+- Real AI API connection
+- API key UI or credential input/storage
+- Run trace persistence
+- Deep linking between Briefing and RunDetail
+- Per-step navigation from HUD focus target
+- Replay engine
+- Tauri / SQLite
+- SA-2 real adapter
+
+### Next recommended phase
+
+1. Run a second Run All to capture `error` severity evidence (FAIL path with connector failure) and confirm error badge renders.
+2. SA-2: real adapter boundary concretization after credential-safe resolution exists.
+3. Briefing ↔ RunDetail evidence deep linking (click evidence in briefing → jump to step in RunDetail).
+4. HUD focus target → RunDetail step navigation.
+
+### Unresolved risks
+
+- Run trace is derived from runtime state only; lost on reload. Future trace store needed for history navigation.
+- preview tool console log buffer is cumulative; historical duplicate-key errors (from before the `key={i}` fix) appeared in the buffer even after the fix was confirmed working via React fiber inspection.
+
+---
+
 ## Phase run-trace-step-evidence-foundation
 
 - Branch: `feat/run-trace-step-evidence-foundation`

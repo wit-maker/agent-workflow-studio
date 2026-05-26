@@ -40,6 +40,7 @@ import {
 } from '../domain/runHistory'
 import { appendRunRecord, loadRunHistory } from '../storage/runHistoryStorage'
 import { deriveHudSnapshot } from '../domain/cognitiveHud'
+import { buildRunTrace } from '../domain/runTrace'
 import {
   duplicateWorkflowTemplate,
   loadWorkflowTemplate,
@@ -303,6 +304,16 @@ export function AppShell() {
         runHistoryCount: runHistory.records.length,
       }),
     [workflow, executionGraph, connectorJobs, runHistory.records.length],
+  )
+  const runTrace = useMemo(
+    () =>
+      buildRunTrace({
+        workflow,
+        executionGraph,
+        connectorJobs,
+        runHistoryRecords: runHistory.records,
+      }),
+    [workflow, executionGraph, connectorJobs, runHistory.records],
   )
 
   useEffect(() => {
@@ -1743,6 +1754,7 @@ export function AppShell() {
         runHistoryCount={runHistory.records.length}
         runHistoryRecords={runHistory.records}
         hudSnapshot={hudSnapshot}
+        runTrace={runTrace}
         settings={{
           ...appSettings,
           canvasMode: toSavedCanvasMode(canvasMode),
