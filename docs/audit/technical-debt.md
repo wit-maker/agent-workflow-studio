@@ -1,8 +1,27 @@
 # Technical Debt
 
-Last updated: 2026-05-25
+Last updated: 2026-05-26
 
 This file lists current limits that may block later work if ignored.
+
+## Concept Layer Debt (Issue #31)
+
+> See `docs/project/concept-layer-correction.md` for the authoritative concept definitions.
+
+These are not bugs — the code works — but the **naming and structure** make it easy for future contributors to misread provisional MVP surfaces as the full layer, which would shrink the final design.
+
+- `CognitiveHudPanel` (component name) reads as "the cognitive HUD." It is actually a summary panel of derived HUD signals. The cognitive HUD as an attention-allocation layer (badges on nodes/edges, central card, focus overlay, dim, intervention) is not implemented. Renaming candidates: `HudSummaryPanel`, `HudSignalList`.
+- The BottomMonitor `認知HUD` tab implies HUD lives in a tab. The HUD layer is supposed to span Canvas / Inspector / notifications / modals. Misleading framing should be corrected in docs first, then in UI labels.
+- `BriefingPanel` (component) + the `ブリーフィング` tab read as "the Situation Assistant." They are actually the **minimum output channel** (4D mock text) of the Situation Narration Layer. Voice / avatar / video / dynamic highlight / timeline narration / incident replay are missing channels, not optional polish.
+- `BriefingAdapter` interface currently produces only `BriefingResult` (text). When voice / avatar / video adapters land, a shared `BriefingScript` intermediate will be needed so output channels stay coherent. Without it, each channel will reinvent the script and drift apart.
+- `BriefingInput` does not yet expose past / present / future axes explicitly. The current 4D template covers it implicitly, but Timeline Narration / Future Risk Predictor will need first-class fields.
+- `docs/source-specs/03_UI_UX_認知HUD設計書_完全版.md` was originally terse and risked being read as "HUD = the things in a HUD tab." It has been reframed (Issue #31 alignment), but the underlying naming debt in code remains.
+- Audio cue belongs to the cognitive HUD as an expression channel (`Critical 短音通知`); audio briefing belongs to the Situation Narration Layer as an output channel. They are different, and conflating them will damage the HUD design.
+- The Situation Assistant's role group (concierge / secretary / narrator / report-relay / situation strategist) is not modeled anywhere in code yet — there is no role switch, no per-role tone control, and no role-aware output channel selection.
+
+These items do not block SA-1, but they should be tracked so that SA-5 onward does not have to invent the missing structure under time pressure.
+
+
 
 ## Data Model Debt
 

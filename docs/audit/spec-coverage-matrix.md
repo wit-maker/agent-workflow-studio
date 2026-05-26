@@ -1,6 +1,6 @@
 # Spec Coverage Matrix
 
-Last updated: 2026-05-25
+Last updated: 2026-05-26
 
 Status values:
 
@@ -9,6 +9,8 @@ Status values:
 - Missing: no meaningful implementation yet.
 - Mismatch: implementation shape differs from the source-spec model and needs reconciliation.
 - Risk: current implementation may block or distort later phases if not handled.
+
+> **Concept layer note (Issue #31)**: For the cognitive HUD and the Situation Narration Layer, the current MVP exposes summary surfaces (`認知HUD` tab, `ブリーフィング` tab, `実行詳細` tab). These surfaces are **provisional MVP display panels**, not the full layers. The "Spec area" rows below are intentionally evaluated against the full source-spec layer, not against the MVP surface. See `docs/project/concept-layer-correction.md` and `current-implementation-map.md` for the concept-layer split.
 
 ## UI Coverage
 
@@ -24,8 +26,9 @@ Status values:
 | UI-08 Observation / execution monitor | Partial | Logs, metrics, queue, output, execution graph, evaluation, agent, and storage tabs exist. | Durable trace/audit, multi-run comparison, error rate, parallelism, and resource load are missing. |
 | UI-09 Evaluation / rebuild | Partial | PASS/REVIEW/FAIL mock flow, local evaluation, human review, rebuild requests, and artifact versions exist. | Diff-based review, persistent human decisions, and improvement prompt accumulation are missing. |
 | UI-10 Reinforced reuse state | Partial | Template save/load/search/duplicate/preview exists with metadata. | Recipes, knowledge, success/failure pattern assets, sharing, and version editing are missing. |
-| UI-11 Cognitive HUD settings | Missing | No dedicated HUD settings screen. | HUD priority, danger levels, notification settings, depth, and collapse rules are not modeled. |
-| UI-12 Run history / audit log | Partial | Local workflow history and transient logs exist. | Durable run history, audit log, replay, reproduction, diff, and export are not complete. |
+| UI-11 Cognitive HUD settings | Missing | No dedicated HUD settings screen. The `認知HUD` BottomMonitor tab is a summary view of derived signals, not the HUD layer itself. | HUD priority, danger levels, notification settings, depth, collapse rules, HUD badges on nodes/edges, central HUD card, approval-pending HUD, failure-cause card, focus overlay, path dim, notification bundle, critical short audio cue, and HUD history are not modeled. |
+| UI-12 Run history / audit log | Partial | Local workflow history, transient logs, durable run record list, and read-only Run Detail evidence panel exist. | Audit log, replay, reproduction, diff, and export are not complete. |
+| UI-13 Situation Narration Layer (added) | Partial | 4D mock text briefing exists as the **minimum output channel** (`BriefingPanel`). | Timeline Narration, Incident Replay, Avatar Briefing, Audio Alert Briefing, Visual Explanation Render, Workflow News Video, Briefing Video Composer, Next Action Briefing standalone, role switch (concierge / secretary / narrator / report-relay / situation strategist) are missing. Voice / avatar / video are MVP-out but must not be removed from spec. |
 
 ## Functional Coverage
 
@@ -36,7 +39,8 @@ Status values:
 | Edge types | Done | `ConnectionKind` covers data, instruction, result, decision, evidence, log, error, retry, approval, resource, template, and improvement. | Runtime semantics for every edge type are not fully implemented. |
 | Run modes | Partial | Run All, Run Selected, Run From Selected, and Dry Run exist. | Validate, Mock Run as explicit mode, Stop, Retry as full run mode, Error Route, Resume, and Replay are incomplete. |
 | Metrics / trace / audit log | Risk | Tokens, cost, latency, success rate, queue count, retry count, bottleneck, logs, and execution graph exist in UI. | Trace and audit log are not durable. Logs/queue/metrics do not survive reload as run records. |
-| Cognitive HUD | Missing | Some statuses, badges, bottleneck indicators, and review/failed states are visible. | No HUD state model, L0-L5 levels, focus lens, alert layer, minimap warning, depth layer, or auto hide/reveal rules. |
+| Cognitive HUD | Partial | `HudSignal` / `HudSnapshot` / `HudCounts` derive a priority + summary panel. Node/edge statuses and bottleneck indicators are visible. | Cognitive HUD as an **attention-allocation layer** (selection / compression / emphasis / notification / intervention) spanning Canvas / Inspector / modals is missing. HUD badges on nodes/edges, central HUD card, approval-pending HUD, failure-cause card, focus overlay, path dim, notification bundle, critical short audio cue, HUD history, and the 5 design dimensions (what / when / where / how / how-much to show) are not modeled. |
+| Situation Narration Layer | Partial | 4D mock text briefing (`BriefingPanel`) reads HUD snapshot, run trace step evidence, logs, metrics, and connector jobs. | This is the **minimum output channel** only. Timeline Extractor, Situation Summarizer, Cause Analyzer, Future Risk Predictor, Briefing Script Writer, Voice Generator, Avatar Narrator, Visual Highlight Renderer, Briefing Video Composer, Next Action Briefing, Human Decision Prompt, role group switch, past→present→future timeline narration, incident replay are missing. Voice / avatar / video must remain in spec even while MVP-out. |
 | Safety gates | Partial | Credential boundary, mock connector boundary, confirmations, review-required flow, and docs exist. | Spec check, secret scan placeholder, git guard, publish gate, shell command risk check, loop/cost limits, and durable approval gate are missing. |
 | Templates / recipes / knowledge | Partial | Local templates with metadata, preview, duplicate, search, and load confirmation exist. | Recipes, knowledge cards, success/failure pattern capture, versioning, and next-best-action are missing. |
 | External adapters | Risk | Mock registry and connector jobs exist. UI states real APIs are not connected. | Real adapter interfaces for Codex, Claude Code, Gemini, Hermes, Grok/X, GitHub, Local Shell, and File System are missing or conceptual. |
