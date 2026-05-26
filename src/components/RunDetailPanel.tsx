@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import type { RunDetailMode, RunDetailSummary, StepEvidenceSummary } from '../domain/runDetail'
 import { summarizeRunDetail } from '../domain/runDetail'
 import type { EvidenceSeverity } from '../domain/runStepEvidence'
@@ -22,7 +22,7 @@ type RunDetailPanelProps = {
 
 export function RunDetailPanel({ runTrace }: RunDetailPanelProps) {
   const [mode, setMode] = useState<RunDetailMode>('all')
-  const summary = summarizeRunDetail(runTrace, mode)
+  const summary = useMemo(() => summarizeRunDetail(runTrace, mode), [runTrace, mode])
 
   return (
     <section className="run-detail-panel" aria-label="実行詳細">
@@ -63,8 +63,8 @@ export function RunDetailPanel({ runTrace }: RunDetailPanelProps) {
         </div>
       ) : (
         <div className="run-detail-step-list">
-          {summary.stepEvidence.map((stepSummary, index) => (
-            <StepEvidenceCard key={stepSummary.stepId ?? `run-${index}`} stepSummary={stepSummary} />
+          {summary.stepEvidence.map((stepSummary) => (
+            <StepEvidenceCard key={stepSummary.stepId ?? `run-level-${stepSummary.runId}`} stepSummary={stepSummary} />
           ))}
         </div>
       )}
