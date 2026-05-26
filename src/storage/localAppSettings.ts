@@ -22,6 +22,7 @@ const VALID_MONITOR_TABS = new Set([
   'Storage',
   'Roadmap',
   'Briefing',
+  'RunDetail',
 ])
 
 function isRecord(value: unknown): value is Record<string, unknown> {

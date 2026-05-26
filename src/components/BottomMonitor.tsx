@@ -11,10 +11,12 @@ import type { ConnectorJob } from '../domain/connectorQueue'
 import type { Workflow } from '../domain/workflow'
 import { MockBriefingAdapter } from '../adapters/briefing/MockBriefingAdapter'
 import { useBriefingGenerator } from '../hooks/useBriefingGenerator'
+import type { RunTrace } from '../domain/runTrace'
 import type { AppSettings } from '../storage/localAppSettings'
 import type { SavedWorkflowTemplate } from '../storage/localTemplates'
 import type { SavedWorkflowSnapshot } from '../storage/localWorkflowHistory'
 import { selectActiveQueueNodes, selectBottleneckNode } from '../state/workflowSelectors'
+import { RunDetailPanel } from './RunDetailPanel'
 import { AgentConnectorPanel } from './AgentConnectorPanel'
 import { ArtifactVersionHistory } from './ArtifactVersionHistory'
 import { BriefingPanel } from './BriefingPanel'
@@ -75,6 +77,7 @@ type BottomMonitorProps = {
   runHistoryCount: number
   runHistoryRecords: WorkflowRunRecord[]
   hudSnapshot: HudSnapshot
+  runTrace: RunTrace | null
   settings: AppSettings
   onChangeActiveTab: (tab: string) => void
   onImportBundle: (bundle: {
@@ -96,6 +99,7 @@ type MonitorTab =
   | 'Storage'
   | 'Roadmap'
   | 'Briefing'
+  | 'RunDetail'
 
 const briefingAdapter = new MockBriefingAdapter()
 
@@ -112,6 +116,7 @@ function normalizeMonitorTab(value: string): MonitorTab {
     'Storage',
     'Roadmap',
     'Briefing',
+    'RunDetail',
   ]
 
   return validTabs.includes(value as MonitorTab) ? (value as MonitorTab) : 'HUD'
@@ -155,6 +160,7 @@ export function BottomMonitor({
   runHistoryCount,
   runHistoryRecords,
   hudSnapshot,
+  runTrace,
   settings,
   onChangeActiveTab,
   onImportBundle,
@@ -181,6 +187,7 @@ export function BottomMonitor({
     Storage: 'ストレージ',
     Roadmap: 'Roadmap',
     Briefing: 'ブリーフィング',
+    RunDetail: '実行詳細',
   } as const
 
   const bottleneck = selectBottleneckNode(workflow)
@@ -195,7 +202,7 @@ export function BottomMonitor({
   return (
     <footer className="bottom-monitor" aria-label="メトリクスとログ">
       <section className="monitor-tabs">
-        {(['HUD', 'Logs', 'Metrics', 'Queue', 'Output', 'Execution', 'Evaluation', 'Agent', 'Storage', 'Roadmap', 'Briefing'] as const).map((tab) => (
+        {(['HUD', 'Logs', 'Metrics', 'Queue', 'Output', 'Execution', 'Evaluation', 'Agent', 'Storage', 'Roadmap', 'Briefing', 'RunDetail'] as const).map((tab) => (
           <button
             key={tab}
             type="button"
@@ -456,6 +463,17 @@ export function BottomMonitor({
               onGenerate={briefing.generate}
               onInputModeChange={briefing.setInputMode}
             />
+            {runTrace ? (
+              <p className="briefing-evidence-reference muted">
+                step evidence 参照可能件数: {runTrace.runEvidence.length + runTrace.steps.reduce((acc, s) => acc + s.evidence.length, 0)} 件 — 詳細は「実行詳細」タブで確認できます
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {activeTab === 'RunDetail' ? (
+          <div className="run-detail-tab-panel">
+            <RunDetailPanel runTrace={runTrace} />
           </div>
         ) : null}
       </section>
