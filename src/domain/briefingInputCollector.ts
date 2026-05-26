@@ -12,7 +12,9 @@ import type {
 import { BRIEFING_SENSITIVE_KEYWORDS } from './briefing'
 import type { ConnectorJob } from './connectorQueue'
 import type { ExecutionGraph } from './executionGraph'
+import { summarizeRunDetail } from './runDetail'
 import type { WorkflowRunRecord } from './runHistory'
+import { buildRunTrace } from './runTrace'
 import type { Workflow, WorkflowRunLog, WorkflowStatus } from './workflow'
 
 export const MAX_BRIEFING_INPUT_CHARS = 32000
@@ -365,6 +367,7 @@ function buildErrorEntries(
   execution: BriefingInput['execution'],
   connectors: BriefingConnectorSummary,
   hud: BriefingHudSummary,
+  runDetail: BriefingInput['runDetail'],
   selectedLogs: readonly WorkflowRunLog[],
 ): string[] {
   const errorEntries: string[] = []
@@ -404,6 +407,21 @@ function buildErrorEntries(
       signal.includes('blocked')
     ) {
       errorEntries.push(signal)
+    }
+  }
+
+  for (const evidence of runDetail.selectedEvidence) {
+    if (
+      evidence.includes('error') ||
+      evidence.includes('warn') ||
+      evidence.includes('failed') ||
+      evidence.includes('review') ||
+      evidence.includes('retry') ||
+      evidence.includes('safety_gate') ||
+      evidence.includes('connector_error') ||
+      evidence.includes('human_review')
+    ) {
+      errorEntries.push(evidence)
     }
   }
 
@@ -459,6 +477,13 @@ export function collectBriefingInput(args: CollectBriefingInputArgs): BriefingIn
   )
   const hud = summarizeHud(args.hudSnapshot, args.mode)
   const runHistory = summarizeRunHistory(args.runHistoryRecords, args.mode)
+  const runTrace = buildRunTrace({
+    workflow: args.workflow,
+    executionGraph: args.executionGraph,
+    connectorJobs: args.connectorJobs,
+    runHistoryRecords: args.runHistoryRecords,
+  })
+  const runDetail = summarizeRunDetail(runTrace, args.mode)
   const severity = determineSeverity(
     args.workflow.status,
     workflowSummary,
@@ -482,6 +507,7 @@ export function collectBriefingInput(args: CollectBriefingInputArgs): BriefingIn
     execution,
     connectors,
     hud,
+    runDetail,
     selectedLogs,
   )
 
@@ -498,6 +524,8 @@ export function collectBriefingInput(args: CollectBriefingInputArgs): BriefingIn
   const trimmedSignals = trimTextList(hud.selectedSignals, listBudget)
   const trimmedConnectors = trimTextList(connectors.selectedEntries, listBudget)
   const trimmedHistory = trimTextList(runHistory.selectedRecords, listBudget)
+  const trimmedEvidence = trimTextList(runDetail.selectedEvidence, listBudget)
+  const trimmedSafetyWarnings = trimTextList(runDetail.safetyWarnings, Math.floor(listBudget / 2))
 
   return {
     mode: args.mode,
@@ -520,6 +548,11 @@ export function collectBriefingInput(args: CollectBriefingInputArgs): BriefingIn
       ...runHistory,
       selectedRecords: trimmedHistory.entries,
     },
+    runDetail: {
+      ...runDetail,
+      safetyWarnings: trimmedSafetyWarnings.entries,
+      selectedEvidence: trimmedEvidence.entries,
+    },
     logEntries: trimmedLogs.entries,
     errorEntries: trimmedErrors.entries,
     truncated:
@@ -527,6 +560,8 @@ export function collectBriefingInput(args: CollectBriefingInputArgs): BriefingIn
       trimmedErrors.truncated ||
       trimmedSignals.truncated ||
       trimmedConnectors.truncated ||
-      trimmedHistory.truncated,
+      trimmedHistory.truncated ||
+      trimmedEvidence.truncated ||
+      trimmedSafetyWarnings.truncated,
   }
 }

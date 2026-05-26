@@ -1,4 +1,5 @@
 import type { WorkflowStatus } from './workflow'
+import type { RunDetailSummary } from './runDetail'
 
 export type BriefingSeverity = 'info' | 'warn' | 'error'
 
@@ -98,6 +99,7 @@ export type BriefingInput = {
   connectors: BriefingConnectorSummary
   hud: BriefingHudSummary
   runHistory: BriefingRunHistorySummary
+  runDetail: RunDetailSummary
   logEntries: string[]
   errorEntries: string[]
   truncated: boolean
