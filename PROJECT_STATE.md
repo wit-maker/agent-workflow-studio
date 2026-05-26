@@ -1619,3 +1619,79 @@ Phase 7.4 Inspector ノード編集体験のハードニング。
 - `npm run build`: success
 - `npm run lint`: success
 - Browser QA: not run（review fix が import normalization 限定のため）
+
+---
+
+## Phase issue31-concept-layer-alignment
+
+- Branch: `docs/issue31-full-concept-alignment`
+- Date: 2026-05-26
+- Model: Claude Opus 4.7（required は Claude Sonnet 4.6 High。不一致のままユーザー明示指示で続行）
+- Source alignment:
+  - `docs/project/concept-layer-correction.md`（補助 Source of Truth）
+  - GitHub Issue #31 本文（`gh issue view 31` で取得確認済み）
+
+### 目的
+
+Issue #31 の概念修正を、リポジトリ内ドキュメント全体へ反映する。実装変更は行わない（プロダクトコード / 設定ファイルは変更しない）。
+
+### 反映した概念修正
+
+- **認知HUD** は HUDタブではなく、**注意配分編集レイヤー / 状況認識編集レイヤー / 意思決定支援レイヤー**である。Critical 短音通知などの音を含む表現チャネル群を扱う。
+- **状況説明生成レイヤー** は、ワークフロー状態を**過去・現在・未来の時間軸**で説明する後段レイヤー。
+- **状況補佐官** は、状況説明生成レイヤーを**人間向けの役割として表現したもの**。ブリーフィングタブ / TTS / アバター / 動画生成のいずれか単独ではない。
+- **text briefing MVP** は、状況補佐官の全体ではなく、状況説明生成レイヤーの**最小出力チャネルの 1 つ**。
+- 単純な「補佐官 ＞ 認知HUD」ではなく、**ワークフロー実行状態 → 観測 → 認知HUD → 状況説明生成 → テキスト/音声/アバター/動画/次アクション** という変換パイプライン。
+- 音声・アバター・動画は MVP スコープ外だが、状況補佐官の**当初発想**（自動ニュース動画生成の要領で状況を解説する）として削除・縮小しない。
+
+### 現在の MVP 表示面と本来仕様の分離
+
+| MVP 表示面 | 本来仕様での位置づけ |
+|---|---|
+| BottomMonitor `認知HUD` タブ / `CognitiveHudPanel` | 認知HUD本体ではなく、HUD サマリ / シグナル一覧（命名上は `HudSummaryPanel` / `HudSignalList` が妥当） |
+| BottomMonitor `ブリーフィング` タブ / `BriefingPanel` | 状況説明生成レイヤーの最小出力チャネル（4D テキスト出力） |
+| BottomMonitor `実行詳細` タブ / `RunDetailPanel` | Run Trace step evidence の読み取り専用ビューア（補助領域） |
+
+### 更新ファイル
+
+- Updated: `docs/project/SOURCE_OF_TRUTH.md` — `concept-layer-correction.md` を補助 SoT として位置づけ、概念定義サマリと Priority 表更新
+- Updated: `docs/source-specs/03_UI_UX_認知HUD設計書_完全版.md` — 注意配分編集レイヤーとしての再定義、5 設計次元、表現チャネル（音含む）、MVP 表示面の補助領域化、状況説明生成レイヤーとの関係を追記
+- Updated: `docs/source-specs/situation-assistant/00_ドキュメント体系_README.md` — 概念修正サマリと MVP / 本来仕様の分離を追記
+- Updated: `docs/source-specs/situation-assistant/01_要件定義書_状況補佐官_完全版.md` — 解く問題に過去/現在/未来軸、MVP スコープと最終構想の分離、当初発想の保持、役割群、認知HUD との隣接関係
+- Updated: `docs/source-specs/situation-assistant/02_機能仕様書_状況説明生成_完全版.md` — 9 サブ機能、10 代表ノード、本来仕様パイプライン、動画化・音声化トリガポリシー
+- Updated: `docs/source-specs/situation-assistant/03_UI_UX_状況ブリーフィング設計書_完全版.md` — ブリーフィングタブを「最小出力チャネルの表示先」と位置づけ、将来の音声/アバター/動画チャネルを記述
+- Updated: `docs/source-specs/situation-assistant/04_システム設計書_状況説明生成基盤_完全版.md` — マルチチャネル基盤設計、Voice/Avatar/Video/Highlight Adapter を将来拡張として記述、`BriefingScript` 中間体の意図
+- Updated: `docs/source-specs/situation-assistant/05_AIエージェント運用設計書_状況補佐官_完全版.md` — 役割境界（計画 AI ではない）、入力材料の参照ポリシー、マルチチャネル安全境界、役割逸脱検出
+- Updated: `docs/source-specs/situation-assistant/06_QA_セキュリティ_受け入れ基準_状況説明生成_完全版.md` — 概念整合の受け入れ基準（CC-01〜CC-05）、停止条件に概念縮小禁止を追加
+- Updated: `docs/source-specs/situation-assistant/07_実装ロードマップ_状況補佐官_完全版.md` — SA-5〜SA-9 を追加（サブ機能展開 / 音声 / アバター / 動画 / 次アクション）
+- Updated: `docs/audit/current-implementation-map.md` — MVP 表示面と本来仕様の分離テーブル、Cognitive HUD / Situation Narration Layer の実装 vs 仕様マトリクス
+- Updated: `docs/audit/spec-coverage-matrix.md` — UI-11 / Cognitive HUD / Situation Narration Layer 行を概念修正に整合させ、UI-13 を追加
+- Updated: `docs/audit/missing-systems.md` — 「Cognitive HUD — full layer elements」「Situation Narration Layer — full layer elements」を追加
+- Updated: `docs/audit/technical-debt.md` — 「Concept Layer Debt」を追加（命名・構造上の概念誤解リスク）
+- Updated: `PROJECT_STATE.md` — 本セクション追加
+
+### 変更しなかったもの（意図的）
+
+- TypeScript / React / CSS / `package.json` / 設定ファイル
+- `docs/project/concept-layer-correction.md`（既に Source of Truth として保存済み、本タスクでは触らない）
+- 本体 source-specs の 01 / 02 / 04 / 05 / 06 / 07（概念修正は SOURCE_OF_TRUTH.md と 03 認知HUD設計書、situation-assistant 配下に集約。本体 source-specs と概念修正文書の整合は SOURCE_OF_TRUTH.md の優先順位ルールでカバー）
+- 既存 Phase 履歴（本セクションは末尾 append のみ）
+
+### Validation
+
+- `npm run typecheck`: pass
+- `npm run lint`: pass
+- `npm run build`: pass（Vite chunk size warning は既存）
+
+### Git
+
+- Branch: `docs/issue31-full-concept-alignment`
+- Commit: `docs: align issue 31 concept layers across specs`
+- Push: pushed
+
+### Notes
+
+- 必須モデル `Claude Sonnet 4.6 High` 不一致のまま、ユーザー指示で Opus 4.7 High で続行。
+- 本タスクは docs only。プロダクト UI 機能の実装は SA-1 以降で別ブランチが扱う。
+
+

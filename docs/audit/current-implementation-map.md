@@ -1,8 +1,24 @@
 # Current Implementation Map
 
-Last updated: 2026-05-25
+Last updated: 2026-05-26
 
 This map records what the current MVP actually contains. It does not redefine the full product goal.
+
+## Concept Layer Note (Issue #31)
+
+> See `docs/project/concept-layer-correction.md` for the authoritative concept definitions.
+
+Several MVP surfaces look like they implement the full cognitive HUD or full Situation Assistant, but they do not. They are **provisional MVP display surfaces** for those concept layers. The table below lists every such surface explicitly so the gap is not lost.
+
+| MVP display surface | What it actually is | What it is NOT |
+|---|---|---|
+| BottomMonitor `認知HUD` tab | A summary view of HUD signals derived from current runtime state. | Not the cognitive HUD itself. The cognitive HUD is an attention-allocation layer that spans Canvas / Inspector / notifications / modals. |
+| `CognitiveHudPanel` component | Read-only HUD summary list. Better named `HudSummaryPanel` / `HudSignalList`. | Not a full HUD with badges on nodes/edges, focus overlays, dimming, intervention cards, or critical audio cues. |
+| BottomMonitor `ブリーフィング` tab + `BriefingPanel` | Minimum output channel of the Situation Narration Layer (4D text only, mock-only). | Not the Situation Assistant as a whole. Voice, avatar, video, dynamic highlight, timeline narration, incident replay are out of scope but not removed from spec. |
+| BottomMonitor `実行詳細` tab + `RunDetailPanel` | Read-only Run Trace step evidence viewer. | Not durable trace store, not replay engine, not deep linking. |
+| BottomMonitor `Roadmap` tab | Connector readiness snapshot. | Not real connector implementation. |
+
+These MVP surfaces are useful and intentional. They are listed here so that "implemented" is never confused with "the full layer is done."
 
 ## Screens
 
@@ -96,3 +112,47 @@ This map records what the current MVP actually contains. It does not redefine th
 | Connector execution queue | Each planned run can create `ConnectorJob` records in React state. |
 | Adapter boundary | `IStorageAdapter` exists for persistence; external service adapters remain mock registry concepts. |
 | Real connectors | Codex, Claude Code, Gemini, Hermes, Grok/X Search, GitHub, Local Shell, and File System real adapters are not implemented. |
+
+## Cognitive HUD / Situation Narration Layer — implemented vs. spec
+
+This section breaks the two concept layers into "what currently exists in code" vs. "what the source spec requires." Use it together with `spec-coverage-matrix.md` and `missing-systems.md`.
+
+### Cognitive HUD
+
+| Spec element (本来仕様) | MVP status | MVP surface (if any) |
+|---|---|---|
+| HudSignal type | Implemented as `HudSignal` in `src/domain/cognitiveHud.ts` | — |
+| HudSnapshot / HudCounts | Implemented as `HudSnapshot` / `HudCounts` | `CognitiveHudPanel` |
+| Priority Score / L0–L5 alert level | Partial — alert level + priority derived per signal | `CognitiveHudPanel` |
+| HUD badge on NodeCard / ConnectionLine | Missing | — |
+| Central HUD card (画面中央のHUDカード) | Missing | — |
+| Approval Pending HUD | Missing (signals exist in list form only) | — |
+| Failure Cause Card | Missing | — |
+| Focus Overlay / Path Dim (不要経路の減光) | Missing | — |
+| Notification Bundle (通知まとめ) | Missing | — |
+| Critical short audio cue | Missing | — |
+| HUD history (HUD表示履歴) | Missing | — |
+| Cognitive HUD as attention-allocation layer spanning Canvas / Inspector / modals | Missing as a layer; only the summary panel exists | `CognitiveHudPanel` is a summary, not the layer |
+
+### Situation Narration Layer (Situation Assistant)
+
+| Spec element (本来仕様) | MVP status | MVP surface (if any) |
+|---|---|---|
+| BriefingInput collector (credential-safe) | Implemented | — |
+| 4D text briefing (What / Why / How / Next) | Implemented (mock-only) | `BriefingPanel` |
+| Situation Summary (short form) | Partial (folded into What) | `BriefingPanel` |
+| Situation Detail (long form) | Partial (folded into Why) | `BriefingPanel` |
+| Timeline Narration (past → present → future) | Missing | — |
+| Incident Replay | Missing | — |
+| Workflow News Video | Missing | — |
+| Avatar Briefing | Missing | — |
+| Audio Alert Briefing | Missing | — |
+| Visual Explanation Render (dynamic highlight) | Missing | — |
+| Next Action Briefing (standalone) | Partial (folded into Next) | `BriefingPanel` |
+| Timeline Extractor / Situation Summarizer / Cause Analyzer / Future Risk Predictor / Briefing Script Writer | Missing | — |
+| Voice Generator / Avatar Narrator / Visual Highlight Renderer / Briefing Video Composer | Missing | — |
+| Human Decision Prompt | Missing | — |
+| Role group (concierge / secretary / narrator / report-relay / situation strategist) | Missing as switchable role | — |
+| Run Trace step evidence as input | Implemented | feeds `BriefingPanel` |
+
+The MVP `BriefingPanel` is the **minimum output channel** of this layer. Removing voice / avatar / video / dynamic highlight / news video from spec because the MVP only outputs text would shrink the final design and is explicitly disallowed.
