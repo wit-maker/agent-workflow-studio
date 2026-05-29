@@ -19,6 +19,7 @@ Architecture notes:
 - `docs/architecture/file-export-import-boundary.md`
 - `docs/architecture/real-connector-adapter-design.md`
 - `docs/architecture/connector-implementation-order.md`
+- `docs/design/cognitive-workspace/README.md`
 
 Agent Workflow Studio は、AI 作業を型付きワークフローノードとして設計・実行・観測・再利用するための
 ローカルファーストな React アプリです。既存の `ai-workflow-lab` とは別リポジトリ・別製品として扱い、
