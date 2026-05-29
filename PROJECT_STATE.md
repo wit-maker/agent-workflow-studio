@@ -4,6 +4,103 @@ Last updated: 2026-05-26
 
 ---
 
+## Phase UI-0 / UI-1: Cognitive Workspace Shell Foundation
+
+- Branch: `feat/ui-system-redesign-cognitive-workspace`
+- Date: 2026-05-26
+- Model: Claude Opus 4.7 (`claude-opus-4-7`)
+- Scope: Issue #34 UI System Redesign — panel-first UI を cognitive workflow workspace へ移行する shell 土台。Issue #31 概念レイヤー（認知HUD = 注意配分編集レイヤー、状況補佐官 = 状況説明生成レイヤーの人間向け表現、4D Text Briefing = 出力チャネル1つ）を縮小しないための受け皿構造を作る。
+
+### 設計宣言
+
+`panel-first UI → cognitive workspace UI` への移行を開始した。
+以後の UI 実装は以下の region 責務に従う。
+
+```
+Top    : Global Run Control + Current State Strip
+Left   : Component Palette / Workflow Library / Templates
+Center : Cognitive Workflow Canvas (+ HUD overlay)
+Right  : Situation / Inspector / Assistant / Human Review (switchable)
+Bottom : Collapsible Detail Drawer Dock (= demoted BottomMonitor)
+Overlay: Cognitive HUD overlay (canvas-attached) + Critical Overlay (root)
+```
+
+旧構造:
+
+```
+Top    : TopBar (Run buttons only)
+Body   : .workspace-grid = PartsPalette | (Canvas + StagePreview) | Inspector
+Bottom : .bottom-monitor = 12 タブが主役（認知HUD / ブリーフィング / 実行詳細 を含む）
+```
+
+新構造との関係:
+
+- BottomMonitor は本フェーズで `DetailDrawerDock` 内に格下げした（デフォルト折りたたみ）。既存タブ（認知HUD / ログ / メトリクス / キュー / 出力 / 実行グラフ / 評価 / エージェント / ストレージ / Roadmap / ブリーフィング / 実行詳細）は当面 Drawer 内で互換性のために維持する。これらは **Detail Surfaces** であって、認知HUD本体・状況補佐官本体ではない。
+- 認知HUD本体は `CognitiveHudOverlay` (canvas 上) + 右パネル `Situation` モードに置かれた。`BottomMonitor` の `認知HUD` タブは派生サマリーである。
+- 状況補佐官本体は右パネル `補佐官` モードに置かれた。`BriefingPanel` (4D Text Briefing) は出力チャネルの 1 つとして wrap されている。
+- 右パネルは selected node config 専用ではなく、`状況 / 選択 / 補佐官 / レビュー` の 4 モード切替になった。
+
+### 追加ファイル (`src/components/workspace/`)
+
+- `CognitiveWorkspaceShell.tsx` — Top/Left/Center/Right/Bottom/Overlay を arrange する新 root layout
+- `GlobalRunControl.tsx` — Run / Selected / FromSelected / Dry / Stop / Reset / Undo / Redo / Export / Import / Canvas mode を 1 領域に統合
+- `CurrentStateStrip.tsx` — 実行状態 / 最重要状態 / フォーカス / モデル / 安全状態を短く表示する read-only ストリップ
+- `WorkspaceLeftRail.tsx` — Components / Workflow Library / Templates のタブ構造。Library / Templates は WIP scaffold（Detail Drawer 経由で既存機能にアクセス可能）
+- `CognitiveWorkflowCanvas.tsx` — `WorkflowCanvas` / `ReactFlowCanvas` を内包し HUD overlay を canvas に重ねる薄いラッパ
+- `CognitiveHudOverlay.tsx` — central HUD card placeholder + focus target ラベル。priority=normal では何も描画しない（沈黙ルール）
+- `WorkspaceRightPanel.tsx` — Situation / Inspector / Assistant / Human Review の 4 モード切替コンテナ
+- `SituationPanel.tsx` — `HudSnapshot` から派生した「今の問題 / 原因候補 / 影響範囲 / 次アクション」の read-only view
+- `AssistantPanel.tsx` — 既存 `BriefingPanel` を wrap、4D Text Briefing は出力チャネルの 1 つと明記
+- `DetailDrawerDock.tsx` — 旧 BottomMonitor を主役から降ろす collapsible dock。デフォルト折りたたみ
+- `CriticalOverlay.tsx` — priority=critical のときだけ最前面に出る banner。critical 短音通知は未実装として構造に残置
+
+### 更新ファイル
+
+- `src/App.tsx` — 変更なし（`AppShell` を経由）
+- `src/components/AppShell.tsx` — JSX 部分を新 `CognitiveWorkspaceShell` 呼び出しに差し替え。state / reducer / handlers / refs / useEffects は完全に維持。TopBar / PartsPalette / Inspector / WorkflowCanvas / ReactFlowCanvas / StagePreview の import は Shell 側へ移動。
+- `src/components/NodeCard.tsx` — `node-hud-badge` を追加。失敗 / 確認待ち / 停止 / 再試行可 のときのみ表示（沈黙ルール）。
+- `src/components/ReactFlowNode.tsx` — 同上の HUD badge を追加。
+- `src/index.css` — `.cognitive-workspace*` / `.global-run-control*` / `.current-state-strip*` / `.workspace-left-rail` / `.workspace-right-panel` / `.left-rail-tabs` / `.right-panel-tabs` / `.cognitive-workflow-canvas*` / `.cognitive-hud-overlay*` / `.critical-overlay*` / `.situation-*` / `.assistant-*` / `.detail-drawer-dock*` / `.node-hud-badge*` のスタイル追加。既存 `.app-shell` / `.workspace-grid` / `.top-bar` selector は触らず残置（将来削除可）。
+
+### Issue #34 整合 / Issue #31 不変条件
+
+- 認知HUD = 注意配分編集レイヤー：`CognitiveHudOverlay` (canvas) + `SituationPanel` (right) + `CriticalOverlay` (root) の 3 surface で受ける構造に再配置。`BottomMonitor` の `認知HUD` タブはサマリー扱い。
+- 状況補佐官 = 状況説明生成レイヤーの人間向け表現：右パネル `補佐官` モード = `AssistantPanel` が受ける。`BriefingPanel` (4D Text Briefing) は出力チャネル 1 つとして wrap。音声 / アバター / 動画 / ニュース風動画 / 次アクション提示は未実装の future channel として `AssistantPanel.tsx` に明記。
+- 4D Text Briefing ≠ 状況補佐官全体：上記の通り。
+- BottomMonitor 主役構造は廃止：`DetailDrawerDock` で collapsible 化。デフォルト折りたたみ。
+- selected node Inspector 中心構造は廃止：右パネル 4 モード化。`状況` を default モードに。
+
+### 実装しなかったもの（意図的に未着手）
+
+- 認知HUD本体ロジック（注意配分編集の実エンジン。ノード/エッジ単位の dim / highlight / focus path 計算）。Overlay 受け皿のみ実装。
+- 状況補佐官本体（状況説明生成パイプラインの実 AI 接続、TTS / アバター / 動画チャネル）。`BriefingPanel` (mock) ラップのみ。
+- Critical 短音通知の音声再生。
+- BottomMonitor タブの強制削除。互換のため Drawer 内で全タブ維持。
+- NodeCard / ReactFlowNode の severity / priority / human-gate / failure-cause の細粒度バッジ（現在は status から導出する 4 種のみ）。
+- ConnectionLine / Edge への flow health / delay / retry / error route overlay。
+- 実 AI API 接続、credential UI、追加の localStorage 永続化。
+- `package.json` 依存追加。
+- Phase 1b/1c/SA-1 系の新機能追加（前任申し送りは保留）。
+
+### Validation
+
+- `npm run typecheck`: pass
+- `npm run lint`: pass
+- `npm run build`: pass（既存 chunk size warning は変わらず）
+
+### Browser QA
+
+- preview tools 経由で実施予定（このフェーズの最終ステップ）
+
+### 未解決リスク
+
+- BottomMonitor の HUD / Briefing / RunDetail タブと、右パネル / Overlay 側の認知HUD / 補佐官表示が二重化している。次フェーズで Drawer 側を段階的に薄くする予定。documentation で「Detail Surface であって本体ではない」と明記済み。
+- `WorkflowCanvas` (standard) / `ReactFlowCanvas` 両方を Cognitive Workflow Canvas 内にそのまま内包しているため、edge overlay や node dim の実装は次フェーズで両系統に追加する必要がある。
+- DetailDrawerDock を初期 collapsed にしたため、既存ユーザーが「タブが消えた」と誤解する可能性。1 行ヘッダーで「詳細を開く」ボタンを常時可視にして緩和。
+- `CurrentStateStrip` の「推奨モデル」「現在モデル」は静的文字列。将来 settings から取得する余地を残す。
+
+---
+
 ## Phase read-only-run-detail-panel
 
 - Branch: `feat/read-only-run-detail-panel`

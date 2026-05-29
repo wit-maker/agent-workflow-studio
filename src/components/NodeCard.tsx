@@ -8,7 +8,26 @@ type NodeCardProps = {
   onSelect: (nodeId: string) => void
 }
 
+// HUD overlay badge — issue #34. Silent on success/idle/running; foregrounds
+// failure / review / blocked / retry so the canvas itself carries the signal.
+function nodeHudBadge(status: WorkflowNode['status']): { label: string; tone: string } | null {
+  switch (status) {
+    case 'failed':
+      return { label: '失敗', tone: 'failed' }
+    case 'review_required':
+      return { label: '確認待ち', tone: 'review' }
+    case 'blocked':
+      return { label: '停止', tone: 'failed' }
+    case 'retry_ready':
+      return { label: '再試行可', tone: 'retry' }
+    default:
+      return null
+  }
+}
+
 export function NodeCard({ node, isSelected, onSelect }: NodeCardProps) {
+  const badge = nodeHudBadge(node.status)
+
   return (
     <button
       type="button"
@@ -16,6 +35,11 @@ export function NodeCard({ node, isSelected, onSelect }: NodeCardProps) {
       style={{ left: node.position.x, top: node.position.y }}
       onClick={() => onSelect(node.id)}
     >
+      {badge ? (
+        <span className={`node-hud-badge node-hud-badge-${badge.tone}`} aria-label={`HUD: ${badge.label}`}>
+          {badge.label}
+        </span>
+      ) : null}
       <span className="node-header">
         <span className="node-category">{nodeCategoryLabels[node.category as NodeCategory] ?? node.category}</span>
         <span className="node-status">{statusLabels[node.status]}</span>

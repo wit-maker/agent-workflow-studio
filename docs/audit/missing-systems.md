@@ -8,7 +8,17 @@ Priority scale:
 - P1: needed soon
 - P2: needed for the full product
 
-> **Concept layer note (Issue #31)**: The cognitive HUD and Situation Narration Layer currently only have *summary surfaces* (`認知HUD` tab, `ブリーフィング` tab) in the MVP. The items listed below for those layers are the elements of the **full layer**, not enhancements to the summary tabs. See `docs/project/concept-layer-correction.md`.
+> **Concept layer note (Issue #31)**: The cognitive HUD and Situation Narration Layer currently only have *summary surfaces* in the MVP. As of Issue #34 UI shell migration, those surfaces are now placed in three locations: `CognitiveHudOverlay` (canvas overlay), right panel `Situation` mode, and the demoted BottomMonitor `認知HUD` tab inside `DetailDrawerDock`. The items listed below for those layers are the elements of the **full layer**, not enhancements to the summary tabs. See `docs/project/concept-layer-correction.md`.
+
+## UI Shell Foundation (Issue #34) — landed, but only as foundation
+
+- `CognitiveWorkspaceShell` + region split landed; `CognitiveHudOverlay`, `CriticalOverlay`, `SituationPanel`, `AssistantPanel`, `WorkspaceRightPanel`, `DetailDrawerDock` exist as receivers.
+- Still missing (foundation only, not full implementation):
+  - Node/edge-level HUD overlay logic (dimming, highlighting, focus path, edge flow health / delay / retry / error route badges)
+  - Situation Assistant real channels beyond 4D text (voice, avatar, video, news-style video, dynamic next-action banners)
+  - Critical short-tone audio channel
+  - Workflow Library / Templates promotion from Detail Drawer to Left Rail
+  - Removal of duplicate BottomMonitor tabs once their right-panel / overlay counterparts are complete
 
 ## P0
 
