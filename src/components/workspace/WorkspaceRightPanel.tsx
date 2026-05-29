@@ -34,9 +34,9 @@ import { SituationPanel } from './SituationPanel'
  *   - Assistant: situation-explanation layer surfaced for humans
  *   - Human Review: approve / revise / reject / skip flow
  *
- * Modes are local UI state. The Inspector mode is auto-selected when a
- * node is chosen, and Human Review mode auto-engages when an evaluation
- * is pending — but the user can always switch.
+ * Modes are local UI state. The user switches tabs manually.
+ * Auto-selection on node pick and auto-engage on review-pending are
+ * intentionally deferred to a follow-up phase.
  */
 
 type RightPanelMode = 'situation' | 'inspector' | 'assistant' | 'humanReview'

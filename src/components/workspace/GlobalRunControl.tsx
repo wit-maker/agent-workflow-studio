@@ -130,6 +130,8 @@ export function GlobalRunControl({
           <div className="segmented-control compact" role="tablist" aria-label="Canvas表示モード">
             <button
               type="button"
+              role="tab"
+              aria-selected={canvasMode === 'standard'}
               className={canvasMode === 'standard' ? 'active' : ''}
               onClick={() => onChangeCanvasMode('standard')}
             >
@@ -137,6 +139,8 @@ export function GlobalRunControl({
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={canvasMode === 'reactFlow'}
               className={canvasMode === 'reactFlow' ? 'active' : ''}
               onClick={() => onChangeCanvasMode('reactFlow')}
             >

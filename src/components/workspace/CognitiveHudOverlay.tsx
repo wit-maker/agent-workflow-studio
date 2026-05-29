@@ -38,7 +38,6 @@ export function CognitiveHudOverlay({ hudSnapshot }: CognitiveHudOverlayProps) {
     <div
       className={`cognitive-hud-overlay cognitive-hud-overlay-${hudSnapshot.priority}`}
       aria-label="認知HUDオーバーレイ"
-      role="presentation"
     >
       <div className="cognitive-hud-overlay-card">
         <span className="eyebrow">認知HUD / 注意配分</span>
