@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { HudSnapshot } from '../../domain/cognitiveHud'
 import type { ConnectorJob } from '../../domain/connectorQueue'
 import type {
@@ -34,9 +34,9 @@ import { SituationPanel } from './SituationPanel'
  *   - Assistant: situation-explanation layer surfaced for humans
  *   - Human Review: approve / revise / reject / skip flow
  *
- * Modes are local UI state. The user switches tabs manually.
- * Auto-selection on node pick and auto-engage on review-pending are
- * intentionally deferred to a follow-up phase.
+ * Modes are local UI state. New node selections nudge the panel to
+ * Inspector, and newly pending reviews nudge it to Human Review. The
+ * user can always switch modes manually after either nudge.
  */
 
 type RightPanelMode = 'situation' | 'inspector' | 'assistant' | 'humanReview'
@@ -97,8 +97,29 @@ export function WorkspaceRightPanel({
   onRequestRebuild,
 }: WorkspaceRightPanelProps) {
   const [mode, setMode] = useState<RightPanelMode>('situation')
+  const previousSelectedNodeIdRef = useRef<string | null>(null)
+  const previousReviewPendingRef = useRef(false)
 
-  const reviewPending = !!humanReview && humanReview.decision === 'pending'
+  const reviewPending = humanReview
+    ? humanReview.decision === 'pending'
+    : workflow.status === 'review_required' || evaluation?.status === 'needs_review'
+
+  useEffect(() => {
+    const becamePending = reviewPending && !previousReviewPendingRef.current
+    if (becamePending) {
+      setMode('humanReview')
+    }
+    previousReviewPendingRef.current = reviewPending
+  }, [reviewPending])
+
+  useEffect(() => {
+    const selectedNodeId = selectedNode?.id ?? null
+    const changedSelection = selectedNodeId !== previousSelectedNodeIdRef.current
+    if (selectedNodeId && changedSelection && !reviewPending) {
+      setMode('inspector')
+    }
+    previousSelectedNodeIdRef.current = selectedNodeId
+  }, [selectedNode?.id, reviewPending])
 
   return (
     <aside className="workspace-right-panel" aria-label="状況・選択・補佐・レビュー">
