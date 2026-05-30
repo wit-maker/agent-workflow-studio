@@ -34,13 +34,14 @@ export function ReactFlowNode({
     connectedInputPortIds,
     connectedOutputPortIds,
     connectionCount,
+    inlinePreview,
   } = data
 
   const badge = nodeHudBadge(node.status)
 
   return (
     <div
-      className={`react-flow-node node-${node.status} ${selected ? 'selected' : ''}`}
+      className={`react-flow-node node-${node.status} react-flow-node-category-${node.category} ${selected ? 'selected' : ''}`}
       aria-label={`${node.title} ノード`}
     >
       {badge ? (
@@ -57,6 +58,10 @@ export function ReactFlowNode({
         <span>{node.type}</span>
         <span>{node.agentRole ? agentRoleLabels[node.agentRole] : '未割当'}</span>
       </div>
+      <section className={`react-flow-inline-preview inline-preview-${inlinePreview.kind}`}>
+        <span>{inlinePreview.title}</span>
+        <p>{inlinePreview.text}</p>
+      </section>
       <div className="react-flow-node-body">
         <section className="react-flow-port-group">
           <div className="react-flow-port-heading">

@@ -1,6 +1,6 @@
 # Missing Systems
 
-Last updated: 2026-05-26
+Last updated: 2026-05-30
 
 Priority scale:
 
@@ -10,11 +10,15 @@ Priority scale:
 
 > **Concept layer note (Issue #31)**: The cognitive HUD and Situation Narration Layer currently only have *summary surfaces* in the MVP. As of Issue #34 UI shell migration, those surfaces are now placed in three locations: `CognitiveHudOverlay` (canvas overlay), right panel `Situation` mode, and the demoted BottomMonitor `認知HUD` tab inside `DetailDrawerDock`. The items listed below for those layers are the elements of the **full layer**, not enhancements to the summary tabs. See `docs/project/concept-layer-correction.md`.
 
-## UI Shell Foundation (Issue #34) — landed, but only as foundation
+## UI Shell Foundation (Issue #34) — landed, now Canvas First foundation
 
-- `CognitiveWorkspaceShell` + region split landed; `CognitiveHudOverlay`, `CriticalOverlay`, `SituationPanel`, `AssistantPanel`, `WorkspaceRightPanel`, `DetailDrawerDock` exist as receivers.
+- `GameHudShell` now makes React Flow canvas the primary surface and turns palette/detail/BottomMonitor into on-demand HUD drawer/console surfaces.
+- `CanvasCommandHud`, `CanvasMiniMapHud`, `WorkflowGroupLayer`, `SelectedObjectHud`, and `SelectedEdgeHud` exist as receivers.
+- Zoom mode (`overview / map / normal / detail / deep`) and inline preview are implemented as class/data projections.
 - Still missing (foundation only, not full implementation):
-  - Node/edge-level HUD overlay logic (dimming, highlighting, focus path, edge flow health / delay / retry / error route badges)
+  - True node/edge coordinate-following HUD placement
+  - Node/edge path dimming, focus highlighting, and richer visual emphasis rules
+  - Runtime-backed edge semantics for delay / retry / error route / health beyond derived HUD summaries
   - Situation Assistant real channels beyond 4D text (voice, avatar, video, news-style video, dynamic next-action banners)
   - Critical short-tone audio channel
   - Workflow Library / Templates promotion from Detail Drawer to Left Rail
@@ -63,8 +67,9 @@ The MVP has `HudSignal` / `HudSnapshot` / `CognitiveHudPanel`. The cognitive HUD
 
 | Element | Why it is needed |
 |---|---|
-| HUD badges on `NodeCard` / `ConnectionLine` | Attention has to surface where the work is (Canvas), not only in a sidebar tab. |
-| Central HUD card | Decisive states (failure, approval needed, danger) need a center-of-screen surface, not a list row. |
+| HUD badges on `ConnectionLine` / React Flow edges | `SelectedEdgeHud` exists for selected edges, but always-on edge badges / path attention still need to surface on the flow path itself. |
+| Coordinate-following selected object HUD | The current selected-node and selected-edge HUDs are canvas-local but fixed-position; future work should anchor them closer to the selected object when viewport data is available. |
+| Rich central HUD card | Decisive states (failure, approval needed, danger) need richer state-specific content, not only the current summary card. |
 | Approval Pending HUD | Approvals must never be hidden in a tab; they need a dedicated, dismissable surface. |
 | Failure Cause Card | Failures need a "follow the cause" surface, not a single log line. |
 | Focus Overlay / Path Dim | Attention is set by raising the relevant path and dimming the rest, not by adding more rows. |

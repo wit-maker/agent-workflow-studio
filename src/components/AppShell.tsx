@@ -58,6 +58,7 @@ import {
   readReactFlowPositions,
   writeReactFlowPositions,
   writeCanvasModePreference,
+  clearReactFlowPositions,
   type SavedCanvasMode,
 } from '../storage/localCanvasState'
 import {
@@ -89,7 +90,7 @@ function countPlannedConnections(workflow: Workflow, plannedNodes: WorkflowNode[
 }
 
 function toCanvasMode(savedMode: SavedCanvasMode | null): CanvasMode {
-  return savedMode === 'react-flow' ? 'reactFlow' : 'standard'
+  return savedMode === 'standard' ? 'standard' : 'reactFlow'
 }
 
 function toSavedCanvasMode(mode: CanvasMode): SavedCanvasMode {
@@ -250,7 +251,7 @@ export function AppShell() {
   const [isEvaluating, setIsEvaluating] = useState(false)
   const [importSuccessMessage, setImportSuccessMessage] = useState<string | null>(null)
   const [canvasMode, setCanvasMode] = useState<CanvasMode>(() =>
-    toCanvasMode(readCanvasModePreference() ?? storageAdapter.loadSettings().canvasMode),
+    toCanvasMode(readCanvasModePreference()),
   )
   const [pendingDeleteNodeId, setPendingDeleteNodeId] = useState<string | null>(null)
   const artifactVersionCountRef = useRef(0)
@@ -1157,6 +1158,7 @@ export function AppShell() {
   }
 
   function handleResetReactFlowPositions() {
+    clearReactFlowPositions()
     const defaultPositions = Object.fromEntries(
       workflow.nodes.map((node) => [node.id, node.position]),
     )

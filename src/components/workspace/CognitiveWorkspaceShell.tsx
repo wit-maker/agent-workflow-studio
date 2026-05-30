@@ -18,13 +18,7 @@ import type {
 } from '../../domain/workflow'
 import type { ConnectionValidationResult } from '../../state/workflowSelectors'
 import type { CanvasMode } from '../TopBar'
-import { CognitiveWorkflowCanvas } from './CognitiveWorkflowCanvas'
-import { CriticalOverlay } from './CriticalOverlay'
-import { CurrentStateStrip } from './CurrentStateStrip'
-import { DetailDrawerDock } from './DetailDrawerDock'
-import { GlobalRunControl } from './GlobalRunControl'
-import { WorkspaceLeftRail } from './WorkspaceLeftRail'
-import { WorkspaceRightPanel } from './WorkspaceRightPanel'
+import { GameHudShell } from './GameHudShell'
 
 /*
  * CognitiveWorkspaceShell
@@ -115,91 +109,5 @@ type CognitiveWorkspaceShellProps = {
 }
 
 export function CognitiveWorkspaceShell(props: CognitiveWorkspaceShellProps) {
-  return (
-    <div className="cognitive-workspace">
-      <header className="cognitive-workspace-top">
-        <GlobalRunControl
-          workflowName={props.workflow.name}
-          isRunning={props.isRunning}
-          canvasMode={props.canvasMode}
-          canUndo={props.canUndo}
-          canRedo={props.canRedo}
-          onRun={props.onRun}
-          onRunSelected={props.onRunSelected}
-          onRunFromSelected={props.onRunFromSelected}
-          onDryRun={props.onDryRun}
-          onStop={props.onStop}
-          onReset={props.onReset}
-          onUndo={props.onUndo}
-          onRedo={props.onRedo}
-          onExportJson={props.onExportJson}
-          onImportJson={props.onImportJson}
-          onChangeCanvasMode={props.onChangeCanvasMode}
-        />
-        <CurrentStateStrip
-          workflowStatus={props.workflowStatus}
-          isRunning={props.isRunning}
-          hudSnapshot={props.hudSnapshot}
-          runHistoryCount={props.runHistoryCount}
-        />
-        {props.flashSlot}
-        {props.confirmSlot}
-      </header>
-
-      <div className="cognitive-workspace-body">
-        <WorkspaceLeftRail
-          parts={props.workflow.nodes}
-          selectedNodeId={props.selectedNodeId}
-          onSelectNode={props.onSelectNode}
-          onAddNode={props.onAddNode}
-        />
-
-        <main className="cognitive-workspace-center">
-          <CognitiveWorkflowCanvas
-            workflow={props.workflow}
-            canvasMode={props.canvasMode}
-            selectedNodeId={props.selectedNodeId}
-            selectedNode={props.selectedNode}
-            connectionValidation={props.connectionValidation}
-            executionGraph={props.executionGraph}
-            evaluation={props.evaluation}
-            humanReview={props.humanReview}
-            checkOutcome={props.checkOutcome}
-            hudSnapshot={props.hudSnapshot}
-            onSelectNode={props.onSelectNode}
-            onCreateConnection={props.onCreateConnectionDraft}
-            onDeleteConnection={props.onDeleteConnection}
-            onDeleteNode={props.onDeleteNode}
-            onMoveNode={props.onMoveNode}
-            onResetPositions={props.onResetReactFlowPositions}
-          />
-        </main>
-
-        <WorkspaceRightPanel
-          selectedNode={props.selectedNode}
-          nodes={props.nodes}
-          connections={props.connections}
-          connectionValidation={props.connectionValidation}
-          workflow={props.workflow}
-          executionGraph={props.executionGraph}
-          connectorJobs={props.connectorJobs}
-          hudSnapshot={props.hudSnapshot}
-          runHistoryRecords={props.runHistoryRecords}
-          evaluation={props.evaluation}
-          humanReview={props.humanReview}
-          onSaveNode={props.onSaveNode}
-          onCreateConnection={props.onCreateConnection}
-          onDeleteConnection={props.onDeleteConnection}
-          onDeleteNode={props.onDeleteNode}
-          onMoveNode={props.onMoveNode}
-          onHumanReviewDecide={props.onHumanReviewDecide}
-          onRequestRebuild={props.onRequestRebuild}
-        />
-      </div>
-
-      <DetailDrawerDock initiallyCollapsed>{props.detailDrawerSlot}</DetailDrawerDock>
-
-      <CriticalOverlay hudSnapshot={props.hudSnapshot} />
-    </div>
-  )
+  return <GameHudShell {...props} />
 }

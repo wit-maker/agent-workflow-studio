@@ -3300,6 +3300,105 @@ button:disabled {
   line-height: 1.3;
 }
 
+/* Selection overlay — object-local HUD shown only while a node is selected */
+
+.selected-object-hud {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  z-index: 6;
+  width: min(340px, calc(100% - 28px));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--blue);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.14);
+  pointer-events: none;
+}
+
+.selected-object-hud-watch {
+  border-left-color: var(--amber);
+}
+
+.selected-object-hud-alert {
+  border-left-color: var(--amber);
+  background: rgba(255, 248, 235, 0.97);
+}
+
+.selected-object-hud-critical {
+  border-left-color: var(--red);
+  background: rgba(255, 245, 244, 0.97);
+}
+
+.selected-object-hud-focused {
+  box-shadow: 0 0 0 2px rgba(47, 111, 189, 0.16), 0 10px 26px rgba(15, 23, 42, 0.14);
+}
+
+.selected-object-hud-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 8px;
+  align-items: center;
+}
+
+.selected-object-hud-header .eyebrow {
+  grid-column: 1 / -1;
+}
+
+.selected-object-hud-header strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selected-object-hud-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 10px;
+}
+
+.selected-object-hud-grid span,
+.selected-object-hud-action .eyebrow {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.selected-object-hud-grid strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selected-object-hud-action {
+  display: grid;
+  gap: 3px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.selected-object-hud-action strong {
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.selected-object-hud-action p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
 /* Critical overlay — front-most, only when priority === 'critical' */
 
 .critical-overlay {
@@ -3522,6 +3621,716 @@ button:disabled {
 /* React Flow node needs its own positioning context for the badge */
 .react-flow-node {
   position: relative;
+}
+
+/* =====================================================================
+ * Game HUD Canvas First completion
+ * ===================================================================== */
+
+.game-hud-workspace {
+  --bg: #050914;
+  --surface: rgba(10, 18, 32, 0.88);
+  --surface-2: rgba(16, 28, 48, 0.78);
+  --text: #e5eefb;
+  --muted: #93a4b8;
+  --border: rgba(148, 163, 184, 0.24);
+  --blue: #60a5fa;
+  --blue-soft: rgba(96, 165, 250, 0.16);
+  --green: #34d399;
+  --green-soft: rgba(52, 211, 153, 0.14);
+  --amber: #fbbf24;
+  --amber-soft: rgba(251, 191, 36, 0.15);
+  --red: #fb7185;
+  --red-soft: rgba(251, 113, 133, 0.14);
+  --purple: #a78bfa;
+  --purple-soft: rgba(167, 139, 250, 0.15);
+  --shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
+  display: block;
+  height: 100vh;
+  min-height: 100vh;
+  overflow: hidden;
+  color: var(--text);
+  background:
+    linear-gradient(90deg, rgba(125, 211, 252, 0.07) 1px, transparent 1px),
+    linear-gradient(rgba(125, 211, 252, 0.07) 1px, transparent 1px),
+    #050914;
+  background-size: 48px 48px, 48px 48px, auto;
+}
+
+.game-hud-canvas-shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.game-hud-workspace .cognitive-workflow-canvas,
+.game-hud-workspace .cognitive-workflow-canvas-stage {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.game-hud-workspace .cognitive-workflow-canvas-stage {
+  background:
+    linear-gradient(90deg, rgba(148, 163, 184, 0.06) 1px, transparent 1px),
+    linear-gradient(rgba(148, 163, 184, 0.06) 1px, transparent 1px),
+    #07101f;
+  background-size: 24px 24px, 24px 24px, auto;
+}
+
+.game-hud-workspace .react-flow-canvas-panel {
+  border: none;
+  border-radius: 0;
+  grid-template-rows: minmax(0, 1fr);
+  background: transparent;
+}
+
+.game-hud-workspace .canvas-scroll {
+  background:
+    linear-gradient(90deg, rgba(103, 232, 249, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(103, 232, 249, 0.08) 1px, transparent 1px),
+    linear-gradient(135deg, rgba(14, 116, 144, 0.08), rgba(15, 23, 42, 0.08)),
+    #07101f;
+  background-size: 24px 24px, 24px 24px, auto, auto;
+}
+
+.canvas-command-hud {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  right: 14px;
+  z-index: 42;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.canvas-command-hud-status,
+.canvas-command-hud-actions,
+.game-hud-drawer,
+.selected-object-hud,
+.selected-edge-hud,
+.canvas-status-hud,
+.game-hud-workspace .detail-drawer-dock,
+.game-hud-workspace .cognitive-hud-overlay-card {
+  border: 1px solid var(--border);
+  background: rgba(8, 14, 26, 0.76);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+}
+
+.canvas-command-hud-status,
+.canvas-command-hud-actions {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
+.canvas-command-hud-status {
+  min-width: 0;
+  max-width: min(820px, 58vw);
+}
+
+.canvas-command-hud-status strong {
+  max-width: 240px;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.canvas-command-hud-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.hud-light {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: var(--green);
+  box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.1);
+}
+
+.hud-light-watch {
+  background: var(--amber);
+  box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.12);
+}
+
+.hud-light-alert,
+.hud-light-critical {
+  background: var(--red);
+  box-shadow: 0 0 0 4px rgba(251, 113, 133, 0.14);
+}
+
+.mini-hud-chip,
+.hud-icon-button,
+.hud-file-action {
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  border-radius: 7px;
+  background: rgba(15, 23, 42, 0.76);
+  color: var(--text);
+}
+
+.mini-hud-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.hud-icon-button,
+.hud-file-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  min-height: 32px;
+  padding: 0 9px;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.hud-icon-button:hover,
+.hud-file-action:hover,
+.hud-icon-button.active {
+  border-color: rgba(103, 232, 249, 0.58);
+  color: #ecfeff;
+  background: rgba(8, 47, 73, 0.86);
+}
+
+.hud-icon-button.primary {
+  border-color: rgba(52, 211, 153, 0.58);
+  background: rgba(6, 78, 59, 0.86);
+  color: #d1fae5;
+}
+
+.hud-icon-button.danger {
+  border-color: rgba(251, 113, 133, 0.44);
+  color: #ffe4e6;
+}
+
+.hud-file-action input {
+  display: none;
+}
+
+.game-hud-alert-stack {
+  position: absolute;
+  top: 66px;
+  left: 50%;
+  z-index: 60;
+  display: grid;
+  width: min(620px, calc(100vw - 36px));
+  gap: 8px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.game-hud-alert-stack > * {
+  pointer-events: auto;
+}
+
+.game-hud-alert-stack .import-error,
+.game-hud-alert-stack .import-success,
+.game-hud-alert-stack .confirm-panel {
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: rgba(8, 14, 26, 0.9);
+  box-shadow: var(--shadow);
+}
+
+.game-hud-drawer {
+  position: absolute;
+  top: 72px;
+  bottom: 64px;
+  z-index: 34;
+  display: flex;
+  flex-direction: column;
+  width: min(390px, calc(100vw - 36px));
+  border-radius: 8px;
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 160ms ease, opacity 160ms ease;
+}
+
+.game-hud-palette-drawer {
+  left: 14px;
+  transform: translateX(calc(-100% - 18px));
+}
+
+.game-hud-detail-drawer {
+  right: 14px;
+  width: min(460px, calc(100vw - 36px));
+  transform: translateX(calc(100% + 18px));
+}
+
+.game-hud-drawer.open {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.game-hud-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.game-hud-workspace .workspace-left-rail,
+.game-hud-workspace .workspace-right-panel,
+.game-hud-workspace .parts-palette,
+.game-hud-workspace .inspector {
+  min-height: 0;
+  background: transparent;
+  border: none;
+}
+
+.game-hud-workspace .workspace-left-rail,
+.game-hud-workspace .workspace-right-panel {
+  flex: 1;
+  overflow: hidden;
+}
+
+.game-hud-workspace .left-rail-tabs,
+.game-hud-workspace .right-panel-tabs {
+  border-bottom-color: var(--border);
+}
+
+.game-hud-workspace .left-rail-body,
+.game-hud-workspace .right-panel-body {
+  padding: 10px;
+}
+
+.game-hud-workspace .part-card,
+.game-hud-workspace .inspector-section,
+.game-hud-workspace .left-rail-placeholder,
+.game-hud-workspace .situation-header,
+.game-hud-workspace .assistant-header,
+.game-hud-workspace .situation-top-signal,
+.game-hud-workspace .situation-signal,
+.game-hud-workspace .field-label input,
+.game-hud-workspace .field-label select,
+.game-hud-workspace .field-label textarea,
+.game-hud-workspace .search-input,
+.game-hud-workspace .inline-mini-button {
+  border-color: var(--border);
+  background: rgba(15, 23, 42, 0.72);
+  color: var(--text);
+}
+
+.game-hud-workspace .part-card.selected,
+.game-hud-workspace .node-card.selected {
+  border-color: rgba(103, 232, 249, 0.65);
+  box-shadow: 0 0 0 2px rgba(103, 232, 249, 0.14);
+}
+
+.game-hud-workspace .primary-button,
+.game-hud-workspace .icon-button,
+.game-hud-workspace .file-action,
+.game-hud-workspace .monitor-tabs button,
+.game-hud-workspace .segmented-control button {
+  border-color: rgba(148, 163, 184, 0.28);
+  background: rgba(15, 23, 42, 0.78);
+  color: var(--text);
+}
+
+.game-hud-workspace .primary-button,
+.game-hud-workspace .monitor-tabs .active,
+.game-hud-workspace .segmented-control .active,
+.game-hud-workspace .right-panel-tabs button.active,
+.game-hud-workspace .left-rail-tabs button.active {
+  border-color: rgba(96, 165, 250, 0.6);
+  background: rgba(30, 64, 175, 0.42);
+  color: #dbeafe;
+}
+
+.game-hud-workspace .detail-drawer-dock {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  left: 14px;
+  z-index: 32;
+  overflow: hidden;
+  border-radius: 8px;
+  color: var(--text);
+}
+
+.game-hud-workspace .detail-drawer-dock.collapsed {
+  left: auto;
+  width: min(440px, calc(100vw - 28px));
+  max-height: 44px;
+}
+
+.game-hud-workspace .detail-drawer-dock.expanded {
+  max-height: min(440px, 44vh);
+}
+
+.game-hud-workspace .detail-drawer-dock-header {
+  min-height: 44px;
+  border-bottom-color: var(--border);
+  background: rgba(8, 14, 26, 0.72);
+}
+
+.game-hud-workspace .detail-drawer-dock-body,
+.game-hud-workspace .detail-drawer-dock-body .bottom-monitor {
+  background: transparent;
+}
+
+.game-hud-workspace .detail-drawer-dock-body .bottom-monitor {
+  min-height: 320px;
+}
+
+.game-hud-workspace .bottom-monitor {
+  border-top: none;
+}
+
+.game-hud-workspace .monitor-tabs {
+  border-right-color: var(--border);
+}
+
+.canvas-status-hud {
+  position: absolute;
+  top: 72px;
+  left: 14px;
+  z-index: 12;
+  display: grid;
+  gap: 4px;
+  max-width: min(340px, calc(100vw - 28px));
+  border-radius: 8px;
+  padding: 8px 10px;
+  pointer-events: none;
+}
+
+.canvas-status-hud strong {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.canvas-status-hud p {
+  margin: 0;
+  font-size: 11px;
+}
+
+.game-hud-workspace .react-flow-canvas-root .react-flow__controls {
+  margin: 0 0 72px min(480px, 42vw);
+  overflow: hidden;
+  border-color: var(--border);
+  background: rgba(8, 14, 26, 0.76);
+  box-shadow: var(--shadow);
+}
+
+.game-hud-workspace .react-flow-canvas-root .react-flow__controls button {
+  border-bottom-color: var(--border);
+  background: rgba(15, 23, 42, 0.88);
+  color: var(--text);
+}
+
+.game-hud-workspace .react-flow__panel:has(.canvas-minimap-hud) {
+  margin: 0 18px 72px 0;
+}
+
+.canvas-minimap-hud {
+  width: 220px;
+  height: 138px;
+  overflow: hidden;
+  border: 1px solid rgba(103, 232, 249, 0.34);
+  border-radius: 8px;
+  background: rgba(4, 12, 24, 0.84);
+  box-shadow: var(--shadow);
+}
+
+.workflow-group-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.workflow-group {
+  position: absolute;
+  z-index: 0;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 18px;
+  background: rgba(30, 41, 59, 0.14);
+}
+
+.workflow-group span {
+  position: absolute;
+  top: 10px;
+  left: 14px;
+  color: rgba(226, 232, 240, 0.58);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.workflow-group-input {
+  border-color: rgba(45, 212, 191, 0.28);
+  background: rgba(20, 184, 166, 0.08);
+}
+
+.workflow-group-transform {
+  border-color: rgba(251, 191, 36, 0.28);
+  background: rgba(251, 191, 36, 0.08);
+}
+
+.workflow-group-execute {
+  border-color: rgba(96, 165, 250, 0.28);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.workflow-group-check {
+  border-color: rgba(167, 139, 250, 0.28);
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.workflow-group-output {
+  border-color: rgba(52, 211, 153, 0.28);
+  background: rgba(22, 163, 74, 0.08);
+}
+
+.game-hud-workspace .react-flow-node {
+  position: relative;
+  z-index: 2;
+  min-height: 172px;
+  border-color: rgba(148, 163, 184, 0.28);
+  border-radius: 8px;
+  background: rgba(11, 18, 32, 0.92);
+  color: var(--text);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.26);
+}
+
+.game-hud-workspace .react-flow-node.selected {
+  border-color: rgba(103, 232, 249, 0.72);
+  box-shadow: 0 0 0 2px rgba(103, 232, 249, 0.18), 0 14px 34px rgba(0, 0, 0, 0.26);
+}
+
+.game-hud-workspace .react-flow-port-row,
+.game-hud-workspace .react-flow-inline-preview {
+  border-color: rgba(148, 163, 184, 0.22);
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.react-flow-inline-preview {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.react-flow-inline-preview span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.react-flow-inline-preview p {
+  margin: 0;
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.zoom-mode-overview .react-flow-node-body,
+.zoom-mode-overview .react-flow-inline-preview,
+.zoom-mode-overview .react-flow-node-footer,
+.zoom-mode-overview .react-flow-node-meta,
+.zoom-mode-map .react-flow-node-body,
+.zoom-mode-map .react-flow-node-footer {
+  display: none;
+}
+
+.zoom-mode-overview .react-flow-node,
+.zoom-mode-map .react-flow-node {
+  gap: 5px;
+  min-height: 92px;
+}
+
+.zoom-mode-overview .react-flow-node strong,
+.zoom-mode-map .react-flow-node strong {
+  font-size: 12px;
+}
+
+.zoom-mode-detail .react-flow-inline-preview,
+.zoom-mode-deep .react-flow-inline-preview {
+  border-color: rgba(103, 232, 249, 0.34);
+}
+
+.selected-object-hud,
+.selected-edge-hud {
+  pointer-events: auto;
+}
+
+.game-hud-workspace .selected-object-hud {
+  left: 18px;
+  bottom: 68px;
+  width: min(430px, calc(100vw - 36px));
+  max-height: min(620px, calc(100vh - 154px));
+  overflow: auto;
+  color: var(--text);
+}
+
+.game-hud-workspace .selected-edge-hud {
+  position: absolute;
+  top: 92px;
+  right: 18px;
+  z-index: 25;
+  width: min(390px, calc(100vw - 36px));
+  display: grid;
+  gap: 8px;
+  border-left: 4px solid var(--green);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text);
+}
+
+.selected-edge-hud-watch {
+  border-left-color: var(--amber);
+}
+
+.selected-edge-hud-blocked {
+  border-left-color: var(--red);
+}
+
+.selected-object-hud-subtitle {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.selected-object-hud-tabs,
+.selected-object-hud-actions,
+.selected-edge-hud-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.selected-object-hud-tabs button {
+  min-height: 28px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 6px;
+  padding: 0 9px;
+  background: rgba(15, 23, 42, 0.76);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.selected-object-hud-tabs button.active {
+  border-color: rgba(103, 232, 249, 0.52);
+  color: var(--text);
+  background: rgba(8, 47, 73, 0.72);
+}
+
+.selected-object-hud-preview,
+.selected-object-hud-panel,
+.selected-object-hud-warnings,
+.selected-edge-hud-action {
+  display: grid;
+  gap: 5px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.selected-object-hud-preview p,
+.selected-edge-hud-action p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.selected-object-hud-panel dl,
+.selected-edge-hud-grid {
+  display: grid;
+  gap: 6px 10px;
+  margin: 0;
+}
+
+.selected-object-hud-panel dl,
+.selected-edge-hud-grid {
+  grid-template-columns: 96px minmax(0, 1fr);
+}
+
+.selected-object-hud-panel div {
+  display: contents;
+}
+
+.selected-object-hud-panel dt,
+.selected-edge-hud-grid span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.selected-object-hud-panel dd,
+.selected-edge-hud-grid strong {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+}
+
+.selected-object-hud-warnings span {
+  display: inline-flex;
+  width: fit-content;
+  border: 1px solid rgba(251, 191, 36, 0.34);
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: rgba(251, 191, 36, 0.12);
+  color: #fde68a;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.selected-edge-hud-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 8px;
+  align-items: center;
+}
+
+.selected-edge-hud-header .eyebrow {
+  grid-column: 1 / -1;
+}
+
+.selected-edge-hud-header strong {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-hud-workspace .cognitive-hud-overlay {
+  top: 74px;
+  right: 18px;
+  z-index: 18;
 }
 
 

@@ -1,4 +1,5 @@
 import { MarkerType, type Connection, type Edge, type Node, type XYPosition } from '@xyflow/react'
+import { buildInlinePreview, type InlinePreview } from './cognitiveHud'
 import { canCarryToInput } from './connectionRules'
 import { connectionKindLabels, connectionStatusLabels, formatDataTypeLabel } from './displayLabels'
 import { findPort, getInputPorts, getOutputPorts, getUnconnectedRequiredInputPorts } from './portRules'
@@ -21,6 +22,7 @@ export type ReactFlowWorkflowNodeData = {
   connectedInputPortIds: string[]
   connectedOutputPortIds: string[]
   connectionCount: number
+  inlinePreview: InlinePreview
 }
 
 export type ReactFlowWorkflowNode = Node<ReactFlowWorkflowNodeData, typeof reactFlowNodeType>
@@ -207,6 +209,7 @@ export function toReactFlowNodes(
         connectedInputPortIds: connectedInputPortIdsByNodeId.get(node.id) ?? [],
         connectedOutputPortIds: connectedOutputPortIdsByNodeId.get(node.id) ?? [],
         connectionCount: connectionCountByNodeId.get(node.id) ?? 0,
+        inlinePreview: buildInlinePreview(node),
       },
     }
   })

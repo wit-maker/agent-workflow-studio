@@ -1,6 +1,6 @@
 # Technical Debt
 
-Last updated: 2026-05-26
+Last updated: 2026-05-30
 
 This file lists current limits that may block later work if ignored.
 
@@ -23,12 +23,13 @@ These items do not block SA-1, but they should be tracked so that SA-5 onward do
 
 ## UI Shell Debt (Issue #34) — newly introduced by the cognitive workspace migration
 
-- The legacy BottomMonitor and all its tabs (認知HUD / ブリーフィング / 実行詳細 / etc.) are now wrapped by `DetailDrawerDock` for compatibility but visually duplicate the right panel and overlay. Need a phased deprecation plan once the right panel + overlay reach parity, otherwise contributors will keep adding logic to the Drawer side.
+- The legacy BottomMonitor and all its tabs (認知HUD / ブリーフィング / 実行詳細 / etc.) are now wrapped by `DetailDrawerDock` as a Bottom Console HUD for compatibility but still duplicate the right panel and overlay. Need a phased deprecation plan once the right panel + overlay reach parity, otherwise contributors will keep adding logic to the Console side.
 - The legacy `.app-shell` / `.workspace-grid` / `.top-bar` CSS rules and the `TopBar.tsx` component are no longer rendered but remain in the tree. They should be removed once we are confident no other surface depends on them.
 - `WorkspaceLeftRail` Workflow Library / Templates tabs are scaffold placeholders. The full library/template UX should land before the WIP badges become stale.
-- `CurrentStateStrip` "推奨モデル / 現在モデル" is a static string. It must read from settings once the model selection lives in product state.
-- `CognitiveHudOverlay` renders a single central card. The Issue #34 spec also calls for per-node badges, edge state overlays, focus highlight, and dim of irrelevant paths. None of those are implemented in this foundation phase — only the overlay layer's *receiver* exists.
+- `CanvasCommandHud` shows model as static `GPT-5.5 high`. It must read from settings once the model selection lives in product state.
+- `CognitiveHudOverlay` renders a single central card, while `SelectedObjectHud` and `SelectedEdgeHud` render fixed-position floating HUDs. The Issue #34 spec also calls for coordinate-following object HUD placement, focus highlight, and dim of irrelevant paths. Those remain missing.
 - `node-hud-badge` covers four statuses (failed / review_required / blocked / retry_ready). The full HUD badge spec includes severity, priority, human-gate, and failure-cause variants on top of status.
+- `SelectedEdgeHud` exists, but delay / retry / error-route / health are derived HUD summaries, not runtime-backed edge semantics yet.
 
 
 
@@ -73,7 +74,7 @@ These items do not block SA-1, but they should be tracked so that SA-5 onward do
 ## UI / UX Debt
 
 - React Flow and standard canvas coexist; full migration/retirement strategy is not settled.
-- Node add/delete, complex edge editing, minimap, auto layout, and DnD interactions remain incomplete or partially browser-QA-limited.
+- Node add/delete, complex edge editing, auto layout, and DnD interactions remain incomplete or partially browser-QA-limited. MiniMap exists as a HUD, but overview behavior is still basic.
 - UI-11 cognitive HUD settings and UI-12 durable run history/audit log are largely missing.
 - Inspector lacks first-class prompt, tools, security, test run, last-run details, and settings history panels.
 

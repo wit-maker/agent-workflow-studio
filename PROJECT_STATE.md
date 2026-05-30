@@ -1,6 +1,131 @@
 # Project State
 
-Last updated: 2026-05-26
+Last updated: 2026-05-30
+
+---
+
+## Phase UI-2b: Game HUD Canvas First Completion
+
+- Branch: `codex/selection-overlay-minimal-hud`
+- Date: 2026-05-30
+- Model gate: ユーザー明示により GPT-5.5 high として継続。`/status` / `/model` での確認はこの環境では使わず、ユーザー明示を優先した。
+- Scope: 既存 UI-2a の差分を保持したまま、固定 3 カラム管理画面寄りの shell を、Canvas First / Game HUD 型 Workflow Studio へ寄せる。依存追加、backend/API、credential 保存、実 AI API、外部画像/asset 埋め込み、新 localStorage key は追加しない。
+
+### Implemented
+
+- `CognitiveWorkspaceShell` を `GameHudShell` 経由に差し替え、キャンバスを全面主役にした。
+- 左パレットは初期 collapsed の Palette HUD drawer、右詳細は選択時/明示 toggle の Detail HUD drawer、旧 BottomMonitor は折りたたみ Bottom Console HUD として再配置した。
+- `CanvasCommandHud` を追加し、実行状態、モード、モデル、安全状態、zoom mode、Run/Reset/Undo/Redo/JSON import/export、drawer/minimap/console toggle を最小常時 HUD に集約した。
+- `SelectedObjectHud` を概要/設定/入出力/履歴タブ付きの floating node HUD へ拡張し、Run selected / Open detail / Move right / Delete selected / Copy summary を追加した。
+- edge selection を `CognitiveWorkflowCanvas` へ lift し、`SelectedEdgeHud` で source/target、flow type、条件、delay/retry/error-route 仮表示、health、次アクション、Select source/target、Delete edge、Copy summary を表示した。
+- React Flow zoom から `overview / map / normal / detail / deep` を算出し、workspace CSS class と HUD 表示に反映した。
+- `CanvasMiniMapHud` を右下 dark HUD として追加し、常時 HUD から表示/非表示を切り替え可能にした。
+- `WorkflowGroupLayer` を追加し、Input/Trigger、Shape/Route、Execution、Verify/Aggregate、Output/Record の薄い非操作グループ背景を表示した。
+- `buildInlinePreview(...)` と node data の inline preview を追加し、text/file/output/normalize 系を含むノードで短い preview を表示した。
+- dark game HUD theme を `src/index.css` に追加し、暗色グリッド、半透明 HUD/drawer/minimap、dark readable form surface に寄せた。
+- fresh state の default canvas mode を React Flow に寄せた。保存済み `standard` / `react-flow` preference は引き続き尊重する。
+
+### Design asset alignment
+
+- `01_game-hud-design-principles.png` / `03_hud-layer-model.png`: HUD を panel ではなく canvas overlay として扱う構造に変更。
+- `04_wireframe-main-canvas.png` / `12_minimal-always-on-hud.png`: 常時表示を command/status HUD へ圧縮し、キャンバス面積を確保。
+- `07_node-detail-hud.png` / `11_selection-overlay.png`: 選択時だけ node floating HUD を出し、safe summary と小タブを追加。
+- `08_minimap-overview.png`: right-bottom minimap HUD を追加。
+- `09_multi-workflow.png`: static group layer で意味単位を可視化。
+- `10_inline-preview.png`: node card / HUD の text inline preview を追加。
+- `13_dark-theme-finished-canvas.png`: 暗色グリッドと半透明 HUD の game HUD theme に寄せた。
+
+### Existing behavior preserved
+
+- mock-only execution を維持。backend/API、real AI/connector、credential UI/storage は追加なし。
+- 既存 workflow / template / app settings / run history / canvas state の localStorage 仕様は増やしていない。
+- Run All / Run Selected / Run From Selected / Dry Run / Stop / Reset / Undo / Redo / JSON export / JSON import / Detail Drawer 相当の導線は維持。
+- BottomMonitor の既存タブは Console HUD 内に互換保持。
+
+### Validation
+
+- `npm.cmd run typecheck`: pass
+- `npm.cmd run lint`: pass
+- `npm.cmd run build`: pass
+- Vite chunk-size warning のみ発生。既存許容警告として扱う。
+- JSON export/import direct path: `npx.cmd tsx` で `validateWorkflowImport(...)`, `createWorkflowBundle(...)`, `createFullBundle(...)`, `validateImportBundle(...)` を検証し pass。
+
+### Browser QA
+
+- Preview: `http://127.0.0.1:4178/`
+- 初期表示 / React Flow canvas / dark HUD theme / 12 nodes / 13 edges / 5 workflow groups: pass
+- Palette drawer / Detail drawer / Bottom Console HUD / MiniMap toggle: pass
+- Node HUD 表示、概要/設定/入出力/履歴タブ、Run selected、Open detail、Move right、Delete confirm + Cancel: pass
+- Edge HUD 表示、Copy summary 導線、Select source、Select target: pass
+- Zoom mode switching: `Map 42%` -> `Overview 25%` -> `Detail 219%` と workspace class 変化を確認。
+- Run / Reset / React Flow position reset / JSON import-export controls reachable: pass
+- Browser console errors/warnings: none captured
+- External script/link/image assets outside localhost: none in DOM (`script`, `link`, `img`)
+
+### Remaining gaps
+
+- Floating node/edge HUD は固定位置で、まだ選択オブジェクト座標への追従はしていない。
+- Path dimming / focus highlight / rich central HUD variants / critical short-tone audio / HUD history は未実装。
+- Edge HUD の delay/retry/error-route/health は派生・仮表示で、runtime semantics の完全実装ではない。
+- Workflow Library / Templates の左 rail 本格化、BottomMonitor duplicate surface の整理は未完。
+- Standard canvas は互換 fallback として維持しており、Game HUD の完全機能は React Flow 主対象。
+
+### Next recommended slice
+
+1. selected node/edge HUD を viewport 座標へ anchor し、対象近傍に追従させる。
+2. Focus path highlight / irrelevant path dimming を React Flow edge/node style に追加する。
+3. rich central HUD variants（approval pending / failure cause / danger）を状態別に実装する。
+4. Bottom Console と右 Detail HUD の重複を整理し、旧 BottomMonitor タブを段階的に薄くする。
+
+---
+
+## Phase UI-2a: Selection Overlay + Minimal Canvas HUD Foundation
+
+- Branch: `codex/selection-overlay-minimal-hud`
+- Date: 2026-05-30
+- Model gate: Recommended model was `GPT-5.5 high` / `GPT-5.5 xhigh`. This Codex environment could not run `/status` or `/model`, and the active model exposed to the agent was not confirmed as GPT-5.5. The agent stopped once with "Model change required before implementation"; the user then explicitly replied `PLEASE IMPLEMENT THIS PLAN`, so implementation proceeded under user continuation approval.
+- Scope: Issue #34 / `docs/design/cognitive-workspace/` next slice. Add a selection-time object HUD on the canvas without changing storage, runner, backend/API, credentials, or real connector behavior.
+
+### Implemented
+
+- Added `SelectedObjectHud` as an L1 object HUD surface inside `CognitiveWorkflowCanvas`.
+- Added `SelectedNodeHudView` and `buildSelectedNodeHudView(...)` in `src/domain/cognitiveHud.ts` so the overlay receives a typed, database-compatible projection instead of formatting raw workflow state in the component.
+- The selected-node HUD shows only compact local context: node title, status, priority/alert level, input/output port counts, incoming/outgoing connection counts, token/latency estimate, HUD focus match, and one recommended action.
+- The overlay renders only when a node is selected. It is canvas-local and read-only, not a BottomMonitor tab and not a right-sidebar replacement.
+
+### Design asset alignment
+
+- `04_wireframe-main-canvas.png`: adds a canvas-local selected object surface without changing the shell.
+- `07_node-detail-hud.png`: establishes a compact node detail HUD with local status, I/O, warning/focus, and quick action context.
+- `11_selection-overlay.png`: selection reveals detail; unselected state stays quiet.
+- `12_minimal-always-on-hud.png`: no new permanent dashboard or large text region was added.
+- `03_hud-layer-model.png`: implements an L1 object HUD bridge while preserving L3/L4 overlay surfaces for later phases.
+
+### Explicit non-goals
+
+- No edge HUD bridge; `ReactFlowCanvas` still owns selected edge state internally.
+- No minimap, zoom-level representation switching, focus path dimming, critical audio cue, multi-workflow view, backend API, database, Tauri, credential UI, real AI API, or new localStorage keys.
+- `StagePreview` remains below the canvas.
+
+### Validation
+
+- `npm run typecheck`: pass
+- `npm run lint`: pass
+- `npm run build`: pass (existing Vite chunk-size warning remains)
+
+### Browser QA
+
+- Preview: `http://127.0.0.1:4177/`
+- App starts: pass
+- Canvas remains primary: pass
+- Selected node shows `選択オブジェクトHUD`: pass
+- HUD remains canvas-local and compact: pass
+- Run button executes existing mock flow: pass
+- Reset remains reachable and works: pass
+- JSON export/import controls remain reachable: pass
+- Detail Drawer remains reachable: pass
+- Console runtime errors: none captured
+- External script/link/image assets outside localhost: none captured
 
 ---
 

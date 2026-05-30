@@ -9,18 +9,12 @@ import {
   type FinalConnectionState,
   type Node,
   type NodeChange,
-  type ReactFlowInstance,
+  type Viewport,
   type XYPosition,
 } from '@xyflow/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { buildZoomHudView, type WorkflowGroupView, type ZoomHudView } from '../domain/cognitiveHud'
 import {
-  connectionKindLabels,
-  connectionStatusLabels,
-  formatDataTypeLabel,
-} from '../domain/displayLabels'
-import { findPort, getInputPorts, getOutputPorts } from '../domain/portRules'
-import {
-  resolveConnectionHandles,
   scaleNodePosition,
   toReactFlowEdges,
   toReactFlowNodes,
@@ -30,7 +24,6 @@ import {
 } from '../domain/reactFlowAdapter'
 import type { ConnectionKind, Workflow } from '../domain/workflow'
 import {
-  clearReactFlowPositions,
   writeReactFlowPositions,
   type SavedReactFlowPositions,
 } from '../storage/localCanvasState'
@@ -39,6 +32,8 @@ import {
   type ConnectionValidationResult,
 } from '../state/workflowSelectors'
 import { ReactFlowNode } from './ReactFlowNode'
+import { CanvasMiniMapHud } from './workspace/CanvasMiniMapHud'
+import { WorkflowGroupLayer } from './workspace/WorkflowGroupLayer'
 
 type CreateConnectionResult = {
   ok: boolean
@@ -53,8 +48,13 @@ type CanvasNotice = {
 type ReactFlowCanvasProps = {
   workflow: Workflow
   selectedNodeId: string
+  selectedConnectionId: string | null
   connectionValidation: ConnectionValidationResult[]
   onSelectNode: (nodeId: string) => void
+  onSelectConnectionId: (connectionId: string | null) => void
+  miniMapVisible: boolean
+  workflowGroups: WorkflowGroupView[]
+  onZoomHudChange: (view: ZoomHudView) => void
   onCreateConnection: (draft: {
     sourceNodeId: string
     sourcePortId: string
@@ -65,7 +65,6 @@ type ReactFlowCanvasProps = {
   onDeleteConnection: (connectionId: string) => void
   onDeleteNode: (nodeId: string) => void
   onMoveNode: (nodeId: string, position: { x: number; y: number }) => void
-  onResetPositions?: () => void
 }
 
 const nodeTypes = {
@@ -129,18 +128,6 @@ function isEditableElement(target: EventTarget | null): boolean {
   )
 }
 
-function formatConnectionPortLabel(
-  label: string | undefined,
-  dataType: string | undefined,
-  required?: boolean,
-): string {
-  if (!label || !dataType) {
-    return '未解決'
-  }
-
-  return `${label} / ${formatDataTypeLabel(dataType)}${required ? ' / 必須' : ''}`
-}
-
 function NodeMeasurer({ nodeIds }: { nodeIds: string[] }) {
   const store = useStoreApi()
 
@@ -169,22 +156,24 @@ function NodeMeasurer({ nodeIds }: { nodeIds: string[] }) {
 export function ReactFlowCanvas({
   workflow,
   selectedNodeId,
+  selectedConnectionId,
   connectionValidation,
   onSelectNode,
+  onSelectConnectionId,
+  miniMapVisible,
+  workflowGroups,
+  onZoomHudChange,
   onCreateConnection,
   onDeleteConnection,
   onDeleteNode,
   onMoveNode,
-  onResetPositions,
 }: ReactFlowCanvasProps) {
   const invalidConnections = connectionValidation.filter((result) => !result.valid)
   const [nodes, setNodes] = useState<ReactFlowWorkflowNode[]>(() =>
     buildFlowNodes(workflow, {}, selectedNodeId),
   )
-  const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null)
   const [connectionNotice, setConnectionNotice] = useState<CanvasNotice | null>(null)
   const [deleteNotice, setDeleteNotice] = useState<string | null>(null)
-  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null)
   const panelRef = useRef<HTMLElement | null>(null)
   const nodesRef = useRef(nodes)
   const rejectedConnectionReasonRef = useRef<string | null>(null)
@@ -198,11 +187,13 @@ export function ReactFlowCanvas({
     setNodes(next)
   }, [selectedNodeId, workflow])
 
+  useEffect(() => {
+    if (selectedConnectionId && !effectiveSelectedConnectionId) {
+      onSelectConnectionId(null)
+    }
+  }, [effectiveSelectedConnectionId, onSelectConnectionId, selectedConnectionId])
+
   const nodeIds = useMemo(() => workflow.nodes.map((node) => node.id), [workflow.nodes])
-  const nodeById = useMemo(
-    () => new Map(workflow.nodes.map((node) => [node.id, node])),
-    [workflow.nodes],
-  )
   const nodeTitleById = useMemo(
     () => new Map(workflow.nodes.map((node) => [node.id, node.title])),
     [workflow.nodes],
@@ -210,21 +201,6 @@ export function ReactFlowCanvas({
   const edges = useMemo(
     () => toReactFlowEdges(workflow, effectiveSelectedConnectionId ?? undefined),
     [effectiveSelectedConnectionId, workflow],
-  )
-  const connectionOptions = useMemo(
-    () =>
-      workflow.connections.map((connection) => {
-        const sourceTitle = nodeTitleById.get(connection.sourceNodeId) ?? connection.sourceNodeId
-        const targetTitle = nodeTitleById.get(connection.targetNodeId) ?? connection.targetNodeId
-
-        return {
-          id: connection.id,
-          label: `${sourceTitle} → ${targetTitle} (${connection.carries
-            .map((dataType) => formatDataTypeLabel(dataType))
-            .join(', ')})`,
-        }
-      }),
-    [nodeTitleById, workflow.connections],
   )
 
   useEffect(() => {
@@ -240,45 +216,6 @@ export function ReactFlowCanvas({
     const timer = window.setTimeout(() => setDeleteNotice(null), 5000)
     return () => window.clearTimeout(timer)
   }, [deleteNotice])
-
-  const selectedConnection = useMemo(
-    () => workflow.connections.find((connection) => connection.id === effectiveSelectedConnectionId) ?? null,
-    [effectiveSelectedConnectionId, workflow.connections],
-  )
-  const selectedConnectionValidation = useMemo(
-    () =>
-      selectedConnection
-        ? connectionValidation.find((result) => result.connectionId === selectedConnection.id) ?? null
-        : null,
-    [connectionValidation, selectedConnection],
-  )
-  const selectedConnectionDetails = useMemo(() => {
-    if (!selectedConnection) {
-      return null
-    }
-
-    const sourceNode = nodeById.get(selectedConnection.sourceNodeId)
-    const targetNode = nodeById.get(selectedConnection.targetNodeId)
-    const { sourceHandle, targetHandle } = resolveConnectionHandles(workflow, selectedConnection)
-    const sourcePort =
-      sourceNode && sourceHandle ? findPort(getOutputPorts(sourceNode), sourceHandle) : undefined
-    const targetPort =
-      targetNode && targetHandle ? findPort(getInputPorts(targetNode), targetHandle) : undefined
-
-    return {
-      sourceNodeTitle: sourceNode?.title ?? selectedConnection.sourceNodeId,
-      sourcePortLabel: formatConnectionPortLabel(
-        sourcePort?.label,
-        sourcePort?.dataType ?? selectedConnection.sourcePort,
-      ),
-      targetNodeTitle: targetNode?.title ?? selectedConnection.targetNodeId,
-      targetPortLabel: formatConnectionPortLabel(
-        targetPort?.label,
-        targetPort?.dataType ?? selectedConnection.targetPort,
-        targetPort?.required,
-      ),
-    }
-  }, [nodeById, selectedConnection, workflow])
 
   const focusCanvasPanel = useCallback(() => {
     panelRef.current?.focus()
@@ -308,10 +245,10 @@ export function ReactFlowCanvas({
 
   const handleEdgeClick = useCallback(
     (_: React.MouseEvent, edge: Edge) => {
-      setSelectedConnectionId(edge.id)
+      onSelectConnectionId(edge.id)
       focusCanvasPanel()
     },
-    [focusCanvasPanel],
+    [focusCanvasPanel, onSelectConnectionId],
   )
 
   const isValidConnection = useCallback(
@@ -413,11 +350,11 @@ export function ReactFlowCanvas({
       }
 
       onDeleteConnection(connectionId)
-      setSelectedConnectionId(null)
+      onSelectConnectionId(null)
       setConnectionNotice({ tone: 'info', text: '接続を削除しました。' })
       focusCanvasPanel()
     },
-    [focusCanvasPanel, nodeTitleById, onDeleteConnection, workflow.connections],
+    [focusCanvasPanel, nodeTitleById, onDeleteConnection, onSelectConnectionId, workflow.connections],
   )
 
   const handlePanelKeyDown = useCallback((event: React.KeyboardEvent<HTMLElement>) => {
@@ -446,142 +383,66 @@ export function ReactFlowCanvas({
     )
   }, [effectiveSelectedConnectionId, handleDeleteSelectedConnection, onDeleteNode, selectedNodeId])
 
-  const handleResetPositions = useCallback(() => {
-    clearReactFlowPositions()
-
-    const next = buildFlowNodes(workflow, {}, selectedNodeId)
-    nodesRef.current = next
-    setNodes(next)
-    setSelectedConnectionId(null)
-    onResetPositions?.()
-
-    window.requestAnimationFrame(() => {
-      reactFlowInstance?.fitView({ padding: 0.12, duration: 250 })
-    })
-  }, [onResetPositions, reactFlowInstance, selectedNodeId, workflow])
-
-  const handleNudgeSelectedNode = useCallback(
-    (delta: { x: number; y: number }) => {
-      const selectedNode = workflow.nodes.find((node) => node.id === selectedNodeId)
-      if (!selectedNode) {
-        return
-      }
-
-      onMoveNode(selectedNode.id, {
-        x: selectedNode.position.x + delta.x,
-        y: selectedNode.position.y + delta.y,
-      })
+  const handleViewportChange = useCallback(
+    (viewport: Viewport) => {
+      onZoomHudChange(buildZoomHudView(viewport.zoom))
     },
-    [onMoveNode, selectedNodeId, workflow.nodes],
+    [onZoomHudChange],
   )
 
   return (
     <main
       ref={panelRef}
-      className="canvas-panel"
+      className="canvas-panel react-flow-canvas-panel"
       aria-label="React Flowキャンバス"
       tabIndex={0}
       onKeyDownCapture={handlePanelKeyDown}
     >
-      <div className="canvas-toolbar">
-        <span>React Flow Canvas</span>
-        <button
-          type="button"
-          className="icon-button"
-          onClick={() => reactFlowInstance?.fitView({ padding: 0.12, duration: 250 })}
-        >
-          全体表示
-        </button>
-        <button type="button" className="icon-button" onClick={handleResetPositions}>
-          位置をリセット
-        </button>
-        <button
-          type="button"
-          className="icon-button"
-          onClick={() => handleNudgeSelectedNode({ x: 40, y: 0 })}
-          disabled={!selectedNodeId}
-        >
-          Move right
-        </button>
-        <button
-          type="button"
-          className="icon-button"
-          onClick={() => handleNudgeSelectedNode({ x: 0, y: 40 })}
-          disabled={!selectedNodeId}
-        >
-          Move down
-        </button>
-        <select
-          className="canvas-toolbar-select"
-          aria-label="接続選択"
-          value={effectiveSelectedConnectionId ?? ''}
-          onChange={(event) => setSelectedConnectionId(event.target.value || null)}
-        >
-          <option value="">接続を選択</option>
-          {connectionOptions.map((connection) => (
-            <option key={connection.id} value={connection.id}>
-              {connection.label}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          className="icon-button"
-          onClick={() => handleDeleteSelectedConnection(effectiveSelectedConnectionId)}
-          disabled={!effectiveSelectedConnectionId}
-        >
-          選択中の接続を削除
-        </button>
-        <strong className={invalidConnections.length === 0 ? 'valid-count' : 'invalid-count'}>
-          {invalidConnections.length === 0
-            ? `有効な接続 ${connectionValidation.length} 件`
-            : `無効な接続 ${invalidConnections.length} 件`}
-        </strong>
-      </div>
       <div className="canvas-scroll react-flow-canvas-body">
         <div className="react-flow-canvas-root">
           <ReactFlow
             nodes={nodes}
             edges={edges}
             nodeTypes={nodeTypes}
+            colorMode="dark"
             fitView
-            onInit={setReactFlowInstance}
+            minZoom={0.05}
+            maxZoom={3.5}
+            onInit={(instance) => {
+              onZoomHudChange(buildZoomHudView(instance.getZoom()))
+            }}
             onNodesChange={handleNodesChange}
             onNodeDragStop={handleNodeDragStop}
             onConnectStart={handleConnectStart}
             onConnect={handleConnect}
             onConnectEnd={handleConnectEnd}
+            onViewportChange={handleViewportChange}
             onEdgeClick={handleEdgeClick}
             onNodeClick={(_, node) => {
+              onSelectConnectionId(null)
               onSelectNode(node.id)
               focusCanvasPanel()
             }}
             onPaneClick={() => {
-              setSelectedConnectionId(null)
+              onSelectConnectionId(null)
               focusCanvasPanel()
             }}
             isValidConnection={isValidConnection}
             deleteKeyCode={null}
           >
+            <WorkflowGroupLayer workflow={workflow} groups={workflowGroups} />
             <NodeMeasurer nodeIds={nodeIds} />
-            <Background gap={24} size={1} />
-            <Controls showInteractive={false} />
+            <Background color="rgba(125, 211, 252, 0.18)" gap={24} size={1} />
+            <Controls showInteractive={false} position="bottom-left" />
+            {miniMapVisible ? <CanvasMiniMapHud /> : null}
           </ReactFlow>
 
-          <section className="react-flow-help-card" aria-label="React Flow操作ヘルプ">
-            <h3>操作ヘルプ</h3>
-            <p>ドラッグ: ノード移動</p>
-            <p>Handle接続: ポート同士を接続</p>
-            <p>Edge選択: 接続詳細を表示</p>
-            <p>Delete: ノード削除は未対応</p>
-            <p>位置リセット: 保存位置を初期化</p>
-          </section>
-
-          <section
-            className="connection-validation-card react-flow-validation-card"
-            aria-label="接続情報"
-          >
-            <h3>接続情報</h3>
+          <section className="canvas-status-hud" aria-label="接続状態HUD">
+            <strong className={invalidConnections.length === 0 ? 'valid-count' : 'invalid-count'}>
+              {invalidConnections.length === 0
+                ? `edges ${connectionValidation.length} ok`
+                : `edges ${invalidConnections.length} invalid`}
+            </strong>
             {connectionNotice ? (
               <p
                 className={
@@ -596,53 +457,6 @@ export function ReactFlowCanvas({
               </p>
             ) : null}
             {deleteNotice ? <p className="warning-text">{deleteNotice}</p> : null}
-
-            {selectedConnection && selectedConnectionDetails ? (
-              <div className="selected-connection-detail">
-                <div className="selected-connection-header">
-                  <strong>選択中の接続</strong>
-                  <button
-                    type="button"
-                    className="icon-button"
-                    onClick={() => handleDeleteSelectedConnection(selectedConnection.id)}
-                  >
-                    接続を削除
-                  </button>
-                </div>
-                <div className="selected-connection-grid">
-                  <span>接続元ノード</span>
-                  <strong>{selectedConnectionDetails.sourceNodeTitle}</strong>
-                  <span>接続元ポート</span>
-                  <strong>{selectedConnectionDetails.sourcePortLabel}</strong>
-                  <span>接続先ノード</span>
-                  <strong>{selectedConnectionDetails.targetNodeTitle}</strong>
-                  <span>接続先ポート</span>
-                  <strong>{selectedConnectionDetails.targetPortLabel}</strong>
-                  <span>carries</span>
-                  <strong>
-                    {selectedConnection.carries.map((item) => formatDataTypeLabel(item)).join(', ')}
-                  </strong>
-                  <span>kind</span>
-                  <strong>{connectionKindLabels[selectedConnection.kind]}</strong>
-                  <span>status</span>
-                  <strong>{connectionStatusLabels[selectedConnection.status]}</strong>
-                  <span>validation result</span>
-                  <strong
-                    className={selectedConnectionValidation?.valid ? 'success-text' : 'error-text'}
-                  >
-                    {selectedConnectionValidation?.valid
-                      ? '有効'
-                      : selectedConnectionValidation?.reason ?? '未確認'}
-                  </strong>
-                </div>
-              </div>
-            ) : null}
-
-            {connectionValidation.slice(0, 4).map((result) => (
-              <p key={result.connectionId} className={result.valid ? 'success-text' : 'error-text'}>
-                {result.sourceLabel} → {result.targetLabel}: {result.valid ? '有効' : result.reason}
-              </p>
-            ))}
           </section>
         </div>
       </div>

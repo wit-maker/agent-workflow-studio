@@ -1,14 +1,19 @@
-import type { ReactNode } from 'react'
-import type { HudSnapshot } from '../../domain/cognitiveHud'
+import { useMemo, useState, type ReactNode } from 'react'
+import {
+  buildSelectedEdgeHudView,
+  buildSelectedNodeHudView,
+  buildWorkflowGroups,
+  type HudSnapshot,
+  type ZoomHudView,
+} from '../../domain/cognitiveHud'
 import type { ConnectionKind, Workflow, WorkflowNode } from '../../domain/workflow'
 import type { ConnectionValidationResult } from '../../state/workflowSelectors'
 import type { CanvasMode } from '../TopBar'
 import { ReactFlowCanvas } from '../ReactFlowCanvas'
-import { StagePreview } from '../StagePreview'
 import { WorkflowCanvas } from '../WorkflowCanvas'
-import type { ExecutionGraph } from '../../domain/executionGraph'
-import type { EvaluationResult, HumanReviewState } from '../../domain/evaluation'
 import { CognitiveHudOverlay } from './CognitiveHudOverlay'
+import { SelectedEdgeHud } from './SelectedEdgeHud'
+import { SelectedObjectHud } from './SelectedObjectHud'
 
 /*
  * CognitiveWorkflowCanvas
@@ -31,11 +36,11 @@ type CognitiveWorkflowCanvasProps = {
   selectedNodeId: string
   selectedNode: WorkflowNode | undefined
   connectionValidation: ConnectionValidationResult[]
-  executionGraph: ExecutionGraph | null
-  evaluation: EvaluationResult | undefined
-  humanReview: HumanReviewState | undefined
-  checkOutcome: 'PASS' | 'REVIEW' | 'FAIL'
   hudSnapshot: HudSnapshot
+  miniMapVisible: boolean
+  onZoomHudChange: (view: ZoomHudView) => void
+  onOpenDetail: () => void
+  onRunSelected: () => void
   onSelectNode: (nodeId: string) => void
   onCreateConnection: (draft: {
     sourceNodeId: string
@@ -47,7 +52,6 @@ type CognitiveWorkflowCanvasProps = {
   onDeleteConnection: (connectionId: string) => void
   onDeleteNode: (nodeId: string) => void
   onMoveNode: (nodeId: string, position: WorkflowNode['position']) => void
-  onResetPositions: () => void
   belowCanvasSlot?: ReactNode
 }
 
@@ -57,19 +61,47 @@ export function CognitiveWorkflowCanvas({
   selectedNodeId,
   selectedNode,
   connectionValidation,
-  executionGraph,
-  evaluation,
-  humanReview,
-  checkOutcome,
   hudSnapshot,
+  miniMapVisible,
+  onZoomHudChange,
+  onOpenDetail,
+  onRunSelected,
   onSelectNode,
   onCreateConnection,
   onDeleteConnection,
   onDeleteNode,
   onMoveNode,
-  onResetPositions,
   belowCanvasSlot,
 }: CognitiveWorkflowCanvasProps) {
+  const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null)
+  const selectedNodeHud = useMemo(
+    () =>
+      buildSelectedNodeHudView({
+        node: selectedNode,
+        connections: workflow.connections,
+        hudSnapshot,
+      }),
+    [hudSnapshot, selectedNode, workflow.connections],
+  )
+  const selectedEdgeHud = useMemo(
+    () =>
+      buildSelectedEdgeHudView({
+        workflow,
+        connectionId: selectedConnectionId,
+        connectionValidation,
+      }),
+    [connectionValidation, selectedConnectionId, workflow],
+  )
+  const workflowGroups = useMemo(() => buildWorkflowGroups(workflow), [workflow])
+
+  function moveSelectedRight() {
+    if (!selectedNode) return
+    onMoveNode(selectedNode.id, {
+      x: selectedNode.position.x + 40,
+      y: selectedNode.position.y,
+    })
+  }
+
   return (
     <div className="cognitive-workflow-canvas" aria-label="認知ワークフローキャンバス">
       <div className="cognitive-workflow-canvas-stage">
@@ -84,26 +116,43 @@ export function CognitiveWorkflowCanvas({
           <ReactFlowCanvas
             workflow={workflow}
             selectedNodeId={selectedNodeId}
+            selectedConnectionId={selectedConnectionId}
             onSelectNode={onSelectNode}
+            onSelectConnectionId={setSelectedConnectionId}
             connectionValidation={connectionValidation}
+            miniMapVisible={miniMapVisible}
+            workflowGroups={workflowGroups}
+            onZoomHudChange={onZoomHudChange}
             onCreateConnection={onCreateConnection}
             onDeleteConnection={onDeleteConnection}
             onDeleteNode={onDeleteNode}
             onMoveNode={onMoveNode}
-            onResetPositions={onResetPositions}
           />
         )}
+        <SelectedObjectHud
+          view={selectedNodeHud}
+          onRunSelected={onRunSelected}
+          onOpenDetail={onOpenDetail}
+          onMoveRight={moveSelectedRight}
+          onDeleteSelected={() => selectedNode ? onDeleteNode(selectedNode.id) : undefined}
+        />
+        <SelectedEdgeHud
+          view={selectedEdgeHud}
+          onSelectSource={(nodeId) => {
+            onSelectNode(nodeId)
+            setSelectedConnectionId(null)
+          }}
+          onSelectTarget={(nodeId) => {
+            onSelectNode(nodeId)
+            setSelectedConnectionId(null)
+          }}
+          onDeleteEdge={(connectionId) => {
+            onDeleteConnection(connectionId)
+            setSelectedConnectionId(null)
+          }}
+        />
         <CognitiveHudOverlay hudSnapshot={hudSnapshot} />
       </div>
-      <StagePreview
-        artifact={workflow.artifact}
-        checkOutcome={checkOutcome}
-        workflow={workflow}
-        selectedNode={selectedNode}
-        executionGraph={executionGraph}
-        evaluation={evaluation}
-        humanReview={humanReview}
-      />
       {belowCanvasSlot}
     </div>
   )

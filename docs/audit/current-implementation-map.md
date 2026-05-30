@@ -1,20 +1,20 @@
 # Current Implementation Map
 
-Last updated: 2026-05-26
+Last updated: 2026-05-30
 
 This map records what the current MVP actually contains. It does not redefine the full product goal.
 
 ## UI Shell Migration (Issue #34)
 
-The UI shell migrated from **panel-first** (TopBar + .workspace-grid: Palette / Canvas+StagePreview / Inspector + BottomMonitor) to **cognitive workspace shell**:
+The UI shell migrated from **panel-first** (TopBar + .workspace-grid: Palette / Canvas+StagePreview / Inspector + BottomMonitor) to **cognitive workspace shell**, then to a Canvas First Game HUD shell:
 
 ```
-Top    : GlobalRunControl + CurrentStateStrip
-Left   : WorkspaceLeftRail (Components / WorkflowLibrary[WIP] / Templates[WIP])
-Center : CognitiveWorkflowCanvas (= WorkflowCanvas|ReactFlowCanvas + CognitiveHudOverlay)
-Right  : WorkspaceRightPanel (Situation / Inspector / Assistant / HumanReview)
-Bottom : DetailDrawerDock (collapsible — wraps the old BottomMonitor as Detail Surface)
-Overlay: CognitiveHudOverlay (canvas) + CriticalOverlay (root)
+Always-on : CanvasCommandHud (status / run / canvas controls / drawer toggles)
+Canvas    : CognitiveWorkflowCanvas (= ReactFlowCanvas primary + HUD overlays)
+Left      : WorkspaceLeftRail as Palette HUD drawer
+Right     : WorkspaceRightPanel as Detail HUD drawer
+Bottom    : DetailDrawerDock as collapsible Console HUD
+Overlay   : CognitiveHudOverlay + SelectedObjectHud + SelectedEdgeHud + CriticalOverlay
 ```
 
 `BottomMonitor` is no longer the primary authoring surface. Its tabs (認知HUD / ブリーフィング / 実行詳細 / etc.) remain available but are **Detail Surfaces**, not the cognitive HUD or situation assistant proper.
@@ -39,20 +39,20 @@ These MVP surfaces are useful and intentional. They are listed here so that "imp
 
 | Area | Current implementation | Notes |
 |---|---|---|
-| Top | `GlobalRunControl` consolidates Run/Selected/FromSelected/Dry/Stop/Reset/Undo/Redo/Export/Import/CanvasMode. `CurrentStateStrip` shows execution state, top attention, focus target, recommended model, safety state. | Recommended/current model is static placeholder text; future settings hookup. |
-| Left | `WorkspaceLeftRail` exposes Components (`PartsPalette`) plus WIP scaffold tabs for Workflow Library and Templates. | Library/Templates tabs are scaffold; existing data still reachable via Detail Drawer. |
-| Center | `CognitiveWorkflowCanvas` wraps `WorkflowCanvas` / `ReactFlowCanvas` and overlays `CognitiveHudOverlay`. `StagePreview` remains rendered inline below the canvas. | Edge-level HUD overlay (flow health, delay, retry, error route) is not implemented. |
-| Right | `WorkspaceRightPanel` switches between Situation / Inspector / Assistant / Human Review. | Inspector is the existing component reused as one mode. |
-| Bottom | `DetailDrawerDock` wraps `BottomMonitor` as a collapsible Detail Surface (default collapsed). All existing tabs preserved for compatibility. | Tabs are no longer the primary surface for HUD / Briefing / Run Detail. |
-| Overlay | `CognitiveHudOverlay` shows central HUD card + focus when HUD priority ≠ normal. `CriticalOverlay` foregrounds a banner only at priority=critical. | Node/edge highlighting and dimming logic, and critical short-tone audio, are not implemented. |
-| Stage/output | `StagePreview`, evaluation, rebuild, human review, and artifact version panels expose local output review. | Diff and publish preparation remain partial or missing. |
+| Always-on HUD | `CanvasCommandHud` shows compact run state, alert level, zoom mode, model, safety state, Run/Selected/FromSelected/Dry/Stop/Reset/Undo/Redo/Export/Import/Canvas mode, and Palette/Detail/MiniMap/Console toggles. | Model is still static text; richer iconography can improve later. |
+| Left | `WorkspaceLeftRail` exposes Components (`PartsPalette`) plus WIP scaffold tabs as a collapsible Palette HUD drawer. | Library/Templates tabs are scaffold; existing data still reachable via Console HUD. |
+| Center | `CognitiveWorkflowCanvas` primarily uses `ReactFlowCanvas`, overlays `CognitiveHudOverlay`, `SelectedObjectHud`, `SelectedEdgeHud`, `WorkflowGroupLayer`, and right-bottom `CanvasMiniMapHud`. StagePreview is no longer a constant canvas footer. | True coordinate-following HUD, path dimming, and focus highlighting are not implemented. |
+| Right | `WorkspaceRightPanel` switches between Situation / Inspector / Assistant / Human Review inside an on-demand Detail HUD drawer. | Inspector is the existing component reused as one mode. |
+| Bottom | `DetailDrawerDock` wraps `BottomMonitor` as collapsible Console HUD. All existing tabs preserved for compatibility. | Tabs are no longer the primary surface for HUD / Briefing / Run Detail. |
+| Overlay | `CognitiveHudOverlay` shows central HUD card + focus when HUD priority ≠ normal. `SelectedObjectHud` shows selected-node local HUD context. `SelectedEdgeHud` shows selected-edge flow context. `CriticalOverlay` foregrounds a banner only at priority=critical. | Path dimming, coordinate-following HUD placement, rich central HUD variants, and critical short-tone audio are not implemented. |
+| Stage/output | Output review remains available through Console HUD / existing BottomMonitor tabs and right detail surfaces. | Diff and publish preparation remain partial or missing. |
 
 ## Components
 
 | Component group | Files / modules | Current role |
 |---|---|---|
-| App shell and layout | `src/components/AppShell.tsx` (state owner), `src/components/workspace/CognitiveWorkspaceShell.tsx` (layout), `src/components/workspace/GlobalRunControl.tsx`, `src/components/workspace/CurrentStateStrip.tsx`, `src/components/workspace/WorkspaceLeftRail.tsx`, `src/components/workspace/WorkspaceRightPanel.tsx`, `src/components/workspace/DetailDrawerDock.tsx`, `src/components/workspace/CognitiveWorkflowCanvas.tsx`, `src/components/workspace/CognitiveHudOverlay.tsx`, `src/components/workspace/CriticalOverlay.tsx`, `src/components/workspace/SituationPanel.tsx`, `src/components/workspace/AssistantPanel.tsx`, legacy `src/components/TopBar.tsx` (unused but kept for now) | AppShell owns reducer state, run actions, connector queue state, persistence hooks, and renders the new workspace shell. The shell arranges Top/Left/Center/Right/Bottom/Overlay regions. |
-| Canvas | `WorkflowCanvas.tsx`, `ReactFlowCanvas.tsx`, `ReactFlowNode.tsx`, `NodeCard.tsx`, `ConnectionLine.tsx` | Displays nodes, edges, statuses, port handles, and validation feedback. |
+| App shell and layout | `src/components/AppShell.tsx` (state owner), `src/components/workspace/CognitiveWorkspaceShell.tsx` (compat wrapper), `src/components/workspace/GameHudShell.tsx`, `src/components/workspace/CanvasCommandHud.tsx`, `src/components/workspace/WorkspaceLeftRail.tsx`, `src/components/workspace/WorkspaceRightPanel.tsx`, `src/components/workspace/DetailDrawerDock.tsx`, `src/components/workspace/CognitiveWorkflowCanvas.tsx`, `src/components/workspace/CognitiveHudOverlay.tsx`, `src/components/workspace/SelectedObjectHud.tsx`, `src/components/workspace/SelectedEdgeHud.tsx`, `src/components/workspace/CanvasMiniMapHud.tsx`, `src/components/workspace/WorkflowGroupLayer.tsx`, `src/components/workspace/CriticalOverlay.tsx`, `src/components/workspace/SituationPanel.tsx`, `src/components/workspace/AssistantPanel.tsx`, legacy `src/components/TopBar.tsx` / `GlobalRunControl.tsx` / `CurrentStateStrip.tsx` (kept for compatibility/history) | AppShell owns reducer state, run actions, connector queue state, persistence hooks, and renders the Game HUD shell through the compatibility wrapper. |
+| Canvas | `WorkflowCanvas.tsx`, `ReactFlowCanvas.tsx`, `ReactFlowNode.tsx`, `NodeCard.tsx`, `ConnectionLine.tsx` | Displays nodes, edges, statuses, port handles, validation feedback, inline previews, zoom-mode classes, minimap HUD, and group layer. |
 | Editing | `Inspector.tsx`, `ConnectionEditor.tsx`, `workflowActions.ts`, `workflowReducer.ts` | Handles node field edits, JSON validation, connection create/delete, undo/redo state, import/reset paths. |
 | Execution and recovery | `runPlanner.ts`, `runEngine.ts`, `nodeExecutors.ts`, `executionGraph.ts`, `connectorQueue.ts`, `recoveryActions.ts` | Provides local mock run planning, execution summaries, graph state, connector jobs, retry/review/skip/cancel actions. |
 | Templates | `TemplateLibrary.tsx`, `TemplatePreview.tsx`, `templateMetadata.ts`, `localTemplates.ts` | Saves, loads, duplicates, searches, previews, and annotates local templates. |
@@ -140,8 +140,9 @@ This section breaks the two concept layers into "what currently exists in code" 
 | HudSignal type | Implemented as `HudSignal` in `src/domain/cognitiveHud.ts` | — |
 | HudSnapshot / HudCounts | Implemented as `HudSnapshot` / `HudCounts` | `CognitiveHudPanel` |
 | Priority Score / L0–L5 alert level | Partial — alert level + priority derived per signal | `CognitiveHudPanel` |
-| HUD badge on NodeCard / ConnectionLine | Missing | — |
-| Central HUD card (画面中央のHUDカード) | Missing | — |
+| HUD badge on NodeCard / ConnectionLine | Partial — node status badges exist on `NodeCard` / `ReactFlowNode`; connection HUD badges are missing | `node-hud-badge` |
+| Selected object HUD (選択時の浮遊HUD) | Partial — selected node and selected edge get canvas-local HUD context with quick actions; coordinate-following placement is still missing | `SelectedObjectHud`, `SelectedEdgeHud` |
+| Central HUD card (画面中央のHUDカード) | Partial — central card receiver exists for non-normal priority, but rich approval/failure/focus variants are missing | `CognitiveHudOverlay` |
 | Approval Pending HUD | Missing (signals exist in list form only) | — |
 | Failure Cause Card | Missing | — |
 | Focus Overlay / Path Dim (不要経路の減光) | Missing | — |

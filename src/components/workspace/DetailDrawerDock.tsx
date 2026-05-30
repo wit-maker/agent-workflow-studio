@@ -20,13 +20,26 @@ import { useState, type ReactNode } from 'react'
 type DetailDrawerDockProps = {
   children: ReactNode
   initiallyCollapsed?: boolean
+  collapsed?: boolean
+  onCollapsedChange?: (collapsed: boolean) => void
 }
 
 export function DetailDrawerDock({
   children,
   initiallyCollapsed = false,
+  collapsed: controlledCollapsed,
+  onCollapsedChange,
 }: DetailDrawerDockProps) {
-  const [collapsed, setCollapsed] = useState(initiallyCollapsed)
+  const [internalCollapsed, setInternalCollapsed] = useState(initiallyCollapsed)
+  const collapsed = controlledCollapsed ?? internalCollapsed
+
+  function toggleCollapsed() {
+    const next = !collapsed
+    if (controlledCollapsed === undefined) {
+      setInternalCollapsed(next)
+    }
+    onCollapsedChange?.(next)
+  }
 
   return (
     <section
@@ -35,19 +48,17 @@ export function DetailDrawerDock({
     >
       <header className="detail-drawer-dock-header">
         <div className="detail-drawer-dock-title">
-          <span className="eyebrow">Detail Drawers</span>
-          <strong>詳細確認領域</strong>
-          <span className="muted">
-            （HUD Summary / Log / Metrics / Queue / Output / Run Detail / Briefing / Roadmap / Storage はここに格下げ）
-          </span>
+          <span className="eyebrow">Console HUD</span>
+          <strong>Log / Queue / Output</strong>
+          <span className="muted">詳細面は必要時だけ展開します。</span>
         </div>
         <button
           type="button"
           className="icon-button"
-          onClick={() => setCollapsed((value) => !value)}
+          onClick={toggleCollapsed}
           aria-expanded={!collapsed}
         >
-          {collapsed ? '詳細を開く' : '詳細を閉じる'}
+          {collapsed ? 'Console open' : 'Console close'}
         </button>
       </header>
       {collapsed ? null : <div className="detail-drawer-dock-body">{children}</div>}
