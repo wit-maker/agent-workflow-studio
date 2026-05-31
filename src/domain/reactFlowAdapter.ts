@@ -23,9 +23,11 @@ export type ReactFlowWorkflowNodeData = {
   connectedOutputPortIds: string[]
   connectionCount: number
   inlinePreview: InlinePreview
+  focusRole: ReactFlowFocusRole
 }
 
 export type ReactFlowWorkflowNode = Node<ReactFlowWorkflowNodeData, typeof reactFlowNodeType>
+export type ReactFlowFocusRole = 'normal' | 'selected' | 'path' | 'dimmed'
 
 type NodePositionMap = Record<string, XYPosition>
 type NodeLookup = Map<string, WorkflowNode>
@@ -210,6 +212,7 @@ export function toReactFlowNodes(
         connectedOutputPortIds: connectedOutputPortIdsByNodeId.get(node.id) ?? [],
         connectionCount: connectionCountByNodeId.get(node.id) ?? 0,
         inlinePreview: buildInlinePreview(node),
+        focusRole: 'normal',
       },
     }
   })
@@ -218,6 +221,10 @@ export function toReactFlowNodes(
 export function toReactFlowEdges(
   workflow: Workflow,
   selectedConnectionId?: string,
+  focusPath?: {
+    focusedConnectionIds: ReadonlySet<string>
+    dimUnfocused: boolean
+  },
 ): Edge[] {
   const nodeIds = new Set(workflow.nodes.map((node) => node.id))
   const nodeLookup = createNodeLookup(workflow)
@@ -233,6 +240,16 @@ export function toReactFlowEdges(
         connection,
       )
       const stroke = getStatusColor(connection.status)
+      const selected = connection.id === selectedConnectionId
+      const focused = focusPath?.focusedConnectionIds.has(connection.id) ?? false
+      const dimmed = focusPath?.dimUnfocused === true && !focused && !selected
+      const className = [
+        selected ? 'focus-selected-edge' : null,
+        focused ? 'focus-path-edge' : null,
+        dimmed ? 'focus-dimmed-edge' : null,
+      ]
+        .filter(Boolean)
+        .join(' ')
 
       return {
         id: connection.id,
@@ -242,14 +259,16 @@ export function toReactFlowEdges(
         targetHandle,
         selectable: true,
         animated: connection.status === 'active',
-        selected: connection.id === selectedConnectionId,
+        selected,
+        className,
         markerEnd: {
           type: MarkerType.ArrowClosed,
           color: stroke,
         },
         style: {
           stroke,
-          strokeWidth: 2.5,
+          strokeWidth: selected || focused ? 3.4 : 2.5,
+          opacity: dimmed ? 0.28 : 1,
         },
         label: connectionKindLabels[connection.kind],
         ariaLabel: [

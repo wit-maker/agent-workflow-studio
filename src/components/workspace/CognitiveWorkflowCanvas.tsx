@@ -1,8 +1,11 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import {
   buildSelectedEdgeHudView,
   buildSelectedNodeHudView,
   buildWorkflowGroups,
+  type CanvasHudAnchor,
+  type CanvasHudCollisionState,
+  type CanvasHudSize,
   type HudSnapshot,
   type ZoomHudView,
 } from '../../domain/cognitiveHud'
@@ -38,6 +41,7 @@ type CognitiveWorkflowCanvasProps = {
   connectionValidation: ConnectionValidationResult[]
   hudSnapshot: HudSnapshot
   miniMapVisible: boolean
+  hudSurfaceState: Pick<CanvasHudCollisionState, 'paletteOpen' | 'detailOpen' | 'consoleOpen'>
   onZoomHudChange: (view: ZoomHudView) => void
   onOpenDetail: () => void
   onRunSelected: () => void
@@ -63,6 +67,7 @@ export function CognitiveWorkflowCanvas({
   connectionValidation,
   hudSnapshot,
   miniMapVisible,
+  hudSurfaceState,
   onZoomHudChange,
   onOpenDetail,
   onRunSelected,
@@ -74,6 +79,23 @@ export function CognitiveWorkflowCanvas({
   belowCanvasSlot,
 }: CognitiveWorkflowCanvasProps) {
   const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null)
+  const [nodeHudAnchor, setNodeHudAnchor] = useState<CanvasHudAnchor | null>(null)
+  const [edgeHudAnchor, setEdgeHudAnchor] = useState<CanvasHudAnchor | null>(null)
+  const [nodeHudSize, setNodeHudSize] = useState<CanvasHudSize | null>(null)
+  const [edgeHudSize, setEdgeHudSize] = useState<CanvasHudSize | null>(null)
+  const handleHudAnchorChange = useCallback(
+    ({ node, edge }: { node: CanvasHudAnchor | null; edge: CanvasHudAnchor | null }) => {
+      setNodeHudAnchor((current) => (areHudAnchorsEqual(current, node) ? current : node))
+      setEdgeHudAnchor((current) => (areHudAnchorsEqual(current, edge) ? current : edge))
+    },
+    [],
+  )
+  const handleNodeHudSizeChange = useCallback((size: CanvasHudSize | null) => {
+    setNodeHudSize((current) => (areHudSizesEqual(current, size) ? current : size))
+  }, [])
+  const handleEdgeHudSizeChange = useCallback((size: CanvasHudSize | null) => {
+    setEdgeHudSize((current) => (areHudSizesEqual(current, size) ? current : size))
+  }, [])
   const selectedNodeHud = useMemo(
     () =>
       buildSelectedNodeHudView({
@@ -93,6 +115,16 @@ export function CognitiveWorkflowCanvas({
     [connectionValidation, selectedConnectionId, workflow],
   )
   const workflowGroups = useMemo(() => buildWorkflowGroups(workflow), [workflow])
+  const visibleSelectedNodeHud = selectedEdgeHud ? null : selectedNodeHud
+  const hudCollisionState = useMemo<CanvasHudCollisionState>(
+    () => ({
+      ...hudSurfaceState,
+      miniMapVisible,
+      nodeHudSize,
+      edgeHudSize,
+    }),
+    [edgeHudSize, hudSurfaceState, miniMapVisible, nodeHudSize],
+  )
 
   function moveSelectedRight() {
     if (!selectedNode) return
@@ -122,7 +154,9 @@ export function CognitiveWorkflowCanvas({
             connectionValidation={connectionValidation}
             miniMapVisible={miniMapVisible}
             workflowGroups={workflowGroups}
+            hudCollisionState={hudCollisionState}
             onZoomHudChange={onZoomHudChange}
+            onHudAnchorChange={handleHudAnchorChange}
             onCreateConnection={onCreateConnection}
             onDeleteConnection={onDeleteConnection}
             onDeleteNode={onDeleteNode}
@@ -130,11 +164,13 @@ export function CognitiveWorkflowCanvas({
           />
         )}
         <SelectedObjectHud
-          view={selectedNodeHud}
+          view={visibleSelectedNodeHud}
           onRunSelected={onRunSelected}
           onOpenDetail={onOpenDetail}
           onMoveRight={moveSelectedRight}
           onDeleteSelected={() => selectedNode ? onDeleteNode(selectedNode.id) : undefined}
+          anchor={canvasMode === 'standard' ? null : nodeHudAnchor}
+          onMeasuredSizeChange={handleNodeHudSizeChange}
         />
         <SelectedEdgeHud
           view={selectedEdgeHud}
@@ -150,10 +186,30 @@ export function CognitiveWorkflowCanvas({
             onDeleteConnection(connectionId)
             setSelectedConnectionId(null)
           }}
+          anchor={canvasMode === 'standard' ? null : edgeHudAnchor}
+          onMeasuredSizeChange={handleEdgeHudSizeChange}
         />
         <CognitiveHudOverlay hudSnapshot={hudSnapshot} />
       </div>
       {belowCanvasSlot}
     </div>
   )
+}
+
+function areHudAnchorsEqual(a: CanvasHudAnchor | null, b: CanvasHudAnchor | null): boolean {
+  if (a === b) return true
+  if (!a || !b) return false
+  return (
+    a.x === b.x &&
+    a.y === b.y &&
+    a.source === b.source &&
+    a.placement === b.placement &&
+    a.collisionIds.join('|') === b.collisionIds.join('|')
+  )
+}
+
+function areHudSizesEqual(a: CanvasHudSize | null, b: CanvasHudSize | null): boolean {
+  if (a === b) return true
+  if (!a || !b) return false
+  return a.width === b.width && a.height === b.height
 }

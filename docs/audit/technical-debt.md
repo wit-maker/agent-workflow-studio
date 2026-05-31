@@ -1,6 +1,6 @@
 # Technical Debt
 
-Last updated: 2026-05-30
+Last updated: 2026-05-31
 
 This file lists current limits that may block later work if ignored.
 
@@ -27,7 +27,7 @@ These items do not block SA-1, but they should be tracked so that SA-5 onward do
 - The legacy `.app-shell` / `.workspace-grid` / `.top-bar` CSS rules and the `TopBar.tsx` component are no longer rendered but remain in the tree. They should be removed once we are confident no other surface depends on them.
 - `WorkspaceLeftRail` Workflow Library / Templates tabs are scaffold placeholders. The full library/template UX should land before the WIP badges become stale.
 - `CanvasCommandHud` shows model as static `GPT-5.5 high`. It must read from settings once the model selection lives in product state.
-- `CognitiveHudOverlay` renders a single central card, while `SelectedObjectHud` and `SelectedEdgeHud` render fixed-position floating HUDs. The Issue #34 spec also calls for coordinate-following object HUD placement, focus highlight, and dim of irrelevant paths. Those remain missing.
+- `CognitiveHudOverlay` renders a single central card. `SelectedObjectHud` and `SelectedEdgeHud` now use measured viewport-anchored placement with DOM collision rects, and selected node/edge local focus path dimming exists. The remaining debt is semantic attention paths derived from trace, validation, approval, and failure-cause state, plus richer HUD density rules for very small viewports.
 - `node-hud-badge` covers four statuses (failed / review_required / blocked / retry_ready). The full HUD badge spec includes severity, priority, human-gate, and failure-cause variants on top of status.
 - `SelectedEdgeHud` exists, but delay / retry / error-route / health are derived HUD summaries, not runtime-backed edge semantics yet.
 

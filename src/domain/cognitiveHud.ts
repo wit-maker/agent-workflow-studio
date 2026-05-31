@@ -183,6 +183,36 @@ export type WorkflowGroupView = {
   nodeIds: string[]
 }
 
+export type CanvasHudPlacement =
+  | 'right'
+  | 'left'
+  | 'below'
+  | 'above'
+  | 'top-safe'
+  | 'fallback'
+
+export type CanvasHudSize = {
+  width: number
+  height: number
+}
+
+export type CanvasHudCollisionState = {
+  paletteOpen: boolean
+  detailOpen: boolean
+  consoleOpen: boolean
+  miniMapVisible: boolean
+  nodeHudSize: CanvasHudSize | null
+  edgeHudSize: CanvasHudSize | null
+}
+
+export type CanvasHudAnchor = {
+  x: number
+  y: number
+  source: 'node' | 'edge'
+  placement: CanvasHudPlacement
+  collisionIds: string[]
+}
+
 // ---- Tunables ----
 
 const ELEVATED_RETRY_THRESHOLD = 2

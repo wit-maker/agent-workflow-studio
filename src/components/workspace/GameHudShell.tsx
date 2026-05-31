@@ -1,4 +1,4 @@
-import { useCallback, useState, type ReactNode } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { buildZoomHudView, type HudSnapshot, type ZoomHudView } from '../../domain/cognitiveHud'
 import type { ConnectorJob } from '../../domain/connectorQueue'
 import type {
@@ -103,9 +103,27 @@ export function GameHudShell(props: GameHudShellProps) {
       current.zoomPercent === next.zoomPercent && current.mode === next.mode ? current : next,
     )
   }, [])
+  const hudSurfaceState = useMemo(
+    () => ({
+      paletteOpen,
+      detailOpen,
+      consoleOpen,
+    }),
+    [consoleOpen, detailOpen, paletteOpen],
+  )
+
+  const workspaceClassName = [
+    'cognitive-workspace',
+    'game-hud-workspace',
+    zoomHud.className,
+    paletteOpen ? 'palette-open' : '',
+    detailOpen ? 'detail-open' : '',
+    consoleOpen ? 'console-open' : '',
+    miniMapVisible ? 'minimap-open' : '',
+  ].filter(Boolean).join(' ')
 
   return (
-    <div className={`cognitive-workspace game-hud-workspace ${zoomHud.className}`}>
+    <div className={workspaceClassName}>
       <div className="game-hud-canvas-shell" aria-label="Game HUD 型ワークフロースタジオ">
         <CognitiveWorkflowCanvas
           workflow={props.workflow}
@@ -115,6 +133,7 @@ export function GameHudShell(props: GameHudShellProps) {
           connectionValidation={props.connectionValidation}
           hudSnapshot={props.hudSnapshot}
           miniMapVisible={miniMapVisible}
+          hudSurfaceState={hudSurfaceState}
           onZoomHudChange={handleZoomChange}
           onOpenDetail={() => setDetailOpen(true)}
           onRunSelected={props.onRunSelected}

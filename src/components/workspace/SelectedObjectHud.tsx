@@ -1,5 +1,9 @@
-import { useState } from 'react'
-import type { SelectedNodeHudView } from '../../domain/cognitiveHud'
+import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
+import type {
+  CanvasHudAnchor,
+  CanvasHudSize,
+  SelectedNodeHudView,
+} from '../../domain/cognitiveHud'
 import { hudPriorityLabels } from '../../domain/cognitiveHud'
 
 type SelectedObjectHudProps = {
@@ -8,6 +12,8 @@ type SelectedObjectHudProps = {
   onOpenDetail: () => void
   onMoveRight: () => void
   onDeleteSelected: () => void
+  anchor?: CanvasHudAnchor | null
+  onMeasuredSizeChange?: (size: CanvasHudSize | null) => void
 }
 
 type HudTab = 'overview' | 'config' | 'io' | 'history'
@@ -25,15 +31,61 @@ export function SelectedObjectHud({
   onOpenDetail,
   onMoveRight,
   onDeleteSelected,
+  anchor,
+  onMeasuredSizeChange,
 }: SelectedObjectHudProps) {
   const [tab, setTab] = useState<HudTab>('overview')
   const [copied, setCopied] = useState(false)
+  const hudRef = useRef<HTMLElement | null>(null)
+
+  useLayoutEffect(() => {
+    if (!onMeasuredSizeChange) {
+      return
+    }
+
+    if (!view) {
+      onMeasuredSizeChange(null)
+      return
+    }
+
+    const element = hudRef.current
+    if (!element) {
+      return
+    }
+
+    const reportSize = () => {
+      const rect = element.getBoundingClientRect()
+      if (rect.width <= 0 || rect.height <= 0) {
+        return
+      }
+      onMeasuredSizeChange({
+        width: Math.ceil(rect.width),
+        height: Math.ceil(rect.height),
+      })
+    }
+
+    reportSize()
+
+    if (typeof ResizeObserver === 'undefined') {
+      return
+    }
+
+    const observer = new ResizeObserver(reportSize)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [onMeasuredSizeChange, tab, view])
 
   if (!view) {
     return null
   }
 
   const safeCopySummary = view.safeCopySummary
+  const anchorStyle: CSSProperties | undefined = anchor
+    ? {
+        left: anchor.x,
+        top: anchor.y,
+      }
+    : undefined
 
   function copySummary() {
     if (!navigator.clipboard) {
@@ -47,9 +99,13 @@ export function SelectedObjectHud({
 
   return (
     <aside
+      ref={hudRef}
       className={`selected-object-hud selected-object-hud-${view.priority} ${
         view.focusMatched ? 'selected-object-hud-focused' : ''
-      }`}
+      } ${anchor ? 'is-anchored' : ''}`}
+      style={anchorStyle}
+      data-hud-placement={anchor?.placement ?? 'fallback'}
+      data-hud-collisions={anchor?.collisionIds.join(' ') ?? ''}
       aria-label="選択オブジェクトHUD"
     >
       <header className="selected-object-hud-header">

@@ -1,11 +1,17 @@
-import { useState } from 'react'
-import type { SelectedEdgeHudView } from '../../domain/cognitiveHud'
+import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
+import type {
+  CanvasHudAnchor,
+  CanvasHudSize,
+  SelectedEdgeHudView,
+} from '../../domain/cognitiveHud'
 
 type SelectedEdgeHudProps = {
   view: SelectedEdgeHudView | null
   onSelectSource: (nodeId: string) => void
   onSelectTarget: (nodeId: string) => void
   onDeleteEdge: (connectionId: string) => void
+  anchor?: CanvasHudAnchor | null
+  onMeasuredSizeChange?: (size: CanvasHudSize | null) => void
 }
 
 export function SelectedEdgeHud({
@@ -13,14 +19,60 @@ export function SelectedEdgeHud({
   onSelectSource,
   onSelectTarget,
   onDeleteEdge,
+  anchor,
+  onMeasuredSizeChange,
 }: SelectedEdgeHudProps) {
   const [copied, setCopied] = useState(false)
+  const hudRef = useRef<HTMLElement | null>(null)
+
+  useLayoutEffect(() => {
+    if (!onMeasuredSizeChange) {
+      return
+    }
+
+    if (!view) {
+      onMeasuredSizeChange(null)
+      return
+    }
+
+    const element = hudRef.current
+    if (!element) {
+      return
+    }
+
+    const reportSize = () => {
+      const rect = element.getBoundingClientRect()
+      if (rect.width <= 0 || rect.height <= 0) {
+        return
+      }
+      onMeasuredSizeChange({
+        width: Math.ceil(rect.width),
+        height: Math.ceil(rect.height),
+      })
+    }
+
+    reportSize()
+
+    if (typeof ResizeObserver === 'undefined') {
+      return
+    }
+
+    const observer = new ResizeObserver(reportSize)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [onMeasuredSizeChange, view])
 
   if (!view) {
     return null
   }
 
   const safeView = view
+  const anchorStyle: CSSProperties | undefined = anchor
+    ? {
+        left: anchor.x,
+        top: anchor.y,
+      }
+    : undefined
 
   function copySummary() {
     if (!navigator.clipboard) {
@@ -41,7 +93,11 @@ export function SelectedEdgeHud({
 
   return (
     <aside
-      className={`selected-edge-hud selected-edge-hud-${view.health}`}
+      ref={hudRef}
+      className={`selected-edge-hud selected-edge-hud-${view.health} ${anchor ? 'is-anchored' : ''}`}
+      style={anchorStyle}
+      data-hud-placement={anchor?.placement ?? 'fallback'}
+      data-hud-collisions={anchor?.collisionIds.join(' ') ?? ''}
       aria-label="選択エッジHUD"
     >
       <header className="selected-edge-hud-header">

@@ -35,13 +35,14 @@ export function ReactFlowNode({
     connectedOutputPortIds,
     connectionCount,
     inlinePreview,
+    focusRole,
   } = data
 
   const badge = nodeHudBadge(node.status)
 
   return (
     <div
-      className={`react-flow-node node-${node.status} react-flow-node-category-${node.category} ${selected ? 'selected' : ''}`}
+      className={`react-flow-node node-${node.status} react-flow-node-category-${node.category} focus-${focusRole} ${selected ? 'selected' : ''}`}
       aria-label={`${node.title} ノード`}
     >
       {badge ? (

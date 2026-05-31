@@ -1,6 +1,6 @@
 # Missing Systems
 
-Last updated: 2026-05-30
+Last updated: 2026-05-31
 
 Priority scale:
 
@@ -15,9 +15,11 @@ Priority scale:
 - `GameHudShell` now makes React Flow canvas the primary surface and turns palette/detail/BottomMonitor into on-demand HUD drawer/console surfaces.
 - `CanvasCommandHud`, `CanvasMiniMapHud`, `WorkflowGroupLayer`, `SelectedObjectHud`, and `SelectedEdgeHud` exist as receivers.
 - Zoom mode (`overview / map / normal / detail / deep`) and inline preview are implemented as class/data projections.
+- Selected node/edge HUDs now use measured HUD size plus DOM collision rects for command HUD, drawers, MiniMap, Console, and React Flow controls; Game HUD mode also disables the legacy 1024px horizontal body scroll.
 - Still missing (foundation only, not full implementation):
-  - True node/edge coordinate-following HUD placement
-  - Node/edge path dimming, focus highlighting, and richer visual emphasis rules
+  - Advanced HUD placement policy with priority-weighted escape zones, content-density reduction, and animated reflow
+  - Semantic node/edge path focus from trace, validation, failure cause, approval state, and runtime attention rules
+  - Richer visual emphasis rules beyond selected node/edge local focus
   - Runtime-backed edge semantics for delay / retry / error route / health beyond derived HUD summaries
   - Situation Assistant real channels beyond 4D text (voice, avatar, video, news-style video, dynamic next-action banners)
   - Critical short-tone audio channel
@@ -68,11 +70,11 @@ The MVP has `HudSignal` / `HudSnapshot` / `CognitiveHudPanel`. The cognitive HUD
 | Element | Why it is needed |
 |---|---|
 | HUD badges on `ConnectionLine` / React Flow edges | `SelectedEdgeHud` exists for selected edges, but always-on edge badges / path attention still need to surface on the flow path itself. |
-| Coordinate-following selected object HUD | The current selected-node and selected-edge HUDs are canvas-local but fixed-position; future work should anchor them closer to the selected object when viewport data is available. |
+| Collision-aware selected object HUD | Selected-node and selected-edge HUDs now use measured card size and DOM collision rects, but advanced priority rules, density reduction, and animated reflow are still missing. |
 | Rich central HUD card | Decisive states (failure, approval needed, danger) need richer state-specific content, not only the current summary card. |
 | Approval Pending HUD | Approvals must never be hidden in a tab; they need a dedicated, dismissable surface. |
 | Failure Cause Card | Failures need a "follow the cause" surface, not a single log line. |
-| Focus Overlay / Path Dim | Attention is set by raising the relevant path and dimming the rest, not by adding more rows. |
+| Semantic Focus Overlay / Path Dim | Selected node/edge local path dimming exists. Attention still needs trace-, validation-, approval-, and failure-cause-driven focus beyond the current selection. |
 | Notification Bundle | Bursts of low-priority signals should fold into one summary instead of competing for attention. |
 | Critical short audio cue | A short audio cue moves attention without forcing eye contact; it is part of the HUD's expression channels. |
 | HUD history | Past HUD states must be reviewable so users can reconstruct "when did this go bad." |

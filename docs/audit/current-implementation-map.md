@@ -1,6 +1,6 @@
 # Current Implementation Map
 
-Last updated: 2026-05-30
+Last updated: 2026-05-31
 
 This map records what the current MVP actually contains. It does not redefine the full product goal.
 
@@ -41,10 +41,10 @@ These MVP surfaces are useful and intentional. They are listed here so that "imp
 |---|---|---|
 | Always-on HUD | `CanvasCommandHud` shows compact run state, alert level, zoom mode, model, safety state, Run/Selected/FromSelected/Dry/Stop/Reset/Undo/Redo/Export/Import/Canvas mode, and Palette/Detail/MiniMap/Console toggles. | Model is still static text; richer iconography can improve later. |
 | Left | `WorkspaceLeftRail` exposes Components (`PartsPalette`) plus WIP scaffold tabs as a collapsible Palette HUD drawer. | Library/Templates tabs are scaffold; existing data still reachable via Console HUD. |
-| Center | `CognitiveWorkflowCanvas` primarily uses `ReactFlowCanvas`, overlays `CognitiveHudOverlay`, `SelectedObjectHud`, `SelectedEdgeHud`, `WorkflowGroupLayer`, and right-bottom `CanvasMiniMapHud`. StagePreview is no longer a constant canvas footer. | True coordinate-following HUD, path dimming, and focus highlighting are not implemented. |
+| Center | `CognitiveWorkflowCanvas` primarily uses `ReactFlowCanvas`, overlays `CognitiveHudOverlay`, anchored `SelectedObjectHud`, anchored `SelectedEdgeHud`, `WorkflowGroupLayer`, and right-bottom `CanvasMiniMapHud`. StagePreview is no longer a constant canvas footer. | HUD placement now uses measured card size and DOM collision rects; semantic trace/cause-chain focus is not implemented. |
 | Right | `WorkspaceRightPanel` switches between Situation / Inspector / Assistant / Human Review inside an on-demand Detail HUD drawer. | Inspector is the existing component reused as one mode. |
 | Bottom | `DetailDrawerDock` wraps `BottomMonitor` as collapsible Console HUD. All existing tabs preserved for compatibility. | Tabs are no longer the primary surface for HUD / Briefing / Run Detail. |
-| Overlay | `CognitiveHudOverlay` shows central HUD card + focus when HUD priority ≠ normal. `SelectedObjectHud` shows selected-node local HUD context. `SelectedEdgeHud` shows selected-edge flow context. `CriticalOverlay` foregrounds a banner only at priority=critical. | Path dimming, coordinate-following HUD placement, rich central HUD variants, and critical short-tone audio are not implemented. |
+| Overlay | `CognitiveHudOverlay` shows central HUD card + focus when HUD priority ≠ normal. `SelectedObjectHud` shows selected-node local HUD context near the selected node while avoiding measured HUD surfaces. `SelectedEdgeHud` shows selected-edge flow context near the selected flow with the same placement path. `CriticalOverlay` foregrounds a banner only at priority=critical. | Rich central HUD variants, semantic focus path, HUD history, and critical short-tone audio are not implemented. |
 | Stage/output | Output review remains available through Console HUD / existing BottomMonitor tabs and right detail surfaces. | Diff and publish preparation remain partial or missing. |
 
 ## Components
@@ -141,15 +141,15 @@ This section breaks the two concept layers into "what currently exists in code" 
 | HudSnapshot / HudCounts | Implemented as `HudSnapshot` / `HudCounts` | `CognitiveHudPanel` |
 | Priority Score / L0–L5 alert level | Partial — alert level + priority derived per signal | `CognitiveHudPanel` |
 | HUD badge on NodeCard / ConnectionLine | Partial — node status badges exist on `NodeCard` / `ReactFlowNode`; connection HUD badges are missing | `node-hud-badge` |
-| Selected object HUD (選択時の浮遊HUD) | Partial — selected node and selected edge get canvas-local HUD context with quick actions; coordinate-following placement is still missing | `SelectedObjectHud`, `SelectedEdgeHud` |
+| Selected object HUD (選択時の浮遊HUD) | Partial — selected node and selected edge get canvas-local HUD context with quick actions and viewport-anchored placement | `SelectedObjectHud`, `SelectedEdgeHud` |
 | Central HUD card (画面中央のHUDカード) | Partial — central card receiver exists for non-normal priority, but rich approval/failure/focus variants are missing | `CognitiveHudOverlay` |
 | Approval Pending HUD | Missing (signals exist in list form only) | — |
 | Failure Cause Card | Missing | — |
-| Focus Overlay / Path Dim (不要経路の減光) | Missing | — |
+| Focus Overlay / Path Dim (不要経路の減光) | Partial — selected node/edge highlight their local path and dim irrelevant nodes/edges | `ReactFlowCanvas`, `ReactFlowNode` |
 | Notification Bundle (通知まとめ) | Missing | — |
 | Critical short audio cue | Missing | — |
 | HUD history (HUD表示履歴) | Missing | — |
-| Cognitive HUD as attention-allocation layer spanning Canvas / Inspector / modals | Missing as a layer; only the summary panel exists | `CognitiveHudPanel` is a summary, not the layer |
+| Cognitive HUD as attention-allocation layer spanning Canvas / Inspector / modals | Partial — canvas selection/focus layer exists, but orchestration across Inspector / modals / notifications is incomplete | `CognitiveHudPanel` remains a summary, not the layer |
 
 ### Situation Narration Layer (Situation Assistant)
 

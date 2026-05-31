@@ -3627,6 +3627,16 @@ button:disabled {
  * Game HUD Canvas First completion
  * ===================================================================== */
 
+body:has(.game-hud-workspace) {
+  min-width: 0;
+  overflow: hidden;
+}
+
+body:has(.game-hud-workspace) #root {
+  width: 100vw;
+  overflow: hidden;
+}
+
 .game-hud-workspace {
   --bg: #050914;
   --surface: rgba(10, 18, 32, 0.88);
@@ -4177,6 +4187,36 @@ button:disabled {
   border-color: rgba(103, 232, 249, 0.34);
 }
 
+.react-flow-node.focus-selected {
+  border-color: rgba(103, 232, 249, 0.72);
+  box-shadow:
+    0 0 0 1px rgba(103, 232, 249, 0.22),
+    0 20px 44px rgba(8, 47, 73, 0.34);
+}
+
+.react-flow-node.focus-path {
+  border-color: rgba(45, 212, 191, 0.45);
+  box-shadow:
+    0 0 0 1px rgba(45, 212, 191, 0.12),
+    0 16px 34px rgba(15, 23, 42, 0.28);
+}
+
+.react-flow-node.focus-dimmed {
+  opacity: 0.42;
+  filter: saturate(0.58);
+}
+
+.react-flow-canvas-root .react-flow__edge.focus-path-edge .react-flow__edge-path,
+.react-flow-canvas-root .react-flow__edge.focus-selected-edge .react-flow__edge-path {
+  filter: drop-shadow(0 0 6px rgba(103, 232, 249, 0.38));
+}
+
+.react-flow-canvas-root .react-flow__edge.focus-dimmed-edge .react-flow__edge-path,
+.react-flow-canvas-root .react-flow__edge.focus-dimmed-edge .react-flow__edge-text,
+.react-flow-canvas-root .react-flow__edge.focus-dimmed-edge .react-flow__edge-textbg {
+  opacity: 0.3;
+}
+
 .selected-object-hud,
 .selected-edge-hud {
   pointer-events: auto;
@@ -4185,10 +4225,16 @@ button:disabled {
 .game-hud-workspace .selected-object-hud {
   left: 18px;
   bottom: 68px;
+  z-index: 26;
   width: min(430px, calc(100vw - 36px));
   max-height: min(620px, calc(100vh - 154px));
   overflow: auto;
   color: var(--text);
+}
+
+.game-hud-workspace .selected-object-hud.is-anchored {
+  right: auto;
+  bottom: auto;
 }
 
 .game-hud-workspace .selected-edge-hud {
@@ -4203,6 +4249,51 @@ button:disabled {
   border-radius: 8px;
   padding: 10px 12px;
   color: var(--text);
+}
+
+.game-hud-workspace .selected-edge-hud.is-anchored {
+  right: auto;
+  bottom: auto;
+}
+
+.game-hud-workspace.console-open .selected-object-hud,
+.game-hud-workspace.console-open .selected-edge-hud {
+  max-height: max(180px, min(420px, calc(56vh - 116px)));
+  overflow: auto;
+}
+
+@media (max-width: 720px) {
+  .game-hud-workspace .selected-object-hud,
+  .game-hud-workspace .selected-edge-hud {
+    max-height: max(180px, min(360px, calc(100vh - 390px)));
+  }
+
+  .game-hud-workspace.console-open .selected-object-hud,
+  .game-hud-workspace.console-open .selected-edge-hud {
+    max-height: max(96px, min(220px, calc(56vh - 250px)));
+  }
+}
+
+.game-hud-workspace .selected-object-hud[data-hud-placement="left"],
+.game-hud-workspace .selected-edge-hud[data-hud-placement="left"] {
+  transform-origin: top right;
+}
+
+.game-hud-workspace .selected-object-hud[data-hud-placement="right"],
+.game-hud-workspace .selected-edge-hud[data-hud-placement="right"],
+.game-hud-workspace .selected-object-hud[data-hud-placement="top-safe"],
+.game-hud-workspace .selected-edge-hud[data-hud-placement="top-safe"] {
+  transform-origin: top left;
+}
+
+.game-hud-workspace .selected-object-hud[data-hud-placement="above"],
+.game-hud-workspace .selected-edge-hud[data-hud-placement="above"] {
+  transform-origin: bottom center;
+}
+
+.game-hud-workspace .selected-object-hud[data-hud-placement="below"],
+.game-hud-workspace .selected-edge-hud[data-hud-placement="below"] {
+  transform-origin: top center;
 }
 
 .selected-edge-hud-watch {

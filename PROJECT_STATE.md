@@ -1,6 +1,138 @@
 # Project State
 
-Last updated: 2026-05-30
+Last updated: 2026-05-31
+
+---
+
+## Phase UI-2d: Measured HUD Collision Placement
+
+- Branch: `codex/selection-overlay-minimal-hud`
+- Date: 2026-05-31
+- Model gate: ユーザー明示により GPT-5.5 high として継続。`/status` / `/model` での確認はこの環境では使わず、ユーザー明示を優先した。
+- Scope: UI-2c の次スライスとして、selected node/edge HUD の実測サイズを使い、command HUD / drawer / MiniMap / Console / React Flow controls との衝突を避ける placement に更新する。依存追加、backend/API、credential 保存、実 AI API、外部 asset、新 localStorage key は追加しない。
+
+### Implemented
+
+- `CanvasHudSize`, `CanvasHudCollisionState`, `CanvasHudPlacement` を `src/domain/cognitiveHud.ts` に追加し、HUD anchor に placement と collision metadata を持たせた。
+- `SelectedObjectHud` / `SelectedEdgeHud` は `ResizeObserver` で実 DOM サイズを測り、`CognitiveWorkflowCanvas` 経由で `ReactFlowCanvas` の placement 計算へ渡すようにした。
+- `ReactFlowCanvas` は選択ノードの React Flow instance 座標だけでなく、実 DOM node rect を優先して anchor 候補を作るようにした。初期フレームで instance 座標が未確定でも HUD が null 固定になりにくい。
+- command HUD / Palette drawer / Detail drawer / Console dock / MiniMap / React Flow controls の実 DOM rect を collision rect として読み、未測定時だけ CSS 寸法ベースの fallback を使う placement scorer に変更した。
+- `body { min-width: 1024px; }` の影響で Game HUD 画面が横スクロールする問題を、`body:has(.game-hud-workspace)` で Game HUD 中だけ `min-width: 0` / `overflow: hidden` に上書きして解消した。
+- 狭幅 viewport で command HUD が複数段に折り返す場合、実測 command HUD 下端を top-safe の基準にし、選択 HUD は内部スクロール可能な低いカードへ縮退するようにした。
+- Console open 時は `console-open` workspace class を追加し、選択 HUD の max-height をさらに抑えて Bottom Console と競合しにくくした。
+
+### Design asset alignment
+
+- `03_hud-layer-model.png`: HUD layer 同士の重なりを実測 rect で調停する基礎を追加した。
+- `07_node-detail-hud.png` / `11_selection-overlay.png`: floating HUD が選択対象だけでなく、周囲 HUD surface を避けながら出るようになった。
+- `12_minimal-always-on-hud.png`: command HUD が狭幅で折り返しても、選択 HUD が常時 HUD を覆いにくい配置へ寄せた。
+- `13_dark-theme-finished-canvas.png`: dark HUD の重なり過多を抑え、Canvas First の視界を維持する方向に調整した。
+
+### Existing behavior preserved
+
+- mock-only execution、localStorage 仕様、JSON import/export、Run/Reset/Undo/Redo、MiniMap、Palette/Detail/Console drawers は維持。
+- Standard canvas は互換 fallback として維持。測定/collision-aware placement は React Flow canvas 主対象。
+- credential/token/password/API key などの値を HUD / copy summary / storage / log に含めない方針を維持。
+
+### Validation
+
+- `npm.cmd run typecheck`: pass
+- `npm.cmd run lint`: pass
+- `npm.cmd run build`: pass
+- Vite chunk-size warning のみ発生。既存許容警告として扱う。
+- JSON import/export direct path: `npx.cmd tsx` で `validateWorkflowImport(...)`, `createWorkflowBundle(...)`, `createFullBundle(...)`, `validateImportBundle(...)` を検証し pass。
+
+### Browser QA
+
+- Preview: `http://127.0.0.1:4180/`
+- 初期表示 / dark Game HUD / React Flow nodes / MiniMap / zoom HUD: pass
+- Game HUD 中の horizontal scroll: `body.scrollWidth === body.clientWidth` / `scrollX === 0` を確認し pass
+- selected node HUD: `is-anchored` 表示、実測 height 反映、narrow viewport で command HUD 下へ移動し、React Flow controls / MiniMap / collapsed Console と実 overlap なしを確認。
+- Palette drawer open: Browser 上で表示状態と object HUD の非重なりを確認。
+- Browser console errors/warnings: none captured
+- External script/link/image assets outside localhost: none in DOM (`script`, `link`, `img`)
+- Note: Browser plugin の click がこの狭幅 viewport で一部不安定だったため、Console toggle / Run のクリック確認は direct DOM state と既存 validation を補助として扱った。
+
+### Remaining gaps
+
+- Collision solver は DOM rect + candidate scoring の基礎実装であり、優先度付き避難先やアニメーション付き再配置までは未実装。
+- Console open 中の極小 viewport では HUD をスクロールカードへ縮退する。将来は HUD の内容量自体を mode 別に減らす必要がある。
+- Focus path は selected node/edge の局所 highlight で、実行 trace / cause chain / approval path 由来の semantic focus までは未実装。
+- Edge HUD の delay/retry/error-route/health は引き続き派生・仮表示で、runtime semantics の完全実装ではない。
+- Rich central HUD variants（approval pending / failure cause / danger）、critical short-tone audio、HUD history は未実装。
+
+### Next recommended slice
+
+1. 実行 trace / validation / failure cause / approval state から semantic focus path を導出し、選択以外でも attention path を出せるようにする。
+2. rich central HUD variants（approval pending / failure cause / danger）を状態別に実装する。
+3. Bottom Console と右 Detail HUD の重複を整理し、旧 BottomMonitor タブを段階的に薄くする。
+4. HUD placement に優先度付き避難先、狭幅専用 content density、再配置アニメーションを追加する。
+
+---
+
+## Phase UI-2c: Anchored Selection HUD + Focus Path
+
+- Branch: `codex/selection-overlay-minimal-hud`
+- Date: 2026-05-31
+- Model gate: ユーザー明示により GPT-5.5 high として継続。`/status` / `/model` での確認はこの環境では使わず、ユーザー明示を優先した。
+- Scope: UI-2b の次スライスとして、selected node/edge HUD を viewport 座標へ anchor し、選択対象に関係する path highlight / irrelevant path dimming を React Flow 表示へ追加する。依存追加、backend/API、credential 保存、実 AI API、外部 asset、新 localStorage key は追加しない。
+
+### Implemented
+
+- React Flow instance の `flowToScreenPosition(...)` と現在 viewport を使い、selected node HUD / selected edge HUD の anchor 座標を `ReactFlowCanvas` から `CognitiveWorkflowCanvas` へ lift した。
+- `SelectedObjectHud` / `SelectedEdgeHud` は `CanvasHudAnchor` を受け取り、固定左下/右上ではなく選択対象近傍へ追従する `is-anchored` 表示になった。
+- overview / map の低 zoom では node HUD を上部 safe zone に逃がし、React Flow controls を塞がないよう調整した。
+- edge 選択時は node HUD を隠し、edge HUD を主 surface として表示するようにした。
+- 選択 node の直接 upstream/downstream edge と隣接 node を `focus-path`、その他を `focus-dimmed` として表示する focus path state を追加した。
+- 選択 edge の source/target node と selected edge を強調し、他 node/edge を dim するようにした。
+- `ReactFlowNode` に `focusRole` を渡し、React Flow edge には `focus-path-edge` / `focus-selected-edge` / `focus-dimmed-edge` class と opacity/stroke の差を付けた。
+
+### Design asset alignment
+
+- `07_node-detail-hud.png` / `11_selection-overlay.png`: floating HUD が選択対象近傍へ寄るようになり、選択時だけ情報密度が上がる構造を強化した。
+- `03_hud-layer-model.png`: L1 Object HUD / L2 Flow HUD を canvas viewport layer と連動させた。
+- `04_wireframe-main-canvas.png` / `12_minimal-always-on-hud.png`: 常時 HUD を邪魔せず、選択 path だけを強調する canvas-first 状態へ寄せた。
+- `13_dark-theme-finished-canvas.png`: focus path の細い発光・非関連 path の減光を dark HUD theme に合わせて追加した。
+
+### Existing behavior preserved
+
+- mock-only execution、localStorage 仕様、JSON import/export、Run/Reset/Undo/Redo、MiniMap、Palette/Detail/Console drawers は維持。
+- Standard canvas は互換 fallback として維持。anchor / focus path は React Flow canvas 主対象。
+- credential/token/password/API key などの値を HUD / copy summary / storage / log に含めない方針を維持。
+
+### Validation
+
+- `npm.cmd run typecheck`: pass
+- `npm.cmd run lint`: pass
+- `npm.cmd run build`: pass
+- Vite chunk-size warning のみ発生。既存許容警告として扱う。
+- JSON import/export direct path: `npx.cmd tsx` で `validateWorkflowImport(...)`, `createWorkflowBundle(...)`, `createFullBundle(...)`, `validateImportBundle(...)` を検証し pass。
+
+### Browser QA
+
+- Preview: `http://127.0.0.1:4179/`
+- 初期表示 / dark Game HUD / 12 nodes / 13 edges: pass
+- selected node HUD: `is-anchored` 表示、選択 node 近傍への追従、overview/map 低 zoom safe-zone placement: pass
+- React Flow controls: node HUD と overlap しないこと、Zoom In 操作で `Overview 34%` -> `Map 49%` に変化することを確認。
+- Focus path: selected node で `focus-selected=1`, `focus-path` node/edge, `focus-dimmed` node/edge が付くことを確認。
+- selected edge HUD: `is-anchored` 表示、edge 選択時の node HUD 非表示、source/target/path/dim の切替、Select source で node HUD へ戻る導線を確認。
+- Browser console errors/warnings: none captured
+- External script/link/image assets outside localhost: none in DOM (`script`, `link`, `img`)
+
+### Remaining gaps
+
+- Anchor はカード概算寸法で clamp しており、HUD 実測サイズ・drawer/minimap/console との完全 collision solver ではない。
+- Focus path は selected node/edge の局所 highlight で、実行 trace / cause chain / approval path 由来の semantic focus までは未実装。
+- Edge HUD の delay/retry/error-route/health は引き続き派生・仮表示で、runtime semantics の完全実装ではない。
+- Rich central HUD variants（approval pending / failure cause / danger）、critical short-tone audio、HUD history は未実装。
+- Bottom Console と右 Detail HUD の重複整理、Workflow Library / Templates の左 rail 本格化は未完。
+
+### Next recommended slice
+
+1. HUD anchor を実測サイズ + drawer/minimap/console collision-aware placement にする。
+2. 実行 trace / validation / failure cause から semantic focus path を導出し、選択以外でも attention path を出せるようにする。
+3. rich central HUD variants（approval pending / failure cause / danger）を状態別に実装する。
+4. Bottom Console と右 Detail HUD の重複を整理し、旧 BottomMonitor タブを段階的に薄くする。
 
 ---
 
