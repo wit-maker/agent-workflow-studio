@@ -14,11 +14,13 @@ import type { EvaluationResult, HumanReviewState } from './evaluation'
 import {
   connectionKindLabels,
   connectionStatusLabels,
+  executionStepStatusLabels,
   formatDataTypeLabel,
   nodeCategoryLabels,
+  routeKindLabels,
   statusLabels,
 } from './displayLabels'
-import type { ExecutionGraph } from './executionGraph'
+import type { ExecutionGraph, ExecutionRouteKind, ExecutionStepStatus } from './executionGraph'
 import {
   getInputPorts,
   getOutputPorts,
@@ -158,6 +160,31 @@ export type InlinePreview = {
   source: 'description' | 'type' | 'ports'
 }
 
+export type EdgeRuntimeState = 'idle' | 'ready' | 'active' | 'observed' | 'blocked' | 'stale'
+
+export type EdgeRuntimeHealth = 'healthy' | 'watch' | 'blocked'
+
+export type EdgeRuntimeSemantics = {
+  connectionId: string
+  state: EdgeRuntimeState
+  stateLabel: string
+  health: EdgeRuntimeHealth
+  healthLabel: string
+  sourceStepStatus: string
+  targetStepStatus: string
+  routeSummary: string
+  observedRouteKinds: ExecutionRouteKind[]
+  evidenceCount: number
+  traceRunId: string | null
+  traceSource: RunTrace['source'] | 'none'
+  delaySummary: string
+  retrySummary: string
+  errorRouteSummary: string
+  conditionSummary: string
+  recommendedAction: string
+  className: string
+}
+
 export type SelectedEdgeHudView = {
   connectionId: string
   sourceNodeId: string
@@ -175,8 +202,16 @@ export type SelectedEdgeHudView = {
   delaySummary: string
   retrySummary: string
   errorRouteSummary: string
-  health: 'healthy' | 'watch' | 'blocked'
+  health: EdgeRuntimeHealth
   healthLabel: string
+  runtimeState: EdgeRuntimeState
+  runtimeLabel: string
+  sourceRuntimeStatus: string
+  targetRuntimeStatus: string
+  observedRouteSummary: string
+  runtimeEvidenceCount: number
+  traceRunId: string | null
+  traceSource: RunTrace['source'] | 'none'
   recommendedAction: string
   safeCopySummary: string
 }
@@ -496,12 +531,54 @@ export function buildSelectedNodeHudView(options: {
   }
 }
 
+type EdgeRuntimeStep = {
+  id: string
+  nodeId: string
+  status: ExecutionStepStatus
+  route: ExecutionRouteKind
+  durationMs?: number
+  evidenceCount: number
+}
+
+export function buildWorkflowEdgeRuntimeMap(options: {
+  workflow: Workflow
+  executionGraph?: ExecutionGraph | null
+  runTrace?: RunTrace | null
+  connectionValidation?: readonly ConnectionValidationSummary[]
+}): ReadonlyMap<string, EdgeRuntimeSemantics> {
+  const { workflow, executionGraph = null, runTrace = null, connectionValidation = [] } = options
+  const result = new Map<string, EdgeRuntimeSemantics>()
+
+  for (const connection of workflow.connections) {
+    const validation = connectionValidation.find((item) => item.connectionId === connection.id)
+    result.set(
+      connection.id,
+      buildEdgeRuntimeSemantics({
+        connection,
+        executionGraph,
+        runTrace,
+        validation,
+      }),
+    )
+  }
+
+  return result
+}
+
 export function buildSelectedEdgeHudView(options: {
   workflow: Workflow
   connectionId: string | null
-  connectionValidation?: readonly { connectionId?: string; valid: boolean; reason?: string | null }[]
+  executionGraph?: ExecutionGraph | null
+  runTrace?: RunTrace | null
+  connectionValidation?: readonly ConnectionValidationSummary[]
 }): SelectedEdgeHudView | null {
-  const { workflow, connectionId, connectionValidation = [] } = options
+  const {
+    workflow,
+    connectionId,
+    executionGraph = null,
+    runTrace = null,
+    connectionValidation = [],
+  } = options
   if (!connectionId) return null
 
   const connection = workflow.connections.find((item) => item.id === connectionId)
@@ -510,31 +587,22 @@ export function buildSelectedEdgeHudView(options: {
   const source = workflow.nodes.find((node) => node.id === connection.sourceNodeId)
   const target = workflow.nodes.find((node) => node.id === connection.targetNodeId)
   const validation = connectionValidation.find((item) => item.connectionId === connection.id)
+  const runtime = buildEdgeRuntimeSemantics({
+    connection,
+    executionGraph,
+    runTrace,
+    validation,
+  })
   const carriesSummary =
     connection.carries.length > 0
       ? connection.carries.map(formatDataTypeLabel).join(', ')
       : '未指定'
   const conditionKinds: ConnectionKind[] = ['decision', 'approval', 'error', 'retry']
   const hasCondition = conditionKinds.includes(connection.kind)
-  const latencyMs = connection.metrics?.latencyMs ?? 0
-  const health: SelectedEdgeHudView['health'] =
-    connection.status === 'failed' || connection.status === 'invalid' || validation?.valid === false
-      ? 'blocked'
-      : connection.status === 'throttled' || connection.kind === 'retry' || latencyMs >= 220
-        ? 'watch'
-        : 'healthy'
-  const healthLabel =
-    health === 'blocked' ? '要確認' : health === 'watch' ? '注視' : '正常'
   const flowTypeLabel = connectionKindLabels[connection.kind]
   const statusLabel = connectionStatusLabels[connection.status]
   const sourceTitle = source?.title ?? connection.sourceNodeId
   const targetTitle = target?.title ?? connection.targetNodeId
-  const recommendedAction =
-    health === 'blocked'
-      ? validation?.reason ?? '接続条件と上流/下流ノードを確認してください。'
-      : health === 'watch'
-        ? '遅延・再試行・分岐条件を確認してください。'
-        : '接続は安定しています。次は下流ノードの出力を確認できます。'
 
   return {
     connectionId: connection.id,
@@ -549,13 +617,21 @@ export function buildSelectedEdgeHudView(options: {
     statusLabel,
     carriesSummary,
     hasCondition,
-    conditionSummary: hasCondition ? `${flowTypeLabel} 経路` : '条件なし',
-    delaySummary: latencyMs > 0 ? `${latencyMs} ms estimate` : 'delay 未設定',
-    retrySummary: connection.kind === 'retry' ? 'retry route' : 'retry 仮表示なし',
-    errorRouteSummary: connection.kind === 'error' ? 'error route' : 'error route 仮表示なし',
-    health,
-    healthLabel,
-    recommendedAction,
+    conditionSummary: runtime.conditionSummary,
+    delaySummary: runtime.delaySummary,
+    retrySummary: runtime.retrySummary,
+    errorRouteSummary: runtime.errorRouteSummary,
+    health: runtime.health,
+    healthLabel: runtime.healthLabel,
+    runtimeState: runtime.state,
+    runtimeLabel: runtime.stateLabel,
+    sourceRuntimeStatus: runtime.sourceStepStatus,
+    targetRuntimeStatus: runtime.targetStepStatus,
+    observedRouteSummary: runtime.routeSummary,
+    runtimeEvidenceCount: runtime.evidenceCount,
+    traceRunId: runtime.traceRunId,
+    traceSource: runtime.traceSource,
+    recommendedAction: runtime.recommendedAction,
     safeCopySummary: [
       `edge: ${connection.id}`,
       `from: ${sourceTitle}`,
@@ -563,8 +639,13 @@ export function buildSelectedEdgeHudView(options: {
       `flow: ${flowTypeLabel}`,
       `status: ${statusLabel}`,
       `carries: ${carriesSummary}`,
-      `health: ${healthLabel}`,
-      `next: ${recommendedAction}`,
+      `runtime: ${runtime.stateLabel} / ${runtime.routeSummary}`,
+      `source: ${runtime.sourceStepStatus}`,
+      `target: ${runtime.targetStepStatus}`,
+      `health: ${runtime.healthLabel}`,
+      `evidence: ${runtime.evidenceCount}`,
+      `trace: ${runtime.traceRunId ?? 'none'} / ${runtime.traceSource}`,
+      `next: ${runtime.recommendedAction}`,
     ].join('\n'),
   }
 }
