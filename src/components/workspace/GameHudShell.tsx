@@ -179,6 +179,7 @@ export function GameHudShell(props: GameHudShellProps) {
           selectedNodeId={props.selectedNodeId}
           selectedNode={props.selectedNode}
           connectionValidation={props.connectionValidation}
+          executionGraph={props.executionGraph}
           hudSnapshot={props.hudSnapshot}
           runTrace={props.runTrace}
           semanticFocusPath={semanticFocusPath}

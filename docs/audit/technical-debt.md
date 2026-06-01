@@ -1,6 +1,6 @@
 # Technical Debt
 
-Last updated: 2026-06-01
+Last updated: 2026-06-02
 
 This file lists current limits that may block later work if ignored.
 
@@ -29,7 +29,7 @@ These items do not block SA-1, but they should be tracked so that SA-5 onward do
 - `CanvasCommandHud` shows model as static `GPT-5.5 high`. It must read from settings once the model selection lives in product state.
 - `CognitiveHudOverlay` now renders central HUD variants driven by semantic focus (`failure`, `approval`, `validation`, `running`, `bottleneck`) and selected node/edge HUDs use measured viewport-anchored placement with DOM collision rects. Selected node history can read durable audit evidence summaries. Remaining debt is richer HUD density rules for very small viewports, HUD history, notification bundling, and user-tunable depth/collapse policy.
 - `node-hud-badge` covers four statuses (failed / review_required / blocked / retry_ready). The full HUD badge spec includes severity, priority, human-gate, and failure-cause variants on top of status.
-- `SelectedEdgeHud` exists and semantic focus can highlight important edge paths, but delay / retry / error-route / health are derived HUD summaries, not runtime-backed edge semantics yet.
+- `SelectedEdgeHud` and React Flow edges now derive delay / retry / error-route / health from current `ExecutionGraph`, `RunTrace`, `WorkflowConnection`, and validation results. Remaining debt is turning that read-only projection into an enforced runtime contract with condition expressions, retry policy editing, durable route replay, and edge-level audit records.
 
 
 
@@ -38,7 +38,7 @@ These items do not block SA-1, but they should be tracked so that SA-5 onward do
 - `Workflow` is still closer to a browser MVP state object than the full `WorkflowDocument` described in source specs.
 - Node category labels differ from the complete source-spec category set.
 - `WorkflowNode` lacks first-class risk, HUD, owner, node log, connector binding, and approval metadata.
-- Connection kinds are typed, but many edge semantics are visual/metadata only and not yet enforced by the runtime.
+- Connection kinds are typed, and edge runtime semantics are now projected into HUD/React Flow from execution trace state, but they are not yet enforced by the runtime or persisted as edge-level audit events.
 - schemaVersion exists, but migration policy and compatibility tests are not yet implemented.
 
 ## Execution Debt

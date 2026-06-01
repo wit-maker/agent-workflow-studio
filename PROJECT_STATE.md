@@ -1,6 +1,70 @@
 # Project State
 
-Last updated: 2026-06-01
+Last updated: 2026-06-02
+
+---
+
+## Phase UI-2g: Runtime-backed Edge Semantics
+
+- Branch: `codex/selection-overlay-minimal-hud`
+- Date: 2026-06-02
+- Model gate: 「ユーザー明示により GPT-5.5 high として継続」を継続記録する。今回の実行時点では、ユーザーが GPT-5.5 xhigh へ変更済みと明示したため、その前提で実装した。
+- Scope: UI-2f の次スライスとして、Selected Edge HUD と React Flow edge 表示の delay / retry / error-route / health を、connection metadata だけでなく current `executionGraph` / `RunTrace` / validation result から導出する。新規 localStorage key、backend/API、credential 保存、実 AI API、外部 asset は追加しない。
+
+### Implemented
+
+- `src/domain/cognitiveHud.ts` に `EdgeRuntimeState`, `EdgeRuntimeHealth`, `EdgeRuntimeSemantics`, `buildWorkflowEdgeRuntimeMap(...)` を追加した。
+- edge runtime semantics は `WorkflowConnection`、`ExecutionGraph.routes`、source/target step status、`RunTrace` evidence count、retry candidates、connection validation を統合して、`idle / ready / active / observed / blocked / stale` と `healthy / watch / blocked` を導出する。
+- `buildSelectedEdgeHudView(...)` は `executionGraph` と `runTrace` を受け取り、condition / delay / retry / error-route / health / next action / copy summary を runtime-backed view に更新した。
+- `ReactFlowCanvas` は `edgeRuntimeByConnectionId` を受け取り、React Flow edge に `edge-runtime-*` / `edge-runtime-health-*` class と runtime label を付与する。
+- `SelectedEdgeHud` に Runtime / Observed / Source step / Target step / Evidence / Trace を追加し、選択 edge が current trace 由来か durable audit snapshot 由来かを読めるようにした。
+- `src/index.css` に runtime edge glow / dash / stale 表現と edge HUD runtime block を追加した。
+
+### Design asset alignment
+
+- `03_hud-layer-model.png`: edge HUD が static metadata だけでなく runtime observation layer を読む構造に近づいた。
+- `07_node-detail-hud.png` / `11_selection-overlay.png`: selected edge HUD に source/target step、observed route、evidence、next action を追加し、選択時だけ詳細が浮く設計を維持した。
+- `12_minimal-always-on-hud.png`: always-on HUD は増やさず、詳細は selected edge HUD と edge class に閉じた。
+- `13_dark-theme-finished-canvas.png`: runtime active / observed / blocked / stale を暗色キャンバス上の細い glow/dash として表現した。
+
+### Existing behavior preserved
+
+- mock-only execution、既存 localStorage key、JSON import/export、Run/Reset/Undo/Redo、Palette/Detail/Console/MiniMap toggles、selected node HUD、semantic focus、zoom mode は維持。
+- raw `node.config`、prompt 本文、raw payload、artifact 本文、credential/token/password/API key は edge HUD / copy summary / runtime semantics に含めていない。
+- edge runtime state は read-only projection であり、connection model や execution runtime の保存形式は破壊していない。
+
+### Validation
+
+- `npm.cmd run typecheck`: pass
+- `npm.cmd run lint`: pass
+- `npm.cmd run build`: pass
+- Vite chunk-size warning のみ発生。既存許容警告として扱った。
+- `npx.cmd tsx` direct validation: `createSampleWorkflow(...)` -> `validateWorkflowImport(...)` -> `createWorkflowBundle(...)` -> `validateImportBundle(...)` が pass（12 nodes / 13 connections）。
+
+### Browser QA
+
+- Preview: `http://127.0.0.1:4184/`
+- Initial canvas: React Flow canvas / 12 nodes / 13 edges / command HUD / MiniMap / zoom HUD / runtime edge classes 13 件を確認。
+- Selected edge HUD: edge click で `SelectedEdgeHud` が表示され、Runtime / Observed / Source step / Target step / Evidence / Trace が表示されることを確認。
+- Run: 実行後、semantic focus が failure に切り替わり、React Flow edge に observed 7 件 / blocked 3 件 / watch 3 件の runtime class projection が出ることを確認。
+- Reset: status が準備完了に戻り、trace source は durable audit snapshot 表示へ切り替わることを確認。
+- Palette / Detail / Console / MiniMap toggles: open / close を確認。
+- JSON export: in-app browser の download event は未対応。DOM 導線の存在と direct code-path validation で補完した。
+- Browser console errors/warnings: none captured
+- External script/link/image assets outside localhost: none in DOM (`script`, `link`, `img`)
+
+### Remaining gaps
+
+- Edge runtime semantics は current execution graph / trace からの read-only projection で、retry policy enforcement、conditional expression model、durable route replay、edge-level audit record までは未実装。
+- Durable audit snapshot からは step evidence は読めるが、route from/to の完全復元はまだできない。
+- Edge always-on badge、edge tooltip density policy、multi-run edge comparison は未実装。
+
+### Next recommended slice
+
+1. HUD history / notification bundle / density settings を追加し、danger visibility と collapse policy をユーザー調整可能にする。
+2. Run Detail に audit replay / run selection / node and edge deep link を追加する。
+3. Runtime edge semantics を connection condition model / retry policy editor / edge-level audit events へ拡張する。
+4. Bottom Console の重複タブを整理し、Workflow Library / Templates を Palette drawer 側へ昇格する。
 
 ---
 

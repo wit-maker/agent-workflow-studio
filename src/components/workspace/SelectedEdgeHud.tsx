@@ -121,7 +121,33 @@ export function SelectedEdgeHud({
         <strong>{view.errorRouteSummary}</strong>
         <span>Health</span>
         <strong>{view.healthLabel}</strong>
+        <span>Runtime</span>
+        <strong>{view.runtimeLabel}</strong>
+        <span>Observed</span>
+        <strong>{view.observedRouteSummary}</strong>
       </div>
+
+      <section className="selected-edge-hud-runtime" aria-label="選択接続の実行観測">
+        <span className={`runtime-pill runtime-${view.runtimeState}`}>{view.runtimeLabel}</span>
+        <dl>
+          <div>
+            <dt>Source step</dt>
+            <dd>{view.sourceRuntimeStatus}</dd>
+          </div>
+          <div>
+            <dt>Target step</dt>
+            <dd>{view.targetRuntimeStatus}</dd>
+          </div>
+          <div>
+            <dt>Evidence</dt>
+            <dd>{view.runtimeEvidenceCount}</dd>
+          </div>
+          <div>
+            <dt>Trace</dt>
+            <dd>{view.traceRunId ? `${view.traceRunId} / ${view.traceSource}` : view.traceSource}</dd>
+          </div>
+        </dl>
+      </section>
 
       <section className="selected-edge-hud-action" aria-label="選択接続の次アクション">
         <span className="eyebrow">Next</span>

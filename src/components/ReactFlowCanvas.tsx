@@ -20,6 +20,7 @@ import {
   type CanvasHudCollisionState,
   type CanvasHudPlacement,
   type CanvasHudSize,
+  type EdgeRuntimeSemantics,
   type HudPriority,
   type SemanticFocusPathView,
   type WorkflowGroupView,
@@ -67,6 +68,7 @@ type ReactFlowCanvasProps = {
   miniMapVisible: boolean
   workflowGroups: WorkflowGroupView[]
   semanticFocusPath: SemanticFocusPathView | null
+  edgeRuntimeByConnectionId: ReadonlyMap<string, EdgeRuntimeSemantics>
   hudCollisionState: CanvasHudCollisionState
   onZoomHudChange: (view: ZoomHudView) => void
   onHudAnchorChange: (anchors: {
@@ -577,6 +579,7 @@ export function ReactFlowCanvas({
   miniMapVisible,
   workflowGroups,
   semanticFocusPath,
+  edgeRuntimeByConnectionId,
   hudCollisionState,
   onZoomHudChange,
   onHudAnchorChange,
@@ -634,13 +637,18 @@ export function ReactFlowCanvas({
   )
   const edges = useMemo(
     () =>
-      toReactFlowEdges(workflow, effectiveSelectedConnectionId ?? undefined, {
-        focusedConnectionIds: focusPath.focusedConnectionIds,
-        dimUnfocused: focusPath.dimUnfocused,
-        source: focusPath.source,
-        priority: focusPath.priority,
-      }),
-    [effectiveSelectedConnectionId, focusPath, workflow],
+      toReactFlowEdges(
+        workflow,
+        effectiveSelectedConnectionId ?? undefined,
+        {
+          focusedConnectionIds: focusPath.focusedConnectionIds,
+          dimUnfocused: focusPath.dimUnfocused,
+          source: focusPath.source,
+          priority: focusPath.priority,
+        },
+        edgeRuntimeByConnectionId,
+      ),
+    [edgeRuntimeByConnectionId, effectiveSelectedConnectionId, focusPath, workflow],
   )
 
   useEffect(() => {

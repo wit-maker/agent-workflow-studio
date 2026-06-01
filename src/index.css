@@ -4345,6 +4345,31 @@ body:has(.game-hud-workspace) #root {
   opacity: 0.3;
 }
 
+.react-flow-canvas-root .react-flow__edge.edge-runtime-active .react-flow__edge-path {
+  stroke-dasharray: 9 7;
+  filter: drop-shadow(0 0 7px rgba(34, 211, 238, 0.46));
+}
+
+.react-flow-canvas-root .react-flow__edge.edge-runtime-observed .react-flow__edge-path,
+.react-flow-canvas-root .react-flow__edge.edge-runtime-ready .react-flow__edge-path {
+  filter: drop-shadow(0 0 5px rgba(45, 212, 191, 0.32));
+}
+
+.react-flow-canvas-root .react-flow__edge.edge-runtime-blocked .react-flow__edge-path,
+.react-flow-canvas-root .react-flow__edge.edge-runtime-health-blocked .react-flow__edge-path {
+  stroke-dasharray: 3 7;
+  filter: drop-shadow(0 0 7px rgba(251, 113, 133, 0.44));
+}
+
+.react-flow-canvas-root .react-flow__edge.edge-runtime-health-watch .react-flow__edge-path {
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.34));
+}
+
+.react-flow-canvas-root .react-flow__edge.edge-runtime-stale .react-flow__edge-path {
+  opacity: 0.74;
+  stroke-dasharray: 2 8;
+}
+
 .selected-object-hud,
 .selected-edge-hud {
   pointer-events: auto;
@@ -4467,6 +4492,7 @@ body:has(.game-hud-workspace) #root {
 .selected-object-hud-preview,
 .selected-object-hud-panel,
 .selected-object-hud-warnings,
+.selected-edge-hud-runtime,
 .selected-edge-hud-action {
   display: grid;
   gap: 5px;
@@ -4480,6 +4506,76 @@ body:has(.game-hud-workspace) #root {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.4;
+}
+
+.selected-edge-hud-runtime {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+}
+
+.selected-edge-hud-runtime dl {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+}
+
+.selected-edge-hud-runtime div {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.selected-edge-hud-runtime dt {
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 900;
+}
+
+.selected-edge-hud-runtime dd {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: rgba(226, 232, 240, 0.9);
+  font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+  font-size: 10.5px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.runtime-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: max-content;
+  min-width: 74px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: rgba(15, 23, 42, 0.78);
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 900;
+}
+
+.runtime-active,
+.runtime-observed,
+.runtime-ready {
+  border-color: rgba(45, 212, 191, 0.44);
+  background: rgba(20, 184, 166, 0.14);
+  color: #99f6e4;
+}
+
+.runtime-blocked {
+  border-color: rgba(251, 113, 133, 0.52);
+  background: rgba(127, 29, 29, 0.22);
+  color: #fecdd3;
+}
+
+.runtime-stale {
+  border-color: rgba(251, 191, 36, 0.42);
+  background: rgba(120, 53, 15, 0.18);
+  color: #fde68a;
 }
 
 .selected-object-hud-panel dl,

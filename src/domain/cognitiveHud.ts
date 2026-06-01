@@ -598,7 +598,9 @@ export function buildSelectedEdgeHudView(options: {
       ? connection.carries.map(formatDataTypeLabel).join(', ')
       : '未指定'
   const conditionKinds: ConnectionKind[] = ['decision', 'approval', 'error', 'retry']
-  const hasCondition = conditionKinds.includes(connection.kind)
+  const hasCondition =
+    conditionKinds.includes(connection.kind) ||
+    runtime.observedRouteKinds.some((kind) => kind !== 'main')
   const flowTypeLabel = connectionKindLabels[connection.kind]
   const statusLabel = connectionStatusLabels[connection.status]
   const sourceTitle = source?.title ?? connection.sourceNodeId
@@ -648,6 +650,244 @@ export function buildSelectedEdgeHudView(options: {
       `next: ${runtime.recommendedAction}`,
     ].join('\n'),
   }
+}
+
+function buildEdgeRuntimeSemantics(options: {
+  connection: WorkflowConnection
+  executionGraph: ExecutionGraph | null
+  runTrace: RunTrace | null
+  validation?: ConnectionValidationSummary
+}): EdgeRuntimeSemantics {
+  const { connection, executionGraph, runTrace, validation } = options
+  const sourceSteps = collectRuntimeSteps(connection.sourceNodeId, executionGraph, runTrace)
+  const targetSteps = collectRuntimeSteps(connection.targetNodeId, executionGraph, runTrace)
+  const latestSourceStep = sourceSteps[sourceSteps.length - 1] ?? null
+  const latestTargetStep = targetSteps[targetSteps.length - 1] ?? null
+  const observedRoutes =
+    executionGraph?.routes.filter((route) => routeMatchesConnection(route, connection)) ?? []
+  const observedRouteKinds = uniqueRouteKinds(observedRoutes.map((route) => route.kind))
+  const observedDurationMs = [latestSourceStep?.durationMs, latestTargetStep?.durationMs]
+    .filter((value): value is number => typeof value === 'number' && Number.isFinite(value))
+    .reduce((total, value) => total + value, 0)
+  const estimatedLatencyMs = connection.metrics?.latencyMs ?? 0
+  const evidenceCount =
+    sourceSteps.reduce((total, step) => total + step.evidenceCount, 0) +
+    targetSteps.reduce((total, step) => total + step.evidenceCount, 0)
+  const retryCandidateCount =
+    runTrace?.retryCandidateStepIds.filter((stepId) =>
+      sourceSteps.some((step) => step.id === stepId) ||
+      targetSteps.some((step) => step.id === stepId),
+    ).length ?? 0
+  const retryRouteCount =
+    observedRoutes.filter((route) => route.kind === 'retry').length +
+    sourceSteps.filter((step) => step.route === 'retry').length +
+    targetSteps.filter((step) => step.route === 'retry').length
+  const errorRouteCount =
+    observedRoutes.filter((route) => route.kind === 'error').length +
+    sourceSteps.filter((step) => step.status === 'failed').length +
+    targetSteps.filter((step) => step.status === 'failed').length
+  const reviewRouteCount =
+    observedRoutes.filter((route) => route.kind === 'review').length +
+    sourceSteps.filter((step) => step.status === 'review_required').length +
+    targetSteps.filter((step) => step.status === 'review_required').length
+  const validationBlocked = validation?.valid === false
+  const staticBlocked = connection.status === 'failed' || connection.status === 'invalid'
+  const runtimeFailed =
+    latestSourceStep?.status === 'failed' ||
+    latestTargetStep?.status === 'failed' ||
+    errorRouteCount > 0
+  const runtimeActive =
+    connection.status === 'active' ||
+    latestSourceStep?.status === 'running' ||
+    latestTargetStep?.status === 'running'
+  const runtimeObserved =
+    observedRoutes.length > 0 ||
+    connection.status === 'success' ||
+    (latestSourceStep?.status === 'success' && latestTargetStep?.status === 'success')
+  const runtimeReady =
+    latestSourceStep?.status === 'success' &&
+    (latestTargetStep?.status === 'queued' || latestTargetStep?.status === 'running')
+  const state: EdgeRuntimeState =
+    validationBlocked || staticBlocked || runtimeFailed
+      ? 'blocked'
+      : runtimeActive
+        ? 'active'
+        : runtimeObserved
+          ? 'observed'
+          : runtimeReady
+            ? 'ready'
+            : runTrace?.source === 'run-history'
+              ? 'stale'
+              : 'idle'
+  const health: EdgeRuntimeHealth =
+    state === 'blocked'
+      ? 'blocked'
+      : connection.status === 'throttled' ||
+          retryRouteCount > 0 ||
+          retryCandidateCount > 0 ||
+          reviewRouteCount > 0 ||
+          connection.kind === 'retry' ||
+          estimatedLatencyMs >= 220 ||
+          state === 'stale'
+        ? 'watch'
+        : 'healthy'
+  const stateLabels: Record<EdgeRuntimeState, string> = {
+    idle: 'No runtime route',
+    ready: 'Ready path',
+    active: 'Live path',
+    observed: 'Observed path',
+    blocked: 'Blocked path',
+    stale: 'Audit snapshot',
+  }
+  const healthLabels: Record<EdgeRuntimeHealth, string> = {
+    healthy: 'Healthy',
+    watch: 'Watch',
+    blocked: 'Blocked',
+  }
+  const routeSummary =
+    observedRouteKinds.length > 0
+      ? observedRouteKinds.map((kind) => routeKindLabels[kind]).join(', ')
+      : state === 'stale'
+        ? 'step evidence only'
+        : 'not observed'
+  const delaySummary =
+    observedDurationMs > 0
+      ? `observed ${observedDurationMs} ms`
+      : estimatedLatencyMs > 0
+        ? `estimate ${estimatedLatencyMs} ms`
+        : runtimeActive
+          ? 'runtime timing pending'
+          : 'no delay sample'
+  const retrySummary =
+    retryRouteCount > 0
+      ? `runtime retry observed (${retryRouteCount})`
+      : retryCandidateCount > 0
+        ? `${retryCandidateCount} retry candidate(s)`
+        : connection.kind === 'retry'
+          ? 'retry branch configured'
+          : 'no runtime retry'
+  const errorRouteSummary =
+    errorRouteCount > 0
+      ? `runtime error path observed (${errorRouteCount})`
+      : connection.kind === 'error'
+        ? 'error branch configured'
+        : 'no runtime error route'
+  const conditionSummary =
+    observedRouteKinds.length > 0
+      ? `runtime ${routeSummary}`
+      : ['decision', 'approval', 'error', 'retry'].includes(connection.kind)
+        ? `${connectionKindLabels[connection.kind]} branch configured`
+        : 'no branch condition'
+  const recommendedAction =
+    state === 'blocked'
+      ? validation?.reason ?? 'Inspect the source and target runtime steps before the next run.'
+      : state === 'active'
+        ? 'Watch the target step and confirm the observed route matches the expected branch.'
+        : health === 'watch'
+          ? 'Review retry / error / approval semantics before promoting this path.'
+          : state === 'stale'
+            ? 'Run again to refresh this edge with live route evidence.'
+            : state === 'observed'
+              ? 'Compare the target output with downstream expectations.'
+              : 'Run the workflow to collect route evidence for this edge.'
+
+  return {
+    connectionId: connection.id,
+    state,
+    stateLabel: stateLabels[state],
+    health,
+    healthLabel: healthLabels[health],
+    sourceStepStatus: formatRuntimeStepStatus(latestSourceStep),
+    targetStepStatus: formatRuntimeStepStatus(latestTargetStep),
+    routeSummary,
+    observedRouteKinds,
+    evidenceCount,
+    traceRunId: runTrace?.runId ?? executionGraph?.runId ?? null,
+    traceSource: runTrace?.source ?? 'none',
+    delaySummary,
+    retrySummary,
+    errorRouteSummary,
+    conditionSummary,
+    recommendedAction,
+    className: [
+      `edge-runtime-${state}`,
+      `edge-runtime-health-${health}`,
+      ...observedRouteKinds.map((kind) => `edge-runtime-route-${kind}`),
+    ].join(' '),
+  }
+}
+
+function collectRuntimeSteps(
+  nodeId: string,
+  executionGraph: ExecutionGraph | null,
+  runTrace: RunTrace | null,
+): EdgeRuntimeStep[] {
+  const traceEvidenceCountByStepId = new Map(
+    runTrace?.steps.map((step) => [step.id, step.evidence.length]) ?? [],
+  )
+  const graphSteps =
+    executionGraph?.steps
+      .filter((step) => step.nodeId === nodeId)
+      .map((step) => ({
+        id: step.id,
+        nodeId: step.nodeId,
+        status: step.status,
+        route: step.route,
+        durationMs: step.durationMs,
+        evidenceCount: traceEvidenceCountByStepId.get(step.id) ?? 0,
+      })) ?? []
+
+  if (graphSteps.length > 0) {
+    return graphSteps
+  }
+
+  return runTrace?.steps
+    .filter((step) => step.nodeId === nodeId)
+    .map((step) => ({
+      id: step.id,
+      nodeId: step.nodeId,
+      status: step.status,
+      route: step.route,
+      durationMs: step.durationMs,
+      evidenceCount: step.evidence.length,
+    })) ?? []
+}
+
+function routeMatchesConnection(
+  route: NonNullable<ExecutionGraph['routes']>[number],
+  connection: WorkflowConnection,
+): boolean {
+  if (route.fromNodeId !== connection.sourceNodeId) {
+    return false
+  }
+
+  if (route.toNodeId === connection.targetNodeId) {
+    return true
+  }
+
+  if (!route.toNodeId && (connection.kind === 'error' || connection.kind === 'retry')) {
+    return true
+  }
+
+  if (
+    connection.sourceNodeId === connection.targetNodeId &&
+    route.toNodeId === connection.sourceNodeId
+  ) {
+    return true
+  }
+
+  return false
+}
+
+function uniqueRouteKinds(kinds: ExecutionRouteKind[]): ExecutionRouteKind[] {
+  return kinds.filter((kind, index, array) => array.indexOf(kind) === index)
+}
+
+function formatRuntimeStepStatus(step: EdgeRuntimeStep | null): string {
+  if (!step) {
+    return 'not observed'
+  }
+  return `${executionStepStatusLabels[step.status]} / ${routeKindLabels[step.route]}`
 }
 
 export function buildWorkflowGroups(workflow: Workflow): WorkflowGroupView[] {

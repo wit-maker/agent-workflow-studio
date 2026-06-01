@@ -1,6 +1,6 @@
 # Missing Systems
 
-Last updated: 2026-06-01
+Last updated: 2026-06-02
 
 Priority scale:
 
@@ -16,11 +16,12 @@ Priority scale:
 - `CanvasCommandHud`, `CanvasMiniMapHud`, `WorkflowGroupLayer`, `SelectedObjectHud`, and `SelectedEdgeHud` exist as receivers.
 - Zoom mode (`overview / map / normal / detail / deep`) and inline preview are implemented as class/data projections.
 - Selected node/edge HUDs now use measured HUD size plus DOM collision rects for command HUD, drawers, MiniMap, Console, and React Flow controls; Game HUD mode also disables the legacy 1024px horizontal body scroll.
+- Selected edge HUD and React Flow edges now derive runtime state / health / observed route / evidence count from `WorkflowConnection`, `ExecutionGraph`, `RunTrace`, and connection validation.
 - Still missing (foundation only, not full implementation):
   - Advanced HUD placement policy with priority-weighted escape zones, content-density reduction, and animated reflow
   - Replayable trace/audit-backed semantic focus. Current semantic focus is a current-state read-only projection from failure / approval / validation / retry / running / bottleneck signals, while completed runs now keep safe trace/audit snapshots for evidence recall.
   - Richer visual emphasis rules beyond the current central HUD variants and semantic edge/node focus
-  - Runtime-backed edge semantics for delay / retry / error route / health beyond derived HUD summaries
+  - Enforced edge runtime contract for retry policy, condition expressions, edge-level audit events, and durable route replay beyond the current read-only projection
   - Situation Assistant real channels beyond 4D text (voice, avatar, video, news-style video, dynamic next-action banners)
   - Critical short-tone audio channel
   - Workflow Library / Templates promotion from Detail Drawer to Left Rail

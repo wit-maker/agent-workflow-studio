@@ -1,5 +1,9 @@
 import { MarkerType, type Connection, type Edge, type Node, type XYPosition } from '@xyflow/react'
-import { buildInlinePreview, type InlinePreview } from './cognitiveHud'
+import {
+  buildInlinePreview,
+  type EdgeRuntimeSemantics,
+  type InlinePreview,
+} from './cognitiveHud'
 import { canCarryToInput } from './connectionRules'
 import { connectionKindLabels, connectionStatusLabels, formatDataTypeLabel } from './displayLabels'
 import { findPort, getInputPorts, getOutputPorts, getUnconnectedRequiredInputPorts } from './portRules'
@@ -241,6 +245,7 @@ export function toReactFlowEdges(
     source?: 'selection' | 'semantic' | 'none'
     priority?: 'normal' | 'watch' | 'alert' | 'critical'
   },
+  edgeRuntimeByConnectionId?: ReadonlyMap<string, EdgeRuntimeSemantics>,
 ): Edge[] {
   const nodeIds = new Set(workflow.nodes.map((node) => node.id))
   const nodeLookup = createNodeLookup(workflow)
@@ -260,11 +265,13 @@ export function toReactFlowEdges(
       const focused = focusPath?.focusedConnectionIds.has(connection.id) ?? false
       const dimmed = focusPath?.dimUnfocused === true && !focused && !selected
       const semanticFocused = focused && focusPath?.source === 'semantic'
+      const runtime = edgeRuntimeByConnectionId?.get(connection.id)
       const className = [
         selected ? 'focus-selected-edge' : null,
         focused ? 'focus-path-edge' : null,
         semanticFocused ? `focus-semantic-edge focus-semantic-edge-${focusPath?.priority ?? 'watch'}` : null,
         dimmed ? 'focus-dimmed-edge' : null,
+        runtime?.className ?? null,
       ]
         .filter(Boolean)
         .join(' ')
@@ -278,7 +285,7 @@ export function toReactFlowEdges(
         sourceHandle,
         targetHandle,
         selectable: true,
-        animated: connection.status === 'active',
+        animated: connection.status === 'active' || runtime?.state === 'active',
         selected,
         className,
         markerEnd: {
@@ -290,7 +297,9 @@ export function toReactFlowEdges(
           strokeWidth: selected || focused ? 3.4 : 2.5,
           opacity: dimmed ? 0.28 : 1,
         },
-        label: connectionKindLabels[connection.kind],
+        label: !runtime || runtime.state === 'idle'
+          ? connectionKindLabels[connection.kind]
+          : `${connectionKindLabels[connection.kind]} / ${runtime.stateLabel}`,
         ariaLabel: [
           `${connection.sourceNodeId} から ${connection.targetNodeId}`,
           connectionKindLabels[connection.kind],
@@ -300,6 +309,8 @@ export function toReactFlowEdges(
         data: {
           kind: connection.kind,
           carries: connection.carries,
+          runtimeState: runtime?.state,
+          runtimeHealth: runtime?.health,
         },
       }
     })

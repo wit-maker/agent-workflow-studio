@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import {
   buildSelectedEdgeHudView,
   buildSelectedNodeHudView,
+  buildWorkflowEdgeRuntimeMap,
   buildWorkflowGroups,
   type CanvasHudAnchor,
   type CanvasHudCollisionState,
@@ -11,6 +12,7 @@ import {
   type SemanticFocusPathView,
   type ZoomHudView,
 } from '../../domain/cognitiveHud'
+import type { ExecutionGraph } from '../../domain/executionGraph'
 import type { ConnectionKind, Workflow, WorkflowNode } from '../../domain/workflow'
 import type { RunTrace } from '../../domain/runTrace'
 import type { ConnectionValidationResult } from '../../state/workflowSelectors'
@@ -42,6 +44,7 @@ type CognitiveWorkflowCanvasProps = {
   selectedNodeId: string
   selectedNode: WorkflowNode | undefined
   connectionValidation: ConnectionValidationResult[]
+  executionGraph: ExecutionGraph | null
   hudSnapshot: HudSnapshot
   runTrace: RunTrace | null
   semanticFocusPath: SemanticFocusPathView | null
@@ -71,6 +74,7 @@ export function CognitiveWorkflowCanvas({
   selectedNodeId,
   selectedNode,
   connectionValidation,
+  executionGraph,
   hudSnapshot,
   runTrace,
   semanticFocusPath,
@@ -121,9 +125,21 @@ export function CognitiveWorkflowCanvas({
       buildSelectedEdgeHudView({
         workflow,
         connectionId: selectedConnectionId,
+        executionGraph,
+        runTrace,
         connectionValidation,
       }),
-    [connectionValidation, selectedConnectionId, workflow],
+    [connectionValidation, executionGraph, runTrace, selectedConnectionId, workflow],
+  )
+  const edgeRuntimeByConnectionId = useMemo(
+    () =>
+      buildWorkflowEdgeRuntimeMap({
+        workflow,
+        executionGraph,
+        runTrace,
+        connectionValidation,
+      }),
+    [connectionValidation, executionGraph, runTrace, workflow],
   )
   const workflowGroups = useMemo(() => buildWorkflowGroups(workflow), [workflow])
   const visibleSelectedNodeHud = selectedEdgeHud ? null : selectedNodeHud
@@ -166,6 +182,7 @@ export function CognitiveWorkflowCanvas({
             miniMapVisible={miniMapVisible}
             workflowGroups={workflowGroups}
             semanticFocusPath={semanticFocusPath}
+            edgeRuntimeByConnectionId={edgeRuntimeByConnectionId}
             hudCollisionState={hudCollisionState}
             onZoomHudChange={onZoomHudChange}
             onHudAnchorChange={handleHudAnchorChange}
