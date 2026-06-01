@@ -1,5 +1,13 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
-import { buildZoomHudView, type HudSnapshot, type ZoomHudView } from '../../domain/cognitiveHud'
+import {
+  buildCentralHudView,
+  buildSemanticFocusPathView,
+  buildZoomHudView,
+  type CentralHudView,
+  type HudSnapshot,
+  type SemanticFocusPathView,
+  type ZoomHudView,
+} from '../../domain/cognitiveHud'
 import type { ConnectorJob } from '../../domain/connectorQueue'
 import type {
   EvaluationResult,
@@ -7,6 +15,7 @@ import type {
   ReviewDecision,
 } from '../../domain/evaluation'
 import type { ExecutionGraph } from '../../domain/executionGraph'
+import type { RunTrace } from '../../domain/runTrace'
 import type { WorkflowRunRecord } from '../../domain/runHistory'
 import type {
   AgentRole,
@@ -42,6 +51,7 @@ export type GameHudShellProps = {
   evaluation: EvaluationResult | undefined
   humanReview: HumanReviewState | undefined
   hudSnapshot: HudSnapshot
+  runTrace: RunTrace | null
   runHistoryRecords: WorkflowRunRecord[]
   runHistoryCount: number
   onRun: () => void
@@ -103,6 +113,14 @@ export function GameHudShell(props: GameHudShellProps) {
       current.zoomPercent === next.zoomPercent && current.mode === next.mode ? current : next,
     )
   }, [])
+  const togglePalette = useCallback(() => {
+    setPaletteOpen((value) => !value)
+    setDetailOpen(false)
+  }, [])
+  const toggleDetail = useCallback(() => {
+    setDetailOpen((value) => !value)
+    setPaletteOpen(false)
+  }, [])
   const hudSurfaceState = useMemo(
     () => ({
       paletteOpen,
@@ -111,11 +129,41 @@ export function GameHudShell(props: GameHudShellProps) {
     }),
     [consoleOpen, detailOpen, paletteOpen],
   )
+  const semanticFocusPath = useMemo<SemanticFocusPathView | null>(
+    () =>
+      buildSemanticFocusPathView({
+        workflow: props.workflow,
+        hudSnapshot: props.hudSnapshot,
+        executionGraph: props.executionGraph,
+        connectionValidation: props.connectionValidation,
+        runTrace: props.runTrace,
+        evaluation: props.evaluation,
+        humanReview: props.humanReview,
+      }),
+    [
+      props.connectionValidation,
+      props.evaluation,
+      props.executionGraph,
+      props.hudSnapshot,
+      props.humanReview,
+      props.runTrace,
+      props.workflow,
+    ],
+  )
+  const centralHudView = useMemo<CentralHudView | null>(
+    () =>
+      buildCentralHudView({
+        hudSnapshot: props.hudSnapshot,
+        semanticFocusPath,
+      }),
+    [props.hudSnapshot, semanticFocusPath],
+  )
 
   const workspaceClassName = [
     'cognitive-workspace',
     'game-hud-workspace',
     zoomHud.className,
+    semanticFocusPath ? `semantic-focus-${semanticFocusPath.source}` : '',
     paletteOpen ? 'palette-open' : '',
     detailOpen ? 'detail-open' : '',
     consoleOpen ? 'console-open' : '',
@@ -132,6 +180,9 @@ export function GameHudShell(props: GameHudShellProps) {
           selectedNode={props.selectedNode}
           connectionValidation={props.connectionValidation}
           hudSnapshot={props.hudSnapshot}
+          runTrace={props.runTrace}
+          semanticFocusPath={semanticFocusPath}
+          centralHudView={centralHudView}
           miniMapVisible={miniMapVisible}
           hudSurfaceState={hudSurfaceState}
           onZoomHudChange={handleZoomChange}
@@ -152,14 +203,16 @@ export function GameHudShell(props: GameHudShellProps) {
           canUndo={props.canUndo}
           canRedo={props.canRedo}
           hudSnapshot={props.hudSnapshot}
+          centralHudView={centralHudView}
+          runTrace={props.runTrace}
           runHistoryCount={props.runHistoryCount}
           zoomHud={zoomHud}
           paletteOpen={paletteOpen}
           detailOpen={detailOpen}
           miniMapVisible={miniMapVisible}
           consoleOpen={consoleOpen}
-          onTogglePalette={() => setPaletteOpen((value) => !value)}
-          onToggleDetail={() => setDetailOpen((value) => !value)}
+          onTogglePalette={togglePalette}
+          onToggleDetail={toggleDetail}
           onToggleMiniMap={() => setMiniMapVisible((value) => !value)}
           onToggleConsole={() => setConsoleOpen((value) => !value)}
           onRun={props.onRun}
@@ -241,7 +294,7 @@ export function GameHudShell(props: GameHudShellProps) {
         </DetailDrawerDock>
       </div>
 
-      <CriticalOverlay hudSnapshot={props.hudSnapshot} />
+      <CriticalOverlay hudSnapshot={props.hudSnapshot} centralHudView={centralHudView} />
     </div>
   )
 }

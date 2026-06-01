@@ -205,6 +205,18 @@ export function SelectedObjectHud({
               <dd>{view.statusLabel}</dd>
             </div>
             <div>
+              <dt>Trace</dt>
+              <dd>
+                {view.historyRunId
+                  ? `${view.historyRunId} / ${view.historySource === 'run-history' ? 'audit snapshot' : 'current'}`
+                  : 'なし'}
+              </dd>
+            </div>
+            <div>
+              <dt>Evidence</dt>
+              <dd>{view.historyEvidenceCount} 件</dd>
+            </div>
+            <div>
               <dt>Focus</dt>
               <dd>{view.focusReason ?? '通常選択'}</dd>
             </div>
@@ -213,6 +225,15 @@ export function SelectedObjectHud({
               <dd>{view.recommendedAction}</dd>
             </div>
           </dl>
+          {view.historyEvidenceSummaries.length > 0 ? (
+            <ul className="selected-object-hud-evidence">
+              {view.historyEvidenceSummaries.map((entry) => (
+                <li key={entry}>{entry}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="selected-object-hud-muted">このノードの durable evidence はまだありません。</p>
+          )}
         </section>
       ) : null}
 

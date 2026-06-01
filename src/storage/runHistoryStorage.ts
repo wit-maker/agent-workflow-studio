@@ -1,7 +1,7 @@
 // Run History の localStorage 暫定保存層 (Phase 1b)。
 //
-// - 保存対象は集計値とメタデータのみ。
-// - logs 本文 / prompt 全文 / credential / API key は保存しない。
+// - 保存対象は集計値、メタデータ、credential-safe trace/audit summary のみ。
+// - logs 本文 / prompt 全文 / raw payload / artifact 本文 / credential / API key は保存しない。
 // - 件数は MAX_RUN_HISTORY_ENTRIES (最新50件) を上限とする。
 // - 不正 JSON / 旧形式は安全に破棄して empty 扱いにする。
 //

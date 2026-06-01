@@ -10,6 +10,7 @@
 // 既存の `RiskState` / `HudState` 語彙 (src/domain/workflow.ts) と整合する。
 
 import type { ConnectorJob } from './connectorQueue'
+import type { EvaluationResult, HumanReviewState } from './evaluation'
 import {
   connectionKindLabels,
   connectionStatusLabels,
@@ -34,6 +35,8 @@ import type {
   WorkflowConnection,
   WorkflowNode,
 } from './workflow'
+import type { RunStep, RunTrace } from './runTrace'
+import { formatEvidenceSummary } from './runStepEvidence'
 
 // ---- Public types ----
 
@@ -128,6 +131,10 @@ export type SelectedNodeHudView = {
   dependencySummary: string
   warningSummaries: string[]
   inlinePreview: InlinePreview
+  historyRunId: string | null
+  historySource: RunTrace['source'] | 'none'
+  historyEvidenceCount: number
+  historyEvidenceSummaries: string[]
   safeCopySummary: string
 }
 
@@ -213,10 +220,62 @@ export type CanvasHudAnchor = {
   collisionIds: string[]
 }
 
+export type SemanticFocusSource =
+  | 'failure'
+  | 'approval'
+  | 'validation'
+  | 'retry'
+  | 'running'
+  | 'bottleneck'
+  | 'hud-signal'
+
+export type SemanticFocusPathView = {
+  id: string
+  source: SemanticFocusSource
+  priority: HudPriority
+  alertLevel: HudAlertLevel
+  title: string
+  summary: string
+  nextAction: string
+  primaryNodeId: string | null
+  nodeIds: string[]
+  connectionIds: string[]
+  dimUnfocused: boolean
+  evidenceCount: number
+}
+
+export type CentralHudVariant =
+  | 'watch'
+  | 'validation'
+  | 'approval'
+  | 'failure'
+  | 'danger'
+
+export type CentralHudView = {
+  variant: CentralHudVariant
+  priority: HudPriority
+  alertLevel: HudAlertLevel
+  headline: string
+  detail: string
+  nextAction: string
+  focusLabel: string | null
+  sourceLabel: string
+  signalCount: number
+}
+
+export type ConnectionValidationSummary = {
+  connectionId?: string
+  valid: boolean
+  reason?: string | null
+  severity?: 'info' | 'warn' | 'error'
+}
+
 // ---- Tunables ----
 
 const ELEVATED_RETRY_THRESHOLD = 2
 const PREVIEW_MAX_LENGTH = 96
+const SEMANTIC_FOCUS_MAX_NODES = 9
+const SEMANTIC_FOCUS_MAX_CONNECTIONS = 12
 
 // ---- Public helpers ----
 
@@ -338,8 +397,10 @@ export function buildSelectedNodeHudView(options: {
   node: WorkflowNode | undefined
   connections: readonly WorkflowConnection[]
   hudSnapshot: HudSnapshot
+  semanticFocusPath?: SemanticFocusPathView | null
+  runTrace?: RunTrace | null
 }): SelectedNodeHudView | null {
-  const { node, connections, hudSnapshot } = options
+  const { node, connections, hudSnapshot, semanticFocusPath = null, runTrace = null } = options
   if (!node) return null
 
   const inputCount = getInputPorts(node).length
@@ -354,6 +415,9 @@ export function buildSelectedNodeHudView(options: {
     hudSnapshot.signals.find(
       (signal) => signal.targetType === 'node' && signal.targetId === node.id,
     ) ?? null
+  const semanticFocusMatched = semanticFocusPath?.nodeIds.includes(node.id) ?? false
+  const semanticPrimaryMatched = semanticFocusPath?.primaryNodeId === node.id
+  const matchedSemanticFocusPath = semanticFocusMatched ? semanticFocusPath : null
   const missingRequired = getUnconnectedRequiredInputPorts(node, [...connections])
   const warningSummaries = [
     ...missingRequired.map((port) => `必須入力未接続: ${port.label}`),
@@ -372,6 +436,11 @@ export function buildSelectedNodeHudView(options: {
   const inlinePreview = buildInlinePreview(node)
   const categoryLabel = nodeCategoryLabels[node.category as NodeCategory] ?? node.category
   const statusLabel = statusLabels[node.status]
+  const nodeTraceSteps = runTrace?.steps.filter((step) => step.nodeId === node.id) ?? []
+  const historyEvidence = nodeTraceSteps.flatMap((step) => step.evidence)
+  const historyEvidenceSummaries = historyEvidence
+    .map(formatEvidenceSummary)
+    .slice(-4)
 
   return {
     nodeId: node.id,
@@ -381,29 +450,48 @@ export function buildSelectedNodeHudView(options: {
     categoryLabel,
     status: node.status,
     statusLabel,
-    priority: focusSignal?.priority ?? hudSnapshot.priority,
-    alertLevel: focusSignal?.alertLevel ?? hudSnapshot.alertLevel,
+    priority: matchedSemanticFocusPath
+      ? matchedSemanticFocusPath.priority
+      : focusSignal?.priority ?? hudSnapshot.priority,
+    alertLevel: matchedSemanticFocusPath
+      ? matchedSemanticFocusPath.alertLevel
+      : focusSignal?.alertLevel ?? hudSnapshot.alertLevel,
     inputCount,
     outputCount,
     incomingConnectionCount: incomingConnections.length,
     outgoingConnectionCount: outgoingConnections.length,
     estimatedTokens: node.metrics?.estimatedTokens ?? 0,
     estimatedLatencyMs: node.metrics?.estimatedLatencyMs ?? 0,
-    focusMatched: focusSignal !== null || hudSnapshot.focusTargetId === node.id,
-    focusReason: focusSignal?.title ?? null,
-    recommendedAction: focusSignal?.detail ?? hudSnapshot.recommendedAction,
+    focusMatched: semanticFocusMatched || focusSignal !== null || hudSnapshot.focusTargetId === node.id,
+    focusReason: matchedSemanticFocusPath && semanticPrimaryMatched
+      ? matchedSemanticFocusPath.title
+      : matchedSemanticFocusPath
+        ? `${matchedSemanticFocusPath.title} path`
+        : focusSignal?.title ?? null,
+    recommendedAction: matchedSemanticFocusPath
+      ? matchedSemanticFocusPath.nextAction
+      : focusSignal?.detail ?? hudSnapshot.recommendedAction,
     inputSummary,
     outputSummary,
     dependencySummary,
     warningSummaries,
     inlinePreview,
+    historyRunId: runTrace?.runId ?? null,
+    historySource: runTrace?.source ?? 'none',
+    historyEvidenceCount: historyEvidence.length,
+    historyEvidenceSummaries,
     safeCopySummary: [
       `node: ${node.title} (${node.id})`,
       `type: ${node.type}`,
       `status: ${statusLabel}`,
       `io: ${inputSummary} -> ${outputSummary}`,
       `estimate: ${node.metrics?.estimatedTokens ?? 0} tokens / ${node.metrics?.estimatedLatencyMs ?? 0} ms`,
-      `next: ${focusSignal?.detail ?? hudSnapshot.recommendedAction}`,
+      `trace: ${runTrace?.runId ?? 'none'} / evidence ${historyEvidence.length}`,
+      `next: ${
+        matchedSemanticFocusPath
+          ? matchedSemanticFocusPath.nextAction
+          : focusSignal?.detail ?? hudSnapshot.recommendedAction
+      }`,
     ].join('\n'),
   }
 }
@@ -507,7 +595,449 @@ export function buildWorkflowGroups(workflow: Workflow): WorkflowGroupView[] {
     .filter((group) => group.nodeIds.length > 0)
 }
 
+export function buildSemanticFocusPathView(options: {
+  workflow: Workflow
+  hudSnapshot: HudSnapshot
+  executionGraph: ExecutionGraph | null
+  connectionValidation?: readonly ConnectionValidationSummary[]
+  runTrace?: RunTrace | null
+  evaluation?: EvaluationResult
+  humanReview?: HumanReviewState
+}): SemanticFocusPathView | null {
+  const {
+    workflow,
+    hudSnapshot,
+    executionGraph,
+    connectionValidation = [],
+    runTrace = null,
+    evaluation,
+    humanReview,
+  } = options
+
+  const hasCurrentFailure =
+    workflow.status === 'failed' ||
+    workflow.nodes.some((node) => node.status === 'failed' || node.status === 'blocked') ||
+    Boolean(executionGraph?.failedStepId)
+  const failedStep = hasCurrentFailure
+    ? findTraceStep(runTrace, 'failed') ?? findExecutionGraphStep(executionGraph, executionGraph?.failedStepId)
+    : null
+  const failedNode =
+    failedStep ? workflow.nodes.find((node) => node.id === failedStep.nodeId) : workflow.nodes.find((node) => node.status === 'failed')
+  if (failedNode) {
+    const evidenceSummary = failedStep && 'evidence' in failedStep ? pickStepEvidenceSummary(failedStep) : null
+    return createSemanticFocusPath({
+      workflow,
+      executionGraph,
+      source: 'failure',
+      priority: 'critical',
+      alertLevel: 5,
+      title: `Failure focus: ${failedNode.title}`,
+      summary: evidenceSummary ?? 'A failed node or failed run step needs attention before the next run.',
+      nextAction: 'Open the failed node, inspect the latest step evidence, then retry or route to the error path.',
+      primaryNodeIds: [failedNode.id],
+      seedConnectionIds: pickRouteConnectionIds(workflow, failedNode.id, ['error', 'retry']),
+      evidenceCount: failedStep && 'evidence' in failedStep ? failedStep.evidence.length : 0,
+    })
+  }
+
+  const humanReviewPending =
+    humanReview?.decision === 'pending' ||
+    humanReview?.decision === 'revise_requested' ||
+    evaluation?.status === 'needs_review'
+  const hasCurrentReview =
+    workflow.status === 'review_required' ||
+    workflow.nodes.some((node) => node.status === 'review_required') ||
+    Boolean(executionGraph?.reviewStepId) ||
+    humanReviewPending
+  const reviewStep = hasCurrentReview
+    ? findTraceStep(runTrace, 'review_required') ??
+      findExecutionGraphStep(executionGraph, executionGraph?.reviewStepId) ??
+      executionGraph?.steps.find((step) => step.status === 'review_required') ??
+      null
+    : null
+  const reviewNode =
+    reviewStep ? workflow.nodes.find((node) => node.id === reviewStep.nodeId) : workflow.nodes.find((node) => node.status === 'review_required')
+  if (reviewNode || humanReviewPending || workflow.status === 'review_required') {
+    const primaryNode = reviewNode ?? workflow.nodes.find((node) => node.category === 'check' || node.category === 'safety') ?? workflow.nodes[0]
+    if (primaryNode) {
+      return createSemanticFocusPath({
+        workflow,
+        executionGraph,
+        source: 'approval',
+        priority: 'critical',
+        alertLevel: 4,
+        title: `Approval focus: ${primaryNode.title}`,
+        summary: 'A human review or approval gate is waiting for a decision.',
+        nextAction: 'Review the approval context, then approve, request revision, or skip from the console review controls.',
+        primaryNodeIds: [primaryNode.id],
+        seedConnectionIds: pickRouteConnectionIds(workflow, primaryNode.id, ['approval', 'decision']),
+        evidenceCount: reviewStep && 'evidence' in reviewStep ? reviewStep.evidence.length : 0,
+      })
+    }
+  }
+
+  const invalidConnections = connectionValidation.filter(
+    (item) => item.connectionId && !item.valid,
+  )
+  if (invalidConnections.length > 0) {
+    const firstInvalidConnectionId = invalidConnections[0].connectionId
+    const invalidConnection = workflow.connections.find(
+      (connection) => connection.id === firstInvalidConnectionId,
+    )
+    if (invalidConnection) {
+      return createSemanticFocusPath({
+        workflow,
+        executionGraph,
+        source: 'validation',
+        priority: invalidConnections.some((item) => item.severity === 'error') ? 'alert' : 'watch',
+        alertLevel: invalidConnections.some((item) => item.severity === 'error') ? 3 : 2,
+        title: 'Validation focus: connection mismatch',
+        summary: truncateText(
+          invalidConnections[0].reason ?? 'A connection does not satisfy port or data type validation.',
+          PREVIEW_MAX_LENGTH,
+        ),
+        nextAction: 'Inspect the highlighted edge and reconnect compatible ports before running.',
+        primaryNodeIds: [invalidConnection.sourceNodeId, invalidConnection.targetNodeId],
+        seedConnectionIds: invalidConnections
+          .map((item) => item.connectionId)
+          .filter((id): id is string => typeof id === 'string'),
+        evidenceCount: invalidConnections.length,
+      })
+    }
+  }
+
+  const hasCurrentRetry =
+    workflow.nodes.some((node) => node.status === 'retry_ready') ||
+    (executionGraph?.retryCandidates.length ?? 0) > 0
+  const retryStep = hasCurrentRetry
+    ? runTrace?.steps.find((step) => runTrace.retryCandidateStepIds.includes(step.id)) ??
+      executionGraph?.steps.find((step) => executionGraph.retryCandidates.includes(step.id)) ??
+      null
+    : null
+  const retryNode =
+    retryStep ? workflow.nodes.find((node) => node.id === retryStep.nodeId) : workflow.nodes.find((node) => node.status === 'retry_ready')
+  if (retryNode) {
+    return createSemanticFocusPath({
+      workflow,
+      executionGraph,
+      source: 'retry',
+      priority: 'alert',
+      alertLevel: 3,
+      title: `Retry focus: ${retryNode.title}`,
+      summary: 'A retry-ready step is available and should be checked before continuing.',
+      nextAction: 'Open the retry route, confirm the failure cause is recoverable, then retry the step.',
+      primaryNodeIds: [retryNode.id],
+      seedConnectionIds: pickRouteConnectionIds(workflow, retryNode.id, ['retry', 'error']),
+      evidenceCount: retryStep && 'evidence' in retryStep ? retryStep.evidence.length : 0,
+    })
+  }
+
+  const hasCurrentRunning =
+    workflow.status === 'running' ||
+    workflow.nodes.some((node) => node.status === 'running') ||
+    Boolean(executionGraph?.activeStepId)
+  const runningStep = hasCurrentRunning
+    ? findTraceStep(runTrace, 'running') ??
+      findExecutionGraphStep(executionGraph, executionGraph?.activeStepId) ??
+      executionGraph?.steps.find((step) => step.status === 'running') ??
+      null
+    : null
+  const runningNode =
+    runningStep ? workflow.nodes.find((node) => node.id === runningStep.nodeId) : workflow.nodes.find((node) => node.status === 'running')
+  if (runningNode) {
+    return createSemanticFocusPath({
+      workflow,
+      executionGraph,
+      source: 'running',
+      priority: 'watch',
+      alertLevel: 2,
+      title: `Running focus: ${runningNode.title}`,
+      summary: 'The active step is highlighted with its immediate downstream path.',
+      nextAction: 'Watch the active step finish, then inspect any generated output or review gate.',
+      primaryNodeIds: [runningNode.id],
+      seedConnectionIds: pickRouteConnectionIds(workflow, runningNode.id, ['data', 'result', 'decision']),
+      evidenceCount: runningStep && 'evidence' in runningStep ? runningStep.evidence.length : 0,
+    })
+  }
+
+  if (workflow.metrics.bottleneckNodeId) {
+    const bottleneckNode = workflow.nodes.find((node) => node.id === workflow.metrics.bottleneckNodeId)
+    if (bottleneckNode) {
+      return createSemanticFocusPath({
+        workflow,
+        executionGraph,
+        source: 'bottleneck',
+        priority: 'alert',
+        alertLevel: 3,
+        title: `Bottleneck focus: ${bottleneckNode.title}`,
+        summary: 'Runtime metrics point to this node as the current bottleneck.',
+        nextAction: 'Review latency, retry count, and upstream input volume for this node.',
+        primaryNodeIds: [bottleneckNode.id],
+        seedConnectionIds: pickRouteConnectionIds(workflow, bottleneckNode.id, ['data', 'result']),
+        evidenceCount: 1,
+      })
+    }
+  }
+
+  const signalNodeId = resolveHudSignalNodeId(workflow, executionGraph, hudSnapshot)
+  if (signalNodeId && hudSnapshot.priority !== 'normal') {
+    const signalNode = workflow.nodes.find((node) => node.id === signalNodeId)
+    if (signalNode) {
+      return createSemanticFocusPath({
+        workflow,
+        executionGraph,
+        source: 'hud-signal',
+        priority: hudSnapshot.priority,
+        alertLevel: hudSnapshot.alertLevel,
+        title: `HUD focus: ${signalNode.title}`,
+        summary: hudSnapshot.summary,
+        nextAction: hudSnapshot.recommendedAction,
+        primaryNodeIds: [signalNode.id],
+        seedConnectionIds: pickRouteConnectionIds(workflow, signalNode.id, ['data', 'result', 'decision']),
+        evidenceCount: hudSnapshot.signals.length,
+      })
+    }
+  }
+
+  return null
+}
+
+export function buildCentralHudView(options: {
+  hudSnapshot: HudSnapshot
+  semanticFocusPath: SemanticFocusPathView | null
+}): CentralHudView | null {
+  const { hudSnapshot, semanticFocusPath } = options
+
+  if (hudSnapshot.priority === 'normal' && !semanticFocusPath) {
+    return null
+  }
+
+  const variant = resolveCentralHudVariant(hudSnapshot, semanticFocusPath)
+  const sourceLabel = semanticFocusPath ? semanticFocusSourceLabels[semanticFocusPath.source] : 'HUD signal'
+  const semanticFocusLabel = semanticFocusPath
+    ? semanticFocusPath.title.replace(/^[^:]+:\s*/, '') || semanticFocusPath.primaryNodeId
+    : null
+
+  return {
+    variant,
+    priority: semanticFocusPath?.priority ?? hudSnapshot.priority,
+    alertLevel: semanticFocusPath?.alertLevel ?? hudSnapshot.alertLevel,
+    headline: semanticFocusPath?.title ?? hudSnapshot.summary,
+    detail: semanticFocusPath?.summary ?? hudSnapshot.signals[0]?.detail ?? hudSnapshot.summary,
+    nextAction: semanticFocusPath?.nextAction ?? hudSnapshot.recommendedAction,
+    focusLabel: semanticFocusLabel ?? hudSnapshot.focusTargetLabel,
+    sourceLabel,
+    signalCount: semanticFocusPath?.evidenceCount ?? hudSnapshot.signals.length,
+  }
+}
+
 // ---- Internal ----
+
+const semanticFocusSourceLabels: Record<SemanticFocusSource, string> = {
+  failure: 'Failure cause',
+  approval: 'Approval gate',
+  validation: 'Validation',
+  retry: 'Retry route',
+  running: 'Active run',
+  bottleneck: 'Bottleneck',
+  'hud-signal': 'HUD signal',
+}
+
+function resolveCentralHudVariant(
+  hudSnapshot: HudSnapshot,
+  semanticFocusPath: SemanticFocusPathView | null,
+): CentralHudVariant {
+  if (semanticFocusPath?.source === 'failure') return 'failure'
+  if (semanticFocusPath?.source === 'approval') return 'approval'
+  if (semanticFocusPath?.source === 'validation') return 'validation'
+  if (hudSnapshot.signals[0]?.kind === 'node_failure') return 'failure'
+  if (hudSnapshot.signals[0]?.kind === 'review_required') return 'approval'
+  if (hudSnapshot.priority === 'critical') return 'danger'
+  return 'watch'
+}
+
+function findExecutionGraphStep(
+  executionGraph: ExecutionGraph | null,
+  stepId: string | undefined,
+) {
+  if (!executionGraph || !stepId) {
+    return null
+  }
+  return executionGraph.steps.find((step) => step.id === stepId) ?? null
+}
+
+function findTraceStep(
+  runTrace: RunTrace | null,
+  status: RunStep['status'],
+): RunStep | null {
+  if (!runTrace) {
+    return null
+  }
+
+  const exact = runTrace.steps.find((step) => step.status === status)
+  if (exact) {
+    return exact
+  }
+
+  if (status !== 'failed') {
+    return null
+  }
+
+  return (
+    runTrace.steps.find((step) =>
+      step.evidence.some((evidence) => evidence.severity === 'error'),
+    ) ?? null
+  )
+}
+
+function pickStepEvidenceSummary(step: RunStep): string | null {
+  const evidence =
+    step.evidence.find((entry) => entry.severity === 'error') ??
+    step.evidence.find((entry) => entry.severity === 'warn') ??
+    step.evidence[0]
+
+  return evidence?.summary ?? null
+}
+
+function pickRouteConnectionIds(
+  workflow: Workflow,
+  nodeId: string,
+  preferredKinds: readonly ConnectionKind[],
+): string[] {
+  const preferred = workflow.connections.filter(
+    (connection) =>
+      (connection.sourceNodeId === nodeId || connection.targetNodeId === nodeId) &&
+      preferredKinds.includes(connection.kind),
+  )
+  const fallback = workflow.connections.filter(
+    (connection) => connection.sourceNodeId === nodeId || connection.targetNodeId === nodeId,
+  )
+  return [...preferred, ...fallback]
+    .map((connection) => connection.id)
+    .filter(uniqueString)
+    .slice(0, SEMANTIC_FOCUS_MAX_CONNECTIONS)
+}
+
+function resolveHudSignalNodeId(
+  workflow: Workflow,
+  executionGraph: ExecutionGraph | null,
+  hudSnapshot: HudSnapshot,
+): string | null {
+  if (hudSnapshot.focusTargetType === 'node') {
+    return workflow.nodes.some((node) => node.id === hudSnapshot.focusTargetId)
+      ? hudSnapshot.focusTargetId
+      : null
+  }
+
+  if (hudSnapshot.focusTargetType === 'step' && executionGraph) {
+    const step = executionGraph.steps.find((item) => item.id === hudSnapshot.focusTargetId)
+    return step?.nodeId ?? null
+  }
+
+  return null
+}
+
+function createSemanticFocusPath(options: {
+  workflow: Workflow
+  executionGraph: ExecutionGraph | null
+  source: SemanticFocusSource
+  priority: HudPriority
+  alertLevel: HudAlertLevel
+  title: string
+  summary: string
+  nextAction: string
+  primaryNodeIds: string[]
+  seedConnectionIds: string[]
+  evidenceCount: number
+}): SemanticFocusPathView {
+  const {
+    workflow,
+    executionGraph,
+    source,
+    priority,
+    alertLevel,
+    title,
+    summary,
+    nextAction,
+    primaryNodeIds,
+    seedConnectionIds,
+    evidenceCount,
+  } = options
+  const workflowNodeIds = new Set(workflow.nodes.map((node) => node.id))
+  const nodeIds = new Set(primaryNodeIds.filter((id) => workflowNodeIds.has(id)))
+  const connectionIds = new Set<string>()
+
+  const addConnection = (connection: WorkflowConnection) => {
+    connectionIds.add(connection.id)
+    if (workflowNodeIds.has(connection.sourceNodeId)) nodeIds.add(connection.sourceNodeId)
+    if (workflowNodeIds.has(connection.targetNodeId)) nodeIds.add(connection.targetNodeId)
+  }
+
+  for (const connectionId of seedConnectionIds) {
+    const connection = workflow.connections.find((item) => item.id === connectionId)
+    if (connection) {
+      addConnection(connection)
+    }
+  }
+
+  for (const primaryNodeId of primaryNodeIds) {
+    const incoming = workflow.connections.filter((connection) => connection.targetNodeId === primaryNodeId)
+    const outgoing = workflow.connections.filter((connection) => connection.sourceNodeId === primaryNodeId)
+    const importantOutgoing = outgoing.filter((connection) =>
+      ['error', 'retry', 'approval', 'decision', 'evidence', 'result'].includes(connection.kind),
+    )
+
+    for (const connection of incoming.slice(0, 3)) {
+      addConnection(connection)
+    }
+    for (const connection of (importantOutgoing.length > 0 ? importantOutgoing : outgoing).slice(0, 3)) {
+      addConnection(connection)
+    }
+  }
+
+  if (executionGraph) {
+    for (const route of executionGraph.routes) {
+      if (!nodeIds.has(route.fromNodeId) && (!route.toNodeId || !nodeIds.has(route.toNodeId))) {
+        continue
+      }
+      if (workflowNodeIds.has(route.fromNodeId)) nodeIds.add(route.fromNodeId)
+      if (route.toNodeId && workflowNodeIds.has(route.toNodeId)) nodeIds.add(route.toNodeId)
+      const routeConnection = workflow.connections.find(
+        (connection) =>
+          connection.sourceNodeId === route.fromNodeId &&
+          (!route.toNodeId || connection.targetNodeId === route.toNodeId),
+      )
+      if (routeConnection) {
+        addConnection(routeConnection)
+      }
+    }
+  }
+
+  const orderedPrimaryNodeId = primaryNodeIds.find((id) => workflowNodeIds.has(id)) ?? null
+  const orderedNodeIds = [
+    ...primaryNodeIds.filter((id) => workflowNodeIds.has(id)),
+    ...Array.from(nodeIds),
+  ].filter(uniqueString).slice(0, SEMANTIC_FOCUS_MAX_NODES)
+
+  return {
+    id: `${source}:${orderedPrimaryNodeId ?? 'workflow'}`,
+    source,
+    priority,
+    alertLevel,
+    title,
+    summary: truncateText(summary, PREVIEW_MAX_LENGTH),
+    nextAction,
+    primaryNodeId: orderedPrimaryNodeId,
+    nodeIds: orderedNodeIds,
+    connectionIds: Array.from(connectionIds).slice(0, SEMANTIC_FOCUS_MAX_CONNECTIONS),
+    dimUnfocused: orderedNodeIds.length > 0,
+    evidenceCount,
+  }
+}
+
+function uniqueString(value: string, index: number, array: string[]): boolean {
+  return array.indexOf(value) === index
+}
 
 const priorityRank: Record<HudPriority, number> = {
   critical: 3,

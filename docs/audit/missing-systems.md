@@ -1,6 +1,6 @@
 # Missing Systems
 
-Last updated: 2026-05-31
+Last updated: 2026-06-01
 
 Priority scale:
 
@@ -18,8 +18,8 @@ Priority scale:
 - Selected node/edge HUDs now use measured HUD size plus DOM collision rects for command HUD, drawers, MiniMap, Console, and React Flow controls; Game HUD mode also disables the legacy 1024px horizontal body scroll.
 - Still missing (foundation only, not full implementation):
   - Advanced HUD placement policy with priority-weighted escape zones, content-density reduction, and animated reflow
-  - Semantic node/edge path focus from trace, validation, failure cause, approval state, and runtime attention rules
-  - Richer visual emphasis rules beyond selected node/edge local focus
+  - Replayable trace/audit-backed semantic focus. Current semantic focus is a current-state read-only projection from failure / approval / validation / retry / running / bottleneck signals, while completed runs now keep safe trace/audit snapshots for evidence recall.
+  - Richer visual emphasis rules beyond the current central HUD variants and semantic edge/node focus
   - Runtime-backed edge semantics for delay / retry / error route / health beyond derived HUD summaries
   - Situation Assistant real channels beyond 4D text (voice, avatar, video, news-style video, dynamic next-action banners)
   - Critical short-tone audio channel
@@ -42,8 +42,8 @@ Priority scale:
 |---|---|
 | WorkflowDocument model | The current `Workflow` is useful but not yet the full saved/executed/audited document described by source specs. |
 | Category normalization | MVP categories need mapping to complete source-spec categories before the parts library grows. |
-| Durable run history | Logs, metrics, execution graph, connector queue, and review states need a run record model that survives reload. |
-| Trace and audit log | Safety, replay, QA, and external adapter work require durable trace/audit records. |
+| Durable run history | Safe trace/audit summaries now survive in run history records, but logs, metrics timeline, connector queue, and review states still need a richer run record model. |
+| Trace and audit log | Safe `traceAudit` snapshot recall exists. Safety, replay, QA, and external adapter work still require replayable audit records and policy-backed events. |
 | Validate / Stop / Resume / Replay run modes | The run model must expand before full execution/runtime work. |
 | Cognitive HUD state model | HUD cannot be added as decoration; L0-L5 priority, alert, focus, and depth concepts need data support. |
 | Safety gate model | Spec check, secret scan placeholder, git guard, publish gate, command risk check, cost/loop limits, and approval records need a shared shape. |
@@ -71,10 +71,10 @@ The MVP has `HudSignal` / `HudSnapshot` / `CognitiveHudPanel`. The cognitive HUD
 |---|---|
 | HUD badges on `ConnectionLine` / React Flow edges | `SelectedEdgeHud` exists for selected edges, but always-on edge badges / path attention still need to surface on the flow path itself. |
 | Collision-aware selected object HUD | Selected-node and selected-edge HUDs now use measured card size and DOM collision rects, but advanced priority rules, density reduction, and animated reflow are still missing. |
-| Rich central HUD card | Decisive states (failure, approval needed, danger) need richer state-specific content, not only the current summary card. |
-| Approval Pending HUD | Approvals must never be hidden in a tab; they need a dedicated, dismissable surface. |
-| Failure Cause Card | Failures need a "follow the cause" surface, not a single log line. |
-| Semantic Focus Overlay / Path Dim | Selected node/edge local path dimming exists. Attention still needs trace-, validation-, approval-, and failure-cause-driven focus beyond the current selection. |
+| Rich central HUD card | Current-state variants exist for failure / approval / validation / running / bottleneck, but they are not yet user-tunable or backed by durable HUD history. |
+| Approval Pending HUD | Approval state can drive semantic focus and central HUD content, but approvals still need a dedicated, dismissable surface and durable decision record. |
+| Failure Cause Card | Failure cause focus exists as a central HUD variant and semantic path, and selected HUD / Run Detail can read durable safe evidence summaries. Replay and richer cause analysis are still missing. |
+| Semantic Focus Overlay / Path Dim | Current-state semantic focus now highlights failure / approval / validation / retry / running / bottleneck paths. It can share step evidence through `traceAudit`, but replayable attention history and richer policy controls are still missing. |
 | Notification Bundle | Bursts of low-priority signals should fold into one summary instead of competing for attention. |
 | Critical short audio cue | A short audio cue moves attention without forcing eye contact; it is part of the HUD's expression channels. |
 | HUD history | Past HUD states must be reviewable so users can reconstruct "when did this go bad." |

@@ -1,60 +1,55 @@
-import type { HudSnapshot } from '../../domain/cognitiveHud'
+import type {
+  CentralHudView,
+  HudSnapshot,
+  SemanticFocusPathView,
+} from '../../domain/cognitiveHud'
 import { hudPriorityLabels, hudSignalKindLabels } from '../../domain/cognitiveHud'
-
-/*
- * CognitiveHudOverlay
- *
- * Overlay layer — issue #34 redesign.
- *
- * Issue #31 / Issue #34: the cognitive HUD is the attention-allocation
- * editing layer, NOT a tab. This overlay sits on top of the canvas and
- * is meant to grow into:
- *   - important node badge
- *   - human gate marker
- *   - failure / warning marker
- *   - focus target / dim irrelevant paths
- *   - central HUD card
- *
- * In this foundation phase, only the central HUD card and a focus-target
- * label are rendered as placeholders so subsequent phases can attach real
- * node-level highlight and dim logic to the same overlay layer.
- *
- * Normal-state policy: when priority === 'normal', the overlay renders
- * nothing so it does not steal attention from the canvas.
- */
 
 type CognitiveHudOverlayProps = {
   hudSnapshot: HudSnapshot
+  centralHudView: CentralHudView | null
+  semanticFocusPath: SemanticFocusPathView | null
 }
 
-export function CognitiveHudOverlay({ hudSnapshot }: CognitiveHudOverlayProps) {
-  if (hudSnapshot.priority === 'normal') {
+export function CognitiveHudOverlay({
+  hudSnapshot,
+  centralHudView,
+  semanticFocusPath,
+}: CognitiveHudOverlayProps) {
+  if (!centralHudView) {
     return null
   }
 
   const topSignal = hudSnapshot.signals[0]
+  const pathText = semanticFocusPath
+    ? `${semanticFocusPath.nodeIds.length} nodes / ${semanticFocusPath.connectionIds.length} edges`
+    : null
 
   return (
     <div
-      className={`cognitive-hud-overlay cognitive-hud-overlay-${hudSnapshot.priority}`}
-      aria-label="認知HUDオーバーレイ"
+      className={`cognitive-hud-overlay cognitive-hud-overlay-${centralHudView.priority} cognitive-hud-variant-${centralHudView.variant}`}
+      aria-label="Cognitive HUD overlay"
     >
       <div className="cognitive-hud-overlay-card">
-        <span className="eyebrow">認知HUD / 注意配分</span>
-        <strong>{hudSnapshot.summary}</strong>
+        <span className="eyebrow">Cognitive HUD / {centralHudView.sourceLabel}</span>
+        <strong>{centralHudView.headline}</strong>
         <span className="cognitive-hud-overlay-meta">
-          L{hudSnapshot.alertLevel} ・ {hudPriorityLabels[hudSnapshot.priority]}
-          {hudSnapshot.focusTargetLabel
-            ? ` ・ フォーカス: ${hudSnapshot.focusTargetLabel}`
-            : null}
+          L{centralHudView.alertLevel} / {hudPriorityLabels[centralHudView.priority]}
+          {centralHudView.focusLabel ? ` / Focus: ${centralHudView.focusLabel}` : null}
         </span>
+        <span className="cognitive-hud-overlay-signal">{centralHudView.detail}</span>
         {topSignal ? (
           <span className="cognitive-hud-overlay-signal">
             {hudSignalKindLabels[topSignal.kind]}: {topSignal.title}
           </span>
         ) : null}
+        {pathText ? (
+          <span className="cognitive-hud-overlay-path">
+            Attention path: {pathText} / evidence {centralHudView.signalCount}
+          </span>
+        ) : null}
         <span className="cognitive-hud-overlay-action muted">
-          次の一手: {hudSnapshot.recommendedAction}
+          Next: {centralHudView.nextAction}
         </span>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import type { ConnectorJob } from './connectorQueue'
 import type { ExecutionGraph, ExecutionStep, ExecutionStepStatus } from './executionGraph'
 import type { WorkflowRunRecord } from './runHistory'
+import { reviveRunTraceFromAuditSummary } from './runAudit'
 import type { Workflow, WorkflowNode, WorkflowRunLog, WorkflowStatus } from './workflow'
 import {
   makeRunStepEvidence,
@@ -21,6 +22,8 @@ export type RunStep = {
   evidence: RunStepEvidence[]
 }
 
+export type RunTraceSource = 'current-state' | 'run-history'
+
 export type RunTrace = {
   runId: string
   workflowId: string
@@ -33,6 +36,9 @@ export type RunTrace = {
   retryCandidateStepIds: string[]
   safetyWarnings: string[]
   excludedEvidenceCount: number
+  source: RunTraceSource
+  auditCreatedAt?: string
+  auditEventCount?: number
 }
 
 export type BuildRunTraceInput = {
@@ -264,6 +270,12 @@ export function buildRunTrace(input: BuildRunTraceInput): RunTrace {
   const latestRecord =
     input.runHistoryRecords.filter((record) => record.runId === runId).pop() ??
     input.runHistoryRecords[input.runHistoryRecords.length - 1]
+  const relevantLogs = input.workflow.logs.filter((log) => log.runId === runId)
+
+  if (!input.executionGraph && relevantLogs.length === 0 && latestRecord?.traceAudit) {
+    return reviveRunTraceFromAuditSummary(latestRecord.traceAudit)
+  }
+
   const steps = input.executionGraph
     ? input.executionGraph.steps.map(createStepFromExecutionStep)
     : input.workflow.nodes.map((node) => createStepFromNode(runId, node))
@@ -280,6 +292,9 @@ export function buildRunTrace(input: BuildRunTraceInput): RunTrace {
     retryCandidateStepIds: input.executionGraph?.retryCandidates ?? [],
     safetyWarnings: [],
     excludedEvidenceCount: 0,
+    source: 'current-state',
+    auditCreatedAt: latestRecord?.traceAudit?.createdAt,
+    auditEventCount: latestRecord?.traceAudit?.events.length,
   }
 
   const relevantJobs = input.connectorJobs.filter((job) => job.runId === runId)
@@ -287,7 +302,6 @@ export function buildRunTrace(input: BuildRunTraceInput): RunTrace {
     trace.excludedEvidenceCount += appendJobEvidence(trace, job)
   }
 
-  const relevantLogs = input.workflow.logs.filter((log) => log.runId === runId)
   for (const log of relevantLogs) {
     trace.excludedEvidenceCount += appendLogEvidence(trace, log)
   }

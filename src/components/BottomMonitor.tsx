@@ -192,6 +192,11 @@ export function BottomMonitor({
 
   const bottleneck = selectBottleneckNode(workflow)
   const queueNodes = selectActiveQueueNodes(workflow)
+  const persistedTraceCount = runHistoryRecords.filter((record) => record.traceAudit).length
+  const persistedAuditEvidenceCount = runHistoryRecords.reduce(
+    (total, record) => total + (record.traceAudit?.evidenceCount ?? 0),
+    0,
+  )
   const reviewSteps =
     executionGraph?.steps.filter((step) => step.status === 'review_required') ?? []
   const retrySteps =
@@ -438,7 +443,7 @@ export function BottomMonitor({
           <div className="storage-tab-panel">
             <StorageBoundaryPanel />
             <div className="run-history-summary muted">
-              実行履歴: {runHistoryCount} 件（localStorage 暫定保存 / 最新 50 件）
+              実行履歴: {runHistoryCount} 件 / durable trace: {persistedTraceCount} 件 / evidence: {persistedAuditEvidenceCount} 件（既存 RUN_HISTORY key / 最新 50 件）
             </div>
             <ImportExportPanel
               workflow={workflow}

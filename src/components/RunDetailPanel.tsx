@@ -23,11 +23,17 @@ type RunDetailPanelProps = {
 export function RunDetailPanel({ runTrace }: RunDetailPanelProps) {
   const [mode, setMode] = useState<RunDetailMode>('all')
   const summary = useMemo(() => summarizeRunDetail(runTrace, mode), [runTrace, mode])
+  const sourceLabel =
+    !runTrace
+      ? 'traceなし'
+      : runTrace.source === 'run-history'
+      ? `durable audit snapshot${runTrace.auditEventCount ? ` / events ${runTrace.auditEventCount}` : ''}`
+      : 'current runtime trace / completion時に audit 保存'
 
   return (
     <section className="run-detail-panel" aria-label="実行詳細">
       <div className="run-detail-mock-banner" role="note">
-        ⚠ read-only — 永続化なし / 実 AI API 未接続
+        ⚠ read-only — {sourceLabel} / 実 AI API 未接続
       </div>
 
       <div className="run-detail-controls">
@@ -46,7 +52,7 @@ export function RunDetailPanel({ runTrace }: RunDetailPanelProps) {
         </label>
       </div>
 
-      <RunDetailHeader summary={summary} />
+      <RunDetailHeader summary={summary} runTrace={runTrace} />
 
       {summary.safetyWarnings.length > 0 ? (
         <div className="run-detail-safety-banner" role="alert">
@@ -74,9 +80,10 @@ export function RunDetailPanel({ runTrace }: RunDetailPanelProps) {
 
 type RunDetailHeaderProps = {
   summary: RunDetailSummary
+  runTrace: RunTrace | null
 }
 
-function RunDetailHeader({ summary }: RunDetailHeaderProps) {
+function RunDetailHeader({ summary, runTrace }: RunDetailHeaderProps) {
   return (
     <div className="run-detail-header">
       <div className="run-detail-stat-row">
@@ -101,6 +108,16 @@ function RunDetailHeader({ summary }: RunDetailHeaderProps) {
           >
             {summary.excludedEvidenceCount}
           </strong>
+        </div>
+        <div className="run-detail-stat">
+          <span className="run-detail-stat-label">Trace source</span>
+          <strong className="run-detail-stat-value">
+            {runTrace?.source === 'run-history' ? 'Audit' : runTrace ? 'Current' : '—'}
+          </strong>
+        </div>
+        <div className="run-detail-stat">
+          <span className="run-detail-stat-label">Audit events</span>
+          <strong className="run-detail-stat-value">{runTrace?.auditEventCount ?? 0}</strong>
         </div>
         <div className="run-detail-stat">
           <span className="run-detail-stat-label">ブリーフィング参照証拠</span>

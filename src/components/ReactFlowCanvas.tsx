@@ -20,6 +20,8 @@ import {
   type CanvasHudCollisionState,
   type CanvasHudPlacement,
   type CanvasHudSize,
+  type HudPriority,
+  type SemanticFocusPathView,
   type WorkflowGroupView,
   type ZoomHudView,
 } from '../domain/cognitiveHud'
@@ -64,6 +66,7 @@ type ReactFlowCanvasProps = {
   onSelectConnectionId: (connectionId: string | null) => void
   miniMapVisible: boolean
   workflowGroups: WorkflowGroupView[]
+  semanticFocusPath: SemanticFocusPathView | null
   hudCollisionState: CanvasHudCollisionState
   onZoomHudChange: (view: ZoomHudView) => void
   onHudAnchorChange: (anchors: {
@@ -91,6 +94,8 @@ type FocusPathState = {
   nodeRoles: Map<string, ReactFlowFocusRole>
   focusedConnectionIds: Set<string>
   dimUnfocused: boolean
+  source: 'selection' | 'semantic' | 'none'
+  priority: HudPriority
 }
 type HudRect = {
   x: number
@@ -172,6 +177,7 @@ function buildFocusPathState(
   workflow: Workflow,
   selectedNodeId: string,
   selectedConnectionId: string | null,
+  semanticFocusPath: SemanticFocusPathView | null,
 ): FocusPathState {
   const nodeRoles = new Map<string, ReactFlowFocusRole>()
   const focusedConnectionIds = new Set<string>()
@@ -191,7 +197,39 @@ function buildFocusPathState(
       }
     }
 
-    return { nodeRoles, focusedConnectionIds, dimUnfocused: true }
+    return {
+      nodeRoles,
+      focusedConnectionIds,
+      dimUnfocused: true,
+      source: 'selection',
+      priority: 'watch',
+    }
+  }
+
+  if (semanticFocusPath?.dimUnfocused && semanticFocusPath.nodeIds.length > 0) {
+    const primaryNodeIds = new Set(
+      semanticFocusPath.primaryNodeId ? [semanticFocusPath.primaryNodeId] : [],
+    )
+    for (const nodeId of semanticFocusPath.nodeIds) {
+      if (nodeIds.has(nodeId)) {
+        nodeRoles.set(nodeId, primaryNodeIds.has(nodeId) ? 'attention' : 'path')
+      }
+    }
+    for (const connectionId of semanticFocusPath.connectionIds) {
+      focusedConnectionIds.add(connectionId)
+    }
+    for (const node of workflow.nodes) {
+      if (!nodeRoles.has(node.id)) {
+        nodeRoles.set(node.id, 'dimmed')
+      }
+    }
+    return {
+      nodeRoles,
+      focusedConnectionIds,
+      dimUnfocused: true,
+      source: 'semantic',
+      priority: semanticFocusPath.priority,
+    }
   }
 
   if (selectedNodeId && nodeIds.has(selectedNodeId)) {
@@ -222,14 +260,26 @@ function buildFocusPathState(
       }
     }
 
-    return { nodeRoles, focusedConnectionIds, dimUnfocused: true }
+    return {
+      nodeRoles,
+      focusedConnectionIds,
+      dimUnfocused: true,
+      source: 'selection',
+      priority: 'watch',
+    }
   }
 
   for (const node of workflow.nodes) {
     nodeRoles.set(node.id, 'normal')
   }
 
-  return { nodeRoles, focusedConnectionIds, dimUnfocused: false }
+  return {
+    nodeRoles,
+    focusedConnectionIds,
+    dimUnfocused: false,
+    source: 'none',
+    priority: 'normal',
+  }
 }
 
 function pickWorkflowPositions(nodes: ReactFlowWorkflowNode[]): SavedReactFlowPositions {
@@ -526,6 +576,7 @@ export function ReactFlowCanvas({
   onSelectConnectionId,
   miniMapVisible,
   workflowGroups,
+  semanticFocusPath,
   hudCollisionState,
   onZoomHudChange,
   onHudAnchorChange,
@@ -535,7 +586,12 @@ export function ReactFlowCanvas({
   onMoveNode,
 }: ReactFlowCanvasProps) {
   const invalidConnections = connectionValidation.filter((result) => !result.valid)
-  const initialFocusPath = buildFocusPathState(workflow, selectedNodeId, selectedConnectionId)
+  const initialFocusPath = buildFocusPathState(
+    workflow,
+    selectedNodeId,
+    selectedConnectionId,
+    semanticFocusPath,
+  )
   const [nodes, setNodes] = useState<ReactFlowWorkflowNode[]>(() =>
     buildFlowNodes(workflow, {}, selectedNodeId, initialFocusPath),
   )
@@ -548,8 +604,14 @@ export function ReactFlowCanvas({
   const effectiveSelectedConnectionId =
     workflow.connections.find((connection) => connection.id === selectedConnectionId)?.id ?? null
   const focusPath = useMemo(
-    () => buildFocusPathState(workflow, selectedNodeId, effectiveSelectedConnectionId),
-    [effectiveSelectedConnectionId, selectedNodeId, workflow],
+    () =>
+      buildFocusPathState(
+        workflow,
+        selectedNodeId,
+        effectiveSelectedConnectionId,
+        semanticFocusPath,
+      ),
+    [effectiveSelectedConnectionId, selectedNodeId, semanticFocusPath, workflow],
   )
 
   useEffect(() => {
@@ -575,6 +637,8 @@ export function ReactFlowCanvas({
       toReactFlowEdges(workflow, effectiveSelectedConnectionId ?? undefined, {
         focusedConnectionIds: focusPath.focusedConnectionIds,
         dimUnfocused: focusPath.dimUnfocused,
+        source: focusPath.source,
+        priority: focusPath.priority,
       }),
     [effectiveSelectedConnectionId, focusPath, workflow],
   )

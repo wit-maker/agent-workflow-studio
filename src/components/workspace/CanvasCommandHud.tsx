@@ -1,6 +1,7 @@
-import type { HudSnapshot, ZoomHudView } from '../../domain/cognitiveHud'
+import type { CentralHudView, HudSnapshot, ZoomHudView } from '../../domain/cognitiveHud'
 import { hudPriorityLabels } from '../../domain/cognitiveHud'
 import { workflowStatusLabels } from '../../domain/displayLabels'
+import type { RunTrace } from '../../domain/runTrace'
 import type { WorkflowStatus } from '../../domain/workflow'
 import type { CanvasMode } from '../TopBar'
 
@@ -12,6 +13,8 @@ type CanvasCommandHudProps = {
   canUndo: boolean
   canRedo: boolean
   hudSnapshot: HudSnapshot
+  centralHudView: CentralHudView | null
+  runTrace: RunTrace | null
   runHistoryCount: number
   zoomHud: ZoomHudView
   paletteOpen: boolean
@@ -44,6 +47,8 @@ export function CanvasCommandHud({
   canUndo,
   canRedo,
   hudSnapshot,
+  centralHudView,
+  runTrace,
   runHistoryCount,
   zoomHud,
   paletteOpen,
@@ -79,6 +84,11 @@ export function CanvasCommandHud({
         <span className="mini-hud-chip" title={hudSnapshot.recommendedAction}>
           L{hudSnapshot.alertLevel} {hudPriorityLabels[hudSnapshot.priority]}
         </span>
+        {centralHudView ? (
+          <span className={`mini-hud-chip mini-hud-chip-${centralHudView.variant}`} title={centralHudView.nextAction}>
+            ATTN {centralHudView.sourceLabel}
+          </span>
+        ) : null}
         <span className="mini-hud-chip" title={zoomHud.description}>
           {zoomHud.label} {zoomHud.zoomPercent}%
         </span>
@@ -87,6 +97,12 @@ export function CanvasCommandHud({
         </span>
         <span className="mini-hud-chip" title="mock-only / credential value storageなし">
           safe / mock / history {runHistoryCount}
+        </span>
+        <span
+          className="mini-hud-chip"
+          title={runTrace?.source === 'run-history' ? '最新の durable audit snapshot を参照中' : '現在の runtime trace を参照中'}
+        >
+          {runTrace?.source === 'run-history' ? 'audit' : 'trace'} {runTrace?.auditEventCount ?? 0}
         </span>
       </div>
 

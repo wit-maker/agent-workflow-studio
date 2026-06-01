@@ -702,6 +702,12 @@ export function workflowReducer(
         ...state,
         isRunning: false,
         completedRun: { runId: action.runId, runStatus: action.runStatus },
+        executionGraph: state.executionGraph
+          ? {
+              ...state.executionGraph,
+              activeStepId: undefined,
+            }
+          : state.executionGraph,
         workflow: {
           ...state.workflow,
           status: action.workflowStatus,

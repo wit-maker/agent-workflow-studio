@@ -38,6 +38,7 @@ import {
   type WorkflowRunHistory,
   type WorkflowRunMode,
 } from '../domain/runHistory'
+import { createRunTraceAuditSummary } from '../domain/runAudit'
 import { appendRunRecord, loadRunHistory } from '../storage/runHistoryStorage'
 import { deriveHudSnapshot } from '../domain/cognitiveHud'
 import { buildRunTrace } from '../domain/runTrace'
@@ -330,6 +331,7 @@ export function AppShell() {
     const { runId, runStatus } = state.completedRun
     const pending = pendingRunRef.current
     if (pending && pending.runId === runId) {
+      const finishedAt = new Date().toISOString()
       const runLogs = workflow.logs.filter((log) => log.runId === runId)
       const record = createWorkflowRunRecord({
         runId: pending.runId,
@@ -337,10 +339,15 @@ export function AppShell() {
         mode: pending.mode,
         status: runStatus,
         startedAt: pending.startedAt,
-        finishedAt: new Date().toISOString(),
+        finishedAt,
         nodeCount: pending.plannedNodeCount,
         connectionCount: pending.plannedConnectionCount,
         logs: runLogs,
+        traceAudit: createRunTraceAuditSummary(runTrace, {
+          mode: pending.mode,
+          status: runStatus,
+          finishedAt,
+        }),
       })
       setRunHistory(appendRunRecord(record))
       // Keep pendingRunRef alive for review_required so the continuation
@@ -350,7 +357,7 @@ export function AppShell() {
       }
     }
     dispatch({ type: 'clearCompletedRun' })
-  }, [state.completedRun, workflow.logs])
+  }, [runTrace, state.completedRun, workflow.logs])
 
   useEffect(() => {
     if (!importSuccessMessage) return
@@ -1718,6 +1725,7 @@ export function AppShell() {
       evaluation={evaluation}
       humanReview={humanReview}
       hudSnapshot={hudSnapshot}
+      runTrace={runTrace}
       runHistoryRecords={runHistory.records}
       runHistoryCount={runHistory.records.length}
       checkOutcome={checkOutcome}

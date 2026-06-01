@@ -351,7 +351,7 @@ function summarizeRunHistory(
   const selectedRecords = scopedRecords
     .map((record) =>
       sanitizeBriefingText(
-        `${record.workflowTitle} / ${record.status} / logs:${record.logCount} / errors:${record.errorCount} / warnings:${record.warningCount}`,
+        `${record.workflowTitle} / ${record.status} / logs:${record.logCount} / errors:${record.errorCount} / warnings:${record.warningCount} / auditEvidence:${record.traceAudit?.evidenceCount ?? 0}`,
       ),
     )
     .filter((record): record is string => record !== null)

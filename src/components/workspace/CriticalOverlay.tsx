@@ -1,39 +1,37 @@
-import type { HudSnapshot } from '../../domain/cognitiveHud'
-
-/*
- * CriticalOverlay
- *
- * Overlay layer — issue #34 redesign.
- *
- * Foreground banner that takes attention only when the cognitive HUD
- * reports a critical-priority signal. Designed as the structural home
- * for the future critical-modal flow (e.g. dangerous stop confirmation,
- * irrecoverable failure interception) and the placeholder for the
- * future critical-tone short audio channel (do not implement yet).
- */
+import type { CentralHudView, HudSnapshot } from '../../domain/cognitiveHud'
 
 type CriticalOverlayProps = {
   hudSnapshot: HudSnapshot
+  centralHudView: CentralHudView | null
 }
 
-export function CriticalOverlay({ hudSnapshot }: CriticalOverlayProps) {
-  if (hudSnapshot.priority !== 'critical') {
+export function CriticalOverlay({ hudSnapshot, centralHudView }: CriticalOverlayProps) {
+  const effectivePriority = centralHudView?.priority ?? hudSnapshot.priority
+
+  if (effectivePriority !== 'critical') {
     return null
   }
 
   const topSignal = hudSnapshot.signals[0]
+  const headline = centralHudView?.headline ?? hudSnapshot.summary
+  const detail = centralHudView?.detail ?? topSignal?.detail
+  const nextAction = centralHudView?.nextAction ?? hudSnapshot.recommendedAction
 
   return (
-    <div className="critical-overlay" role="alert" aria-live="assertive">
+    <div
+      className={`critical-overlay ${centralHudView ? `critical-overlay-${centralHudView.variant}` : ''}`}
+      role="alert"
+      aria-live="assertive"
+    >
       <div className="critical-overlay-card">
-        <span className="critical-overlay-eyebrow">CRITICAL / 注意配分介入</span>
-        <strong>{hudSnapshot.summary}</strong>
-        {topSignal ? <p>{topSignal.detail}</p> : null}
-        <p className="critical-overlay-action">
-          次の一手: {hudSnapshot.recommendedAction}
-        </p>
+        <span className="critical-overlay-eyebrow">
+          CRITICAL / {centralHudView?.sourceLabel ?? 'HUD signal'}
+        </span>
+        <strong>{headline}</strong>
+        {detail ? <p>{detail}</p> : null}
+        <p className="critical-overlay-action">Next: {nextAction}</p>
         <p className="muted">
-          ※ critical 短音通知は将来の expression channel として未実装。
+          Critical short-tone audio remains a future expression channel and is not played.
         </p>
       </div>
     </div>

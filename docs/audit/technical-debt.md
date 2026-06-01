@@ -1,6 +1,6 @@
 # Technical Debt
 
-Last updated: 2026-05-31
+Last updated: 2026-06-01
 
 This file lists current limits that may block later work if ignored.
 
@@ -27,9 +27,9 @@ These items do not block SA-1, but they should be tracked so that SA-5 onward do
 - The legacy `.app-shell` / `.workspace-grid` / `.top-bar` CSS rules and the `TopBar.tsx` component are no longer rendered but remain in the tree. They should be removed once we are confident no other surface depends on them.
 - `WorkspaceLeftRail` Workflow Library / Templates tabs are scaffold placeholders. The full library/template UX should land before the WIP badges become stale.
 - `CanvasCommandHud` shows model as static `GPT-5.5 high`. It must read from settings once the model selection lives in product state.
-- `CognitiveHudOverlay` renders a single central card. `SelectedObjectHud` and `SelectedEdgeHud` now use measured viewport-anchored placement with DOM collision rects, and selected node/edge local focus path dimming exists. The remaining debt is semantic attention paths derived from trace, validation, approval, and failure-cause state, plus richer HUD density rules for very small viewports.
+- `CognitiveHudOverlay` now renders central HUD variants driven by semantic focus (`failure`, `approval`, `validation`, `running`, `bottleneck`) and selected node/edge HUDs use measured viewport-anchored placement with DOM collision rects. Selected node history can read durable audit evidence summaries. Remaining debt is richer HUD density rules for very small viewports, HUD history, notification bundling, and user-tunable depth/collapse policy.
 - `node-hud-badge` covers four statuses (failed / review_required / blocked / retry_ready). The full HUD badge spec includes severity, priority, human-gate, and failure-cause variants on top of status.
-- `SelectedEdgeHud` exists, but delay / retry / error-route / health are derived HUD summaries, not runtime-backed edge semantics yet.
+- `SelectedEdgeHud` exists and semantic focus can highlight important edge paths, but delay / retry / error-route / health are derived HUD summaries, not runtime-backed edge semantics yet.
 
 
 
@@ -51,9 +51,9 @@ These items do not block SA-1, but they should be tracked so that SA-5 onward do
 
 ## Observability Debt
 
-- Logs, metrics, queue, and execution graph are visible but not stored as durable run records.
-- There is no dedicated trace model.
-- There is no durable audit log for safety decisions, approvals, external calls, command risk checks, or publish gates.
+- Logs, metrics, queue, and execution graph are visible; completed runs now store a credential-safe `traceAudit` snapshot inside the existing run history record.
+- `RunTrace` exists as a read-only derived view and can be revived from `traceAudit` when current runtime logs are not present. This is durable evidence recall, not a full replayable audit model.
+- There is no durable audit log for safety decisions, approvals, external calls, command risk checks, publish gates, replay, or multi-run diff.
 - Metrics do not yet cover error rate, parallelism, resource load, or multi-run comparisons.
 
 ## Storage Debt
@@ -75,7 +75,7 @@ These items do not block SA-1, but they should be tracked so that SA-5 onward do
 
 - React Flow and standard canvas coexist; full migration/retirement strategy is not settled.
 - Node add/delete, complex edge editing, auto layout, and DnD interactions remain incomplete or partially browser-QA-limited. MiniMap exists as a HUD, but overview behavior is still basic.
-- UI-11 cognitive HUD settings and UI-12 durable run history/audit log are largely missing.
+- UI-11 cognitive HUD settings are missing. UI-12 now has durable safe trace snapshots in run history, but replay, run selection, and audit policy controls are incomplete.
 - Inspector lacks first-class prompt, tools, security, test run, last-run details, and settings history panels.
 
 ## Template / Reuse Debt

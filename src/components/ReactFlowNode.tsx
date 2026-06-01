@@ -39,12 +39,23 @@ export function ReactFlowNode({
   } = data
 
   const badge = nodeHudBadge(node.status)
+  const semanticBadge =
+    focusRole === 'attention'
+      ? 'ATTN'
+      : focusRole === 'path'
+        ? 'PATH'
+        : null
 
   return (
     <div
       className={`react-flow-node node-${node.status} react-flow-node-category-${node.category} focus-${focusRole} ${selected ? 'selected' : ''}`}
       aria-label={`${node.title} ノード`}
     >
+      {semanticBadge ? (
+        <span className={`semantic-focus-badge semantic-focus-badge-${focusRole}`}>
+          {semanticBadge}
+        </span>
+      ) : null}
       {badge ? (
         <span className={`node-hud-badge node-hud-badge-${badge.tone}`} aria-label={`HUD: ${badge.label}`}>
           {badge.label}

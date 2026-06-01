@@ -27,7 +27,7 @@ export type ReactFlowWorkflowNodeData = {
 }
 
 export type ReactFlowWorkflowNode = Node<ReactFlowWorkflowNodeData, typeof reactFlowNodeType>
-export type ReactFlowFocusRole = 'normal' | 'selected' | 'path' | 'dimmed'
+export type ReactFlowFocusRole = 'normal' | 'selected' | 'attention' | 'path' | 'dimmed'
 
 type NodePositionMap = Record<string, XYPosition>
 type NodeLookup = Map<string, WorkflowNode>
@@ -46,6 +46,20 @@ function getStatusColor(status: WorkflowConnection['status']): string {
     case 'inactive':
     default:
       return '#8a98aa'
+  }
+}
+
+function getSemanticFocusColor(priority: 'normal' | 'watch' | 'alert' | 'critical'): string {
+  switch (priority) {
+    case 'critical':
+      return '#fb7185'
+    case 'alert':
+      return '#fbbf24'
+    case 'watch':
+      return '#67e8f9'
+    case 'normal':
+    default:
+      return '#2dd4bf'
   }
 }
 
@@ -224,6 +238,8 @@ export function toReactFlowEdges(
   focusPath?: {
     focusedConnectionIds: ReadonlySet<string>
     dimUnfocused: boolean
+    source?: 'selection' | 'semantic' | 'none'
+    priority?: 'normal' | 'watch' | 'alert' | 'critical'
   },
 ): Edge[] {
   const nodeIds = new Set(workflow.nodes.map((node) => node.id))
@@ -243,13 +259,17 @@ export function toReactFlowEdges(
       const selected = connection.id === selectedConnectionId
       const focused = focusPath?.focusedConnectionIds.has(connection.id) ?? false
       const dimmed = focusPath?.dimUnfocused === true && !focused && !selected
+      const semanticFocused = focused && focusPath?.source === 'semantic'
       const className = [
         selected ? 'focus-selected-edge' : null,
         focused ? 'focus-path-edge' : null,
+        semanticFocused ? `focus-semantic-edge focus-semantic-edge-${focusPath?.priority ?? 'watch'}` : null,
         dimmed ? 'focus-dimmed-edge' : null,
       ]
         .filter(Boolean)
         .join(' ')
+      const semanticStroke =
+        semanticFocused ? getSemanticFocusColor(focusPath?.priority ?? 'watch') : stroke
 
       return {
         id: connection.id,
@@ -263,10 +283,10 @@ export function toReactFlowEdges(
         className,
         markerEnd: {
           type: MarkerType.ArrowClosed,
-          color: stroke,
+          color: semanticStroke,
         },
         style: {
-          stroke,
+          stroke: semanticStroke,
           strokeWidth: selected || focused ? 3.4 : 2.5,
           opacity: dimmed ? 0.28 : 1,
         },

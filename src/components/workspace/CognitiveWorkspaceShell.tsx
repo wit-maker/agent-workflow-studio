@@ -7,6 +7,7 @@ import type {
   ReviewDecision,
 } from '../../domain/evaluation'
 import type { ExecutionGraph } from '../../domain/executionGraph'
+import type { RunTrace } from '../../domain/runTrace'
 import type { WorkflowRunRecord } from '../../domain/runHistory'
 import type {
   AgentRole,
@@ -58,6 +59,7 @@ type CognitiveWorkspaceShellProps = {
   evaluation: EvaluationResult | undefined
   humanReview: HumanReviewState | undefined
   hudSnapshot: HudSnapshot
+  runTrace: RunTrace | null
   runHistoryRecords: WorkflowRunRecord[]
   runHistoryCount: number
   checkOutcome: 'PASS' | 'REVIEW' | 'FAIL'

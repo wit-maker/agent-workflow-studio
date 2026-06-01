@@ -6,10 +6,13 @@ import {
   type CanvasHudAnchor,
   type CanvasHudCollisionState,
   type CanvasHudSize,
+  type CentralHudView,
   type HudSnapshot,
+  type SemanticFocusPathView,
   type ZoomHudView,
 } from '../../domain/cognitiveHud'
 import type { ConnectionKind, Workflow, WorkflowNode } from '../../domain/workflow'
+import type { RunTrace } from '../../domain/runTrace'
 import type { ConnectionValidationResult } from '../../state/workflowSelectors'
 import type { CanvasMode } from '../TopBar'
 import { ReactFlowCanvas } from '../ReactFlowCanvas'
@@ -40,6 +43,9 @@ type CognitiveWorkflowCanvasProps = {
   selectedNode: WorkflowNode | undefined
   connectionValidation: ConnectionValidationResult[]
   hudSnapshot: HudSnapshot
+  runTrace: RunTrace | null
+  semanticFocusPath: SemanticFocusPathView | null
+  centralHudView: CentralHudView | null
   miniMapVisible: boolean
   hudSurfaceState: Pick<CanvasHudCollisionState, 'paletteOpen' | 'detailOpen' | 'consoleOpen'>
   onZoomHudChange: (view: ZoomHudView) => void
@@ -66,6 +72,9 @@ export function CognitiveWorkflowCanvas({
   selectedNode,
   connectionValidation,
   hudSnapshot,
+  runTrace,
+  semanticFocusPath,
+  centralHudView,
   miniMapVisible,
   hudSurfaceState,
   onZoomHudChange,
@@ -102,8 +111,10 @@ export function CognitiveWorkflowCanvas({
         node: selectedNode,
         connections: workflow.connections,
         hudSnapshot,
+        semanticFocusPath,
+        runTrace,
       }),
-    [hudSnapshot, selectedNode, workflow.connections],
+    [hudSnapshot, runTrace, selectedNode, semanticFocusPath, workflow.connections],
   )
   const selectedEdgeHud = useMemo(
     () =>
@@ -154,6 +165,7 @@ export function CognitiveWorkflowCanvas({
             connectionValidation={connectionValidation}
             miniMapVisible={miniMapVisible}
             workflowGroups={workflowGroups}
+            semanticFocusPath={semanticFocusPath}
             hudCollisionState={hudCollisionState}
             onZoomHudChange={onZoomHudChange}
             onHudAnchorChange={handleHudAnchorChange}
@@ -189,7 +201,7 @@ export function CognitiveWorkflowCanvas({
           anchor={canvasMode === 'standard' ? null : edgeHudAnchor}
           onMeasuredSizeChange={handleEdgeHudSizeChange}
         />
-        <CognitiveHudOverlay hudSnapshot={hudSnapshot} />
+        <CognitiveHudOverlay hudSnapshot={hudSnapshot} centralHudView={centralHudView} semanticFocusPath={semanticFocusPath} />
       </div>
       {belowCanvasSlot}
     </div>
