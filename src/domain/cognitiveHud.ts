@@ -214,6 +214,8 @@ export type SelectedEdgeHudView = {
   runtimeEvidenceCount: number
   traceRunId: string | null
   traceSource: RunTrace['source'] | 'none'
+  runDetailFocusLabel: string
+  runDetailFocusSummary: string
   recommendedAction: string
   safeCopySummary: string
 }
@@ -667,6 +669,13 @@ export function buildSelectedEdgeHudView(options: {
   const statusLabel = connectionStatusLabels[connection.status]
   const sourceTitle = source?.title ?? connection.sourceNodeId
   const targetTitle = target?.title ?? connection.targetNodeId
+  const runDetailFocusLabel = `Run Detail focus / edge ${connection.id}`
+  const runDetailFocusSummary = [
+    `${sourceTitle} -> ${targetTitle}`,
+    `${runtime.stateLabel}`,
+    `${runtime.routeSummary}`,
+    runtime.traceRunId ? `trace ${runtime.traceRunId}` : 'trace none',
+  ].join(' / ')
 
   return {
     connectionId: connection.id,
@@ -695,6 +704,8 @@ export function buildSelectedEdgeHudView(options: {
     runtimeEvidenceCount: runtime.evidenceCount,
     traceRunId: runtime.traceRunId,
     traceSource: runtime.traceSource,
+    runDetailFocusLabel,
+    runDetailFocusSummary,
     recommendedAction: runtime.recommendedAction,
     safeCopySummary: [
       `edge: ${connection.id}`,
@@ -710,6 +721,7 @@ export function buildSelectedEdgeHudView(options: {
       `health: ${runtime.healthLabel}`,
       `evidence: ${runtime.evidenceCount}`,
       `trace: ${runtime.traceRunId ?? 'none'} / ${runtime.traceSource}`,
+      `run detail focus: ${runDetailFocusSummary}`,
       `next: ${runtime.recommendedAction}`,
     ].join('\n'),
   }

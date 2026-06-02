@@ -221,7 +221,10 @@ export function CognitiveWorkflowCanvas({
             onDeleteConnection(connectionId)
             onSelectConnectionId(null)
           }}
-          onOpenRunDetail={onOpenRunDetail}
+          onOpenRunDetail={(connectionId) => {
+            onSelectConnectionId(connectionId)
+            onOpenRunDetail()
+          }}
           anchor={canvasMode === 'standard' ? null : edgeHudAnchor}
           onMeasuredSizeChange={handleEdgeHudSizeChange}
         />
