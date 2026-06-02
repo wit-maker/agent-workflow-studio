@@ -10,7 +10,7 @@ type SelectedEdgeHudProps = {
   onSelectSource: (nodeId: string) => void
   onSelectTarget: (nodeId: string) => void
   onDeleteEdge: (connectionId: string) => void
-  onOpenRunDetail: () => void
+  onOpenRunDetail: (connectionId: string) => void
   anchor?: CanvasHudAnchor | null
   onMeasuredSizeChange?: (size: CanvasHudSize | null) => void
 }
@@ -156,6 +156,15 @@ export function SelectedEdgeHud({
         <p>{view.recommendedAction}</p>
       </section>
 
+      <section className="selected-edge-hud-action" aria-label="Run Detail deep link">
+        <span className="eyebrow">Deep link</span>
+        <p>
+          <strong>{view.runDetailFocusLabel}</strong>
+          <br />
+          {view.runDetailFocusSummary}
+        </p>
+      </section>
+
       <div className="selected-edge-hud-actions" aria-label="エッジクイックアクション">
         <button type="button" className="icon-button" onClick={() => onSelectSource(view.sourceNodeId)}>
           Select source
@@ -166,8 +175,8 @@ export function SelectedEdgeHud({
         <button type="button" className="icon-button" onClick={copySummary}>
           {copied ? 'Copied' : 'Copy edge summary'}
         </button>
-        <button type="button" className="icon-button" onClick={onOpenRunDetail}>
-          Open trace
+        <button type="button" className="icon-button" onClick={() => onOpenRunDetail(view.connectionId)}>
+          Open Run Detail focus
         </button>
         <button type="button" className="icon-button danger-action" onClick={deleteEdge}>
           Delete edge
