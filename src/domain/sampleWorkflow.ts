@@ -187,6 +187,26 @@ export function createSampleWorkflow(): Workflow {
       kind,
       carries,
       status: 'inactive',
+      runtimePolicy:
+        kind === 'decision'
+          ? {
+              condition: {
+                mode: index === 9 ? 'on_review' : 'expression',
+                label: index === 9 ? 'quality gate' : 'route by decision',
+                expression: index === 9 ? undefined : 'decision == true',
+              },
+              retry: {
+                enabled: index === 9,
+                maxAttempts: 2,
+                backoffMs: 500,
+              },
+            }
+          : kind === 'error' || kind === 'retry'
+            ? {
+                condition: { mode: 'on_failure', label: 'failure recovery' },
+                retry: { enabled: kind === 'retry', maxAttempts: 2, backoffMs: 800 },
+              }
+            : undefined,
       metrics: {
         flowRate: 1,
         tokens: 24 + index * 8,

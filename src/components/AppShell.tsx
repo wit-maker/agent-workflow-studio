@@ -27,6 +27,7 @@ import type {
   ConnectionKind,
   Workflow,
   WorkflowArtifact,
+  WorkflowConnectionRuntimePolicy,
   WorkflowNode,
   WorkflowRunLog,
   WorkflowStatus,
@@ -38,6 +39,7 @@ import {
   type WorkflowRunHistory,
   type WorkflowRunMode,
 } from '../domain/runHistory'
+import { createRunTraceAuditSummary } from '../domain/runAudit'
 import { appendRunRecord, loadRunHistory } from '../storage/runHistoryStorage'
 import { deriveHudSnapshot } from '../domain/cognitiveHud'
 import { buildRunTrace } from '../domain/runTrace'
@@ -58,6 +60,7 @@ import {
   readReactFlowPositions,
   writeReactFlowPositions,
   writeCanvasModePreference,
+  clearReactFlowPositions,
   type SavedCanvasMode,
 } from '../storage/localCanvasState'
 import {
@@ -89,7 +92,7 @@ function countPlannedConnections(workflow: Workflow, plannedNodes: WorkflowNode[
 }
 
 function toCanvasMode(savedMode: SavedCanvasMode | null): CanvasMode {
-  return savedMode === 'react-flow' ? 'reactFlow' : 'standard'
+  return savedMode === 'standard' ? 'standard' : 'reactFlow'
 }
 
 function toSavedCanvasMode(mode: CanvasMode): SavedCanvasMode {
@@ -250,9 +253,11 @@ export function AppShell() {
   const [isEvaluating, setIsEvaluating] = useState(false)
   const [importSuccessMessage, setImportSuccessMessage] = useState<string | null>(null)
   const [canvasMode, setCanvasMode] = useState<CanvasMode>(() =>
-    toCanvasMode(readCanvasModePreference() ?? storageAdapter.loadSettings().canvasMode),
+    toCanvasMode(readCanvasModePreference()),
   )
   const [pendingDeleteNodeId, setPendingDeleteNodeId] = useState<string | null>(null)
+  const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null)
+  const [selectedRunDetailRunId, setSelectedRunDetailRunId] = useState<string | null>(null)
   const artifactVersionCountRef = useRef(0)
   const cancelledRebuildIdsRef = useRef<Set<string>>(new Set())
   const {
@@ -329,6 +334,7 @@ export function AppShell() {
     const { runId, runStatus } = state.completedRun
     const pending = pendingRunRef.current
     if (pending && pending.runId === runId) {
+      const finishedAt = new Date().toISOString()
       const runLogs = workflow.logs.filter((log) => log.runId === runId)
       const record = createWorkflowRunRecord({
         runId: pending.runId,
@@ -336,10 +342,15 @@ export function AppShell() {
         mode: pending.mode,
         status: runStatus,
         startedAt: pending.startedAt,
-        finishedAt: new Date().toISOString(),
+        finishedAt,
         nodeCount: pending.plannedNodeCount,
         connectionCount: pending.plannedConnectionCount,
         logs: runLogs,
+        traceAudit: createRunTraceAuditSummary(runTrace, {
+          mode: pending.mode,
+          status: runStatus,
+          finishedAt,
+        }),
       })
       setRunHistory(appendRunRecord(record))
       // Keep pendingRunRef alive for review_required so the continuation
@@ -349,7 +360,7 @@ export function AppShell() {
       }
     }
     dispatch({ type: 'clearCompletedRun' })
-  }, [state.completedRun, workflow.logs])
+  }, [runTrace, state.completedRun, workflow.logs])
 
   useEffect(() => {
     if (!importSuccessMessage) return
@@ -837,6 +848,7 @@ export function AppShell() {
   function handleReset() {
     runTokenRef.current += 1
     artifactVersionCountRef.current = 0
+    setSelectedConnectionId(null)
     dispatch({ type: 'resetWorkflow', workflow: createSampleWorkflow() })
   }
 
@@ -846,6 +858,8 @@ export function AppShell() {
     artifactVersionCountRef.current = 0
     pendingRunRef.current = null
     setRunHistory(loadRunHistory())
+    setSelectedConnectionId(null)
+    setSelectedRunDetailRunId(null)
     // Reset in-memory UI state to defaults after clearing persisted storage
     setAppSettings(DEFAULT_APP_SETTINGS)
     setCanvasMode(toCanvasMode(null))
@@ -1014,6 +1028,7 @@ export function AppShell() {
 
   function handleDeleteConnection(connectionId: string) {
     dispatch({ type: 'deleteConnection', connectionId })
+    setSelectedConnectionId((current) => (current === connectionId ? null : current))
     dispatch({
       type: 'appendLog',
       log: makeLog(
@@ -1021,6 +1036,22 @@ export function AppShell() {
         '接続を削除しました。',
         undefined,
         'warn',
+      ),
+    })
+  }
+
+  function handleUpdateConnectionRuntimePolicy(
+    connectionId: string,
+    runtimePolicy: WorkflowConnectionRuntimePolicy | undefined,
+  ) {
+    dispatch({ type: 'updateConnectionRuntimePolicy', connectionId, runtimePolicy })
+    dispatch({
+      type: 'appendLog',
+      log: makeLog(
+        executionGraph?.runId ?? `connection-policy-${Date.now()}`,
+        runtimePolicy ? '接続 runtime policy を保存しました。' : '接続 runtime policy をクリアしました。',
+        undefined,
+        'info',
       ),
     })
   }
@@ -1119,6 +1150,19 @@ export function AppShell() {
     )
   }
 
+  function handleSelectNode(nodeId: string) {
+    setSelectedConnectionId(null)
+    dispatch({ type: 'selectNode', nodeId })
+  }
+
+  function handleSelectRunDetailRunId(runId: string | null) {
+    setSelectedRunDetailRunId(runId)
+  }
+
+  function handleOpenRunDetail() {
+    handleChangeActiveTab('RunDetail')
+  }
+
   function handleChangeCanvasMode(nextMode: CanvasMode) {
     const savedCanvasMode = toSavedCanvasMode(nextMode)
     setCanvasMode(nextMode)
@@ -1157,6 +1201,7 @@ export function AppShell() {
   }
 
   function handleResetReactFlowPositions() {
+    clearReactFlowPositions()
     const defaultPositions = Object.fromEntries(
       workflow.nodes.map((node) => [node.id, node.position]),
     )
@@ -1687,6 +1732,9 @@ export function AppShell() {
       onResetStorage={handleResetStorage}
       runHistoryCount={runHistory.records.length}
       runHistoryRecords={runHistory.records}
+      selectedRunDetailRunId={selectedRunDetailRunId}
+      selectedNodeId={selectedNodeId}
+      selectedConnectionId={selectedConnectionId}
       hudSnapshot={hudSnapshot}
       runTrace={runTrace}
       settings={{
@@ -1694,6 +1742,9 @@ export function AppShell() {
         canvasMode: toSavedCanvasMode(canvasMode),
       }}
       onChangeActiveTab={handleChangeActiveTab}
+      onSelectRunDetailRunId={handleSelectRunDetailRunId}
+      onSelectNode={handleSelectNode}
+      onSelectConnectionId={setSelectedConnectionId}
       onImportBundle={handleImportBundle}
     />
   )
@@ -1716,8 +1767,11 @@ export function AppShell() {
       evaluation={evaluation}
       humanReview={humanReview}
       hudSnapshot={hudSnapshot}
+      runTrace={runTrace}
       runHistoryRecords={runHistory.records}
       runHistoryCount={runHistory.records.length}
+      selectedConnectionId={selectedConnectionId}
+      selectedRunDetailRunId={selectedRunDetailRunId}
       checkOutcome={checkOutcome}
       onRun={() => runMockWorkflow()}
       onRunSelected={() => runMockWorkflow('selected')}
@@ -1730,10 +1784,14 @@ export function AppShell() {
       onExportJson={exportJson}
       onImportJson={importJson}
       onChangeCanvasMode={handleChangeCanvasMode}
-      onSelectNode={(nodeId) => dispatch({ type: 'selectNode', nodeId })}
+      onSelectNode={handleSelectNode}
+      onSelectConnectionId={setSelectedConnectionId}
+      onSelectRunDetailRunId={handleSelectRunDetailRunId}
+      onOpenRunDetail={handleOpenRunDetail}
       onAddNode={handleAddNode}
       onSaveNode={handleSaveNode}
       onCreateConnection={handleCreateConnection}
+      onUpdateConnectionRuntimePolicy={handleUpdateConnectionRuntimePolicy}
       onCreateConnectionDraft={createConnectionFromDraft}
       onDeleteConnection={handleDeleteConnection}
       onDeleteNode={handleDeleteNode}

@@ -3,6 +3,7 @@ import {
   getConnectionError,
   isKnownConnectionKind,
 } from '../domain/connectionRules'
+import { normalizeConnectionRuntimePolicy } from '../domain/edgeRuntimePolicy'
 import { findPort, getInputPorts, getOutputPorts } from '../domain/portRules'
 import { connectionKinds, normalizeNodeCategory } from '../domain/workflow'
 import type {
@@ -331,6 +332,7 @@ export function validateWorkflowImport(value: unknown): {
       ? raw.carries.filter((item): item is WorkflowDataType => typeof item === 'string')
       : [],
     status: isConnectionStatus(raw.status) ? raw.status : 'inactive',
+    runtimePolicy: normalizeConnectionRuntimePolicy(raw.runtimePolicy),
     metrics: normalizeConnectionMetrics(raw.metrics),
   }))
 

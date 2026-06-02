@@ -1,23 +1,35 @@
 # Current Implementation Map
 
-Last updated: 2026-05-26
+Last updated: 2026-06-03
 
 This map records what the current MVP actually contains. It does not redefine the full product goal.
 
 ## UI Shell Migration (Issue #34)
 
-The UI shell migrated from **panel-first** (TopBar + .workspace-grid: Palette / Canvas+StagePreview / Inspector + BottomMonitor) to **cognitive workspace shell**:
+The UI shell migrated from **panel-first** (TopBar + .workspace-grid: Palette / Canvas+StagePreview / Inspector + BottomMonitor) to **cognitive workspace shell**, then to a Canvas First Game HUD shell:
 
 ```
-Top    : GlobalRunControl + CurrentStateStrip
-Left   : WorkspaceLeftRail (Components / WorkflowLibrary[WIP] / Templates[WIP])
-Center : CognitiveWorkflowCanvas (= WorkflowCanvas|ReactFlowCanvas + CognitiveHudOverlay)
-Right  : WorkspaceRightPanel (Situation / Inspector / Assistant / HumanReview)
-Bottom : DetailDrawerDock (collapsible — wraps the old BottomMonitor as Detail Surface)
-Overlay: CognitiveHudOverlay (canvas) + CriticalOverlay (root)
+Always-on : CanvasCommandHud (status / run / canvas controls / drawer toggles)
+Canvas    : CognitiveWorkflowCanvas (= ReactFlowCanvas primary + HUD overlays)
+Left      : WorkspaceLeftRail as Palette HUD drawer
+Right     : WorkspaceRightPanel as Detail HUD drawer
+Bottom    : DetailDrawerDock as collapsible Console HUD
+Overlay   : CognitiveHudOverlay + SelectedObjectHud + SelectedEdgeHud + CriticalOverlay
 ```
 
 `BottomMonitor` is no longer the primary authoring surface. Its tabs (認知HUD / ブリーフィング / 実行詳細 / etc.) remain available but are **Detail Surfaces**, not the cognitive HUD or situation assistant proper.
+
+## Runtime Audit Worktree Phase
+
+The Runtime Audit parallel worktree phase landed the safe route-event foundation without introducing backend/API behavior, credential storage, dependencies, or new localStorage keys.
+
+| Lane | Current implementation | Boundary |
+|---|---|---|
+| Shared Contract | `src/domain/runtimeAuditContract.ts` defines the shared safe event contract and normalization boundary used by runtime and audit code. | Contract events are derived metadata only; no raw config, prompt, payload, artifact body, credential, token, or API key belongs in this shape. |
+| Runtime Events | `RunTrace.runtimeEvents` can carry safe route/runtime events produced during mock execution. | Current run events remain mock-run observations, not real adapter telemetry. |
+| Durable Audit | `traceAudit.runtimeEvents` stores the safe event metadata inside existing run history records, and old records without the field normalize to `[]`. | This reuses the existing run history key; it is not a new audit store or new localStorage scope. |
+| Run Detail Replay / Diff | `RunDetailPanel` comparison includes runtime event count metadata and a runtime-event diff row when two safe audit snapshots are selected. | This is metadata comparison, not animated replay or full route reconstruction. |
+| Edge HUD Deep Link | `SelectedEdgeHud` can keep the selected edge and open Run Detail in an edge-focused context. Safe copy summary includes the Run Detail focus label. | This is a session-state deep link, not a persistent URL router or durable replay engine. |
 
 ## Concept Layer Note (Issue #31)
 
@@ -30,7 +42,7 @@ Several MVP surfaces look like they implement the full cognitive HUD or full Sit
 | BottomMonitor `認知HUD` tab | A summary view of HUD signals derived from current runtime state. | Not the cognitive HUD itself. The cognitive HUD is an attention-allocation layer that spans Canvas / Inspector / notifications / modals. |
 | `CognitiveHudPanel` component | Read-only HUD summary list. Better named `HudSummaryPanel` / `HudSignalList`. | Not a full HUD with badges on nodes/edges, focus overlays, dimming, intervention cards, or critical audio cues. |
 | BottomMonitor `ブリーフィング` tab + `BriefingPanel` | Minimum output channel of the Situation Narration Layer (4D text only, mock-only). | Not the Situation Assistant as a whole. Voice, avatar, video, dynamic highlight, timeline narration, incident replay are out of scope but not removed from spec. |
-| BottomMonitor `実行詳細` tab + `RunDetailPanel` | Read-only Run Trace step evidence viewer. | Not durable trace store, not replay engine, not deep linking. |
+| BottomMonitor `実行詳細` tab + `RunDetailPanel` | Read-only Run Trace step evidence viewer that can select current runtime trace or revived safe audit snapshots from run history, with node/edge focus deep links back to the canvas. It also has a two-run safe audit comparison view with metadata rows, runtime event counts, step-level safe evidence grouping, focused node/edge scoped diff, and safe connection `runtimePolicy` summaries inside the same panel. | Not an animated replay engine, not edge-level durable route event replay, not timeline scrubber, and not visual replay animation. |
 | BottomMonitor `Roadmap` tab | Connector readiness snapshot. | Not real connector implementation. |
 
 These MVP surfaces are useful and intentional. They are listed here so that "implemented" is never confused with "the full layer is done."
@@ -39,22 +51,22 @@ These MVP surfaces are useful and intentional. They are listed here so that "imp
 
 | Area | Current implementation | Notes |
 |---|---|---|
-| Top | `GlobalRunControl` consolidates Run/Selected/FromSelected/Dry/Stop/Reset/Undo/Redo/Export/Import/CanvasMode. `CurrentStateStrip` shows execution state, top attention, focus target, recommended model, safety state. | Recommended/current model is static placeholder text; future settings hookup. |
-| Left | `WorkspaceLeftRail` exposes Components (`PartsPalette`) plus WIP scaffold tabs for Workflow Library and Templates. | Library/Templates tabs are scaffold; existing data still reachable via Detail Drawer. |
-| Center | `CognitiveWorkflowCanvas` wraps `WorkflowCanvas` / `ReactFlowCanvas` and overlays `CognitiveHudOverlay`. `StagePreview` remains rendered inline below the canvas. | Edge-level HUD overlay (flow health, delay, retry, error route) is not implemented. |
-| Right | `WorkspaceRightPanel` switches between Situation / Inspector / Assistant / Human Review. | Inspector is the existing component reused as one mode. |
-| Bottom | `DetailDrawerDock` wraps `BottomMonitor` as a collapsible Detail Surface (default collapsed). All existing tabs preserved for compatibility. | Tabs are no longer the primary surface for HUD / Briefing / Run Detail. |
-| Overlay | `CognitiveHudOverlay` shows central HUD card + focus when HUD priority ≠ normal. `CriticalOverlay` foregrounds a banner only at priority=critical. | Node/edge highlighting and dimming logic, and critical short-tone audio, are not implemented. |
-| Stage/output | `StagePreview`, evaluation, rebuild, human review, and artifact version panels expose local output review. | Diff and publish preparation remain partial or missing. |
+| Always-on HUD | `CanvasCommandHud` shows compact run state, alert level, semantic attention source, trace/audit evidence source chip, zoom mode, model, safety state, HUD density chip, Run/Selected/FromSelected/Dry/Stop/Reset/Undo/Redo/Export/Import/Canvas mode, and Palette/Detail/MiniMap/Console/Notification/Density toggles. | Model is still static text; richer iconography can improve later. |
+| Left | `WorkspaceLeftRail` exposes Components (`PartsPalette`) plus WIP scaffold tabs as a collapsible Palette HUD drawer. | Library/Templates tabs are scaffold; existing data still reachable via Console HUD. |
+| Center | `CognitiveWorkflowCanvas` primarily uses `ReactFlowCanvas`, overlays `CognitiveHudOverlay`, anchored `SelectedObjectHud`, anchored `SelectedEdgeHud`, `WorkflowGroupLayer`, and right-bottom `CanvasMiniMapHud`. StagePreview is no longer a constant canvas footer. | HUD placement uses measured card size and DOM collision rects. Semantic focus highlights current failure/approval/validation/retry/running/bottleneck attention paths. Selected node HUD can show durable audit evidence summaries. Selected edge selection is now lifted to `AppShell`, so Run Detail and canvas HUDs can deep-link to the same edge selection. |
+| Right | `WorkspaceRightPanel` switches between Situation / Inspector / Assistant / Human Review inside an on-demand Detail HUD drawer. | Inspector is the existing component reused as one mode. |
+| Bottom | `DetailDrawerDock` wraps `BottomMonitor` as collapsible Console HUD. All existing tabs preserved for compatibility. | Tabs are no longer the primary surface for HUD / Briefing / Run Detail. |
+| Overlay | `CognitiveHudOverlay` shows central HUD variants for semantic attention. `HudNotificationBundle` shows on-demand HUD feed, run history summary, density settings, and Replay links into Run Detail. `SelectedObjectHud` shows selected-node local HUD context and node-scoped durable audit evidence near the selected node while avoiding measured HUD surfaces. `SelectedEdgeHud` shows selected-edge flow context plus runtime route, optional connection runtime policy, source/target step status, evidence count, trace source, health, next action, and an Open Run Detail focus link near the selected flow. `CriticalOverlay` foregrounds failure/danger variants when semantic or HUD priority is critical. | Durable notification read/ack/pin state, edge-level durable replay, animated audit replay, and critical short-tone audio are not implemented. |
+| Stage/output | Output review remains available through Console HUD / existing BottomMonitor tabs and right detail surfaces. | Diff and publish preparation remain partial or missing. |
 
 ## Components
 
 | Component group | Files / modules | Current role |
 |---|---|---|
-| App shell and layout | `src/components/AppShell.tsx` (state owner), `src/components/workspace/CognitiveWorkspaceShell.tsx` (layout), `src/components/workspace/GlobalRunControl.tsx`, `src/components/workspace/CurrentStateStrip.tsx`, `src/components/workspace/WorkspaceLeftRail.tsx`, `src/components/workspace/WorkspaceRightPanel.tsx`, `src/components/workspace/DetailDrawerDock.tsx`, `src/components/workspace/CognitiveWorkflowCanvas.tsx`, `src/components/workspace/CognitiveHudOverlay.tsx`, `src/components/workspace/CriticalOverlay.tsx`, `src/components/workspace/SituationPanel.tsx`, `src/components/workspace/AssistantPanel.tsx`, legacy `src/components/TopBar.tsx` (unused but kept for now) | AppShell owns reducer state, run actions, connector queue state, persistence hooks, and renders the new workspace shell. The shell arranges Top/Left/Center/Right/Bottom/Overlay regions. |
-| Canvas | `WorkflowCanvas.tsx`, `ReactFlowCanvas.tsx`, `ReactFlowNode.tsx`, `NodeCard.tsx`, `ConnectionLine.tsx` | Displays nodes, edges, statuses, port handles, and validation feedback. |
-| Editing | `Inspector.tsx`, `ConnectionEditor.tsx`, `workflowActions.ts`, `workflowReducer.ts` | Handles node field edits, JSON validation, connection create/delete, undo/redo state, import/reset paths. |
-| Execution and recovery | `runPlanner.ts`, `runEngine.ts`, `nodeExecutors.ts`, `executionGraph.ts`, `connectorQueue.ts`, `recoveryActions.ts` | Provides local mock run planning, execution summaries, graph state, connector jobs, retry/review/skip/cancel actions. |
+| App shell and layout | `src/components/AppShell.tsx` (state owner), `src/components/workspace/CognitiveWorkspaceShell.tsx` (compat wrapper), `src/components/workspace/GameHudShell.tsx`, `src/components/workspace/CanvasCommandHud.tsx`, `src/components/workspace/HudNotificationBundle.tsx`, `src/components/workspace/WorkspaceLeftRail.tsx`, `src/components/workspace/WorkspaceRightPanel.tsx`, `src/components/workspace/DetailDrawerDock.tsx`, `src/components/workspace/CognitiveWorkflowCanvas.tsx`, `src/components/workspace/CognitiveHudOverlay.tsx`, `src/components/workspace/SelectedObjectHud.tsx`, `src/components/workspace/SelectedEdgeHud.tsx`, `src/components/workspace/CanvasMiniMapHud.tsx`, `src/components/workspace/WorkflowGroupLayer.tsx`, `src/components/workspace/CriticalOverlay.tsx`, `src/components/workspace/SituationPanel.tsx`, `src/components/workspace/AssistantPanel.tsx`, legacy `src/components/TopBar.tsx` / `GlobalRunControl.tsx` / `CurrentStateStrip.tsx` (kept for compatibility/history) | AppShell owns reducer state, run actions, connector queue state, session-only selected edge/run-detail selection, persistence hooks, and renders the Game HUD shell through the compatibility wrapper. |
+| Canvas | `WorkflowCanvas.tsx`, `ReactFlowCanvas.tsx`, `ReactFlowNode.tsx`, `NodeCard.tsx`, `ConnectionLine.tsx` | Displays nodes, edges, statuses, port handles, validation feedback, inline previews, zoom-mode classes, minimap HUD, group layer, selection focus, semantic attention focus, and runtime edge class projections. |
+| Editing | `Inspector.tsx`, `ConnectionEditor.tsx`, `workflowActions.ts`, `workflowReducer.ts` | Handles node field edits, JSON validation, connection create/delete, optional connection runtime policy editing, undo/redo state, import/reset paths. |
+| Execution and recovery | `runPlanner.ts`, `runEngine.ts`, `nodeExecutors.ts`, `executionGraph.ts`, `connectorQueue.ts`, `recoveryActions.ts`, `runTrace.ts`, `runAudit.ts`, `runAuditRouteEvents.ts`, `runtimeAuditContract.ts`, `runtimeEvents.ts`, `runtimeEventSummary.ts`, `runDetail.ts` | Provides local mock run planning, safe runtime route events, execution summaries, graph state, connector jobs, retry/review/skip/cancel actions, current run trace evidence, durable safe audit snapshot creation/revival, read-only run replay view models, and safe audit comparison view models with metadata, runtime event count diff, step evidence grouping, and focused node/edge scope. |
 | Templates | `TemplateLibrary.tsx`, `TemplatePreview.tsx`, `templateMetadata.ts`, `localTemplates.ts` | Saves, loads, duplicates, searches, previews, and annotates local templates. |
 | Safety and connectors | `AgentConnectorPanel.tsx`, `CredentialBoundaryPanel.tsx`, `agentConnectorRegistry.ts`, `credentialPolicy.ts` | Shows mock connector boundaries and credential non-storage policy. |
 | Storage | `localWorkflowState.ts`, `localWorkflowHistory.ts`, `localCanvasState.ts`, `localAppSettings.ts`, `storageAdapter.ts`, `storageKeys.ts` | Uses localStorage plus an `IStorageAdapter` boundary prepared for later Tauri/file storage. |
@@ -65,9 +77,9 @@ These MVP surfaces are useful and intentional. They are listed here so that "imp
 |---|---|---|
 | `Workflow` | Has id, optional schemaVersion, name, status, nodes, connections, metrics, logs, artifact, timestamps. | Not yet a full `WorkflowDocument` with viewport, runConfig, templates, metadata, migrations, and audit identity. |
 | `WorkflowNode` | Has type, title, category, status, agentRole, typed inputs/outputs, optional ports, config, position, metrics, lastRun. | Missing explicit owner, risk state, HUD state, node logs, and normalized connector bindings. |
-| `WorkflowConnection` | Has source/target node and port ids, `ConnectionKind`, carried data types, status, and metrics. | Does not yet model all runtime trace, approval, resource, or audit semantics. |
+| `WorkflowConnection` | Has source/target node and port ids, `ConnectionKind`, carried data types, status, metrics, and optional safe `runtimePolicy` metadata for condition / delay / retry / error-route summaries. Runtime edge HUD derives observed route/health from execution graph, run trace, safe runtime events, connection validation, and optional policy. | Does not yet enforce condition/retry semantics as first-class runtime contracts, and does not yet provide animated edge-level replay. |
 | Data types | `WorkflowDataType` covers text, files, prompts, context, result, evidence, decision, artifact, logs, metrics, errors, JSON, command, review, and related types. | CredentialRef is intentionally absent from normal data flow. Some source-spec data classes are not yet modeled separately. |
-| Run state | Node and workflow statuses include idle, queued, running, success, failed, skipped, review_required, blocked, paused, archived, and retry_ready. | Cancelled/paused/replay state is incomplete in runtime behavior. |
+| Run state | Node and workflow statuses include idle, queued, running, success, failed, skipped, review_required, blocked, paused, archived, and retry_ready. `runFinished` clears the active execution step so Stop/Cancel does not keep an Active Run focus. | Cancelled/paused/replay state is still incomplete in runtime behavior. |
 
 ## Save / Load
 
@@ -76,9 +88,9 @@ These MVP surfaces are useful and intentional. They are listed here so that "imp
 | Workflow autosave | Current workflow is saved to localStorage and restored at startup. |
 | Import/export | Workflow JSON import/export exists with validation and normalization paths. |
 | Templates | Templates are persisted to localStorage with metadata and backward-compatible normalization. |
-| History snapshots | Workflow history exists in localStorage. |
+| History snapshots | Workflow history exists in localStorage. Run history records can include optional safe `traceAudit` snapshots and safe `traceAudit.runtimeEvents` under the existing run history key. |
 | Adapter boundary | `IStorageAdapter` exists, but many call sites still use direct local storage helpers. |
-| Not persisted | Run logs, connector queue, runtime metrics, and review queue do not survive reload as durable run history. |
+| Not persisted | Raw run logs, connector queue, full runtime metrics timeline, and review queue do not survive reload. Safe trace/audit summaries do survive in run history records. |
 
 ## Execution
 
@@ -97,9 +109,9 @@ These MVP surfaces are useful and intentional. They are listed here so that "imp
 | Logs | Workflow logs appear in BottomMonitor and include mock connector messages. |
 | Metrics | Tokens, cost, latency, success rate, queue count, retry count, and bottleneck node are shown. |
 | Queue | Active nodes and connector jobs are visible in the queue tab. |
-| Execution graph | Review/error/retry/skip routes are summarized. |
+| Execution graph | Review/error/retry/skip routes and safe runtime events are summarized and projected into selected-edge HUD / React Flow runtime edge classes / Run Detail metadata diff. Optional connection runtime policy metadata is shown as safe summaries but is not enforced. |
 | Evaluation | Local evaluation scores and rebuild requests are visible. |
-| Missing | Durable trace, node log history, audit log, multi-run comparison, error rate, parallelism, and resource load. |
+| Missing | Animated replay engine, enforced edge runtime policy, edge-level route event replay, node log history, visual multi-run replay animation, error rate, parallelism, and resource load. Safe `traceAudit` snapshot selection/recall, metadata comparison, step evidence grouping, and focused scoped diff exist. |
 
 ## Templates
 
@@ -140,15 +152,16 @@ This section breaks the two concept layers into "what currently exists in code" 
 | HudSignal type | Implemented as `HudSignal` in `src/domain/cognitiveHud.ts` | — |
 | HudSnapshot / HudCounts | Implemented as `HudSnapshot` / `HudCounts` | `CognitiveHudPanel` |
 | Priority Score / L0–L5 alert level | Partial — alert level + priority derived per signal | `CognitiveHudPanel` |
-| HUD badge on NodeCard / ConnectionLine | Missing | — |
-| Central HUD card (画面中央のHUDカード) | Missing | — |
+| HUD badge on NodeCard / ConnectionLine | Partial — node status badges exist on `NodeCard` / `ReactFlowNode`; connection HUD badges are missing | `node-hud-badge` |
+| Selected object HUD (選択時の浮遊HUD) | Partial — selected node and selected edge get canvas-local HUD context with quick actions and viewport-anchored placement | `SelectedObjectHud`, `SelectedEdgeHud` |
+| Central HUD card (画面中央のHUDカード) | Partial — central card receiver exists for non-normal priority, but rich approval/failure/focus variants are missing | `CognitiveHudOverlay` |
 | Approval Pending HUD | Missing (signals exist in list form only) | — |
 | Failure Cause Card | Missing | — |
-| Focus Overlay / Path Dim (不要経路の減光) | Missing | — |
+| Focus Overlay / Path Dim (不要経路の減光) | Partial — selected node/edge highlight their local path and dim irrelevant nodes/edges | `ReactFlowCanvas`, `ReactFlowNode` |
 | Notification Bundle (通知まとめ) | Missing | — |
 | Critical short audio cue | Missing | — |
 | HUD history (HUD表示履歴) | Missing | — |
-| Cognitive HUD as attention-allocation layer spanning Canvas / Inspector / modals | Missing as a layer; only the summary panel exists | `CognitiveHudPanel` is a summary, not the layer |
+| Cognitive HUD as attention-allocation layer spanning Canvas / Inspector / modals | Partial — canvas selection/focus layer plus on-demand notification/history/density overlay exists, but durable notification state and cross-modal intervention policy are incomplete | `CognitiveHudPanel` remains a summary, not the layer |
 
 ### Situation Narration Layer (Situation Assistant)
 

@@ -1,6 +1,12 @@
 import { MarkerType, type Connection, type Edge, type Node, type XYPosition } from '@xyflow/react'
+import {
+  buildInlinePreview,
+  type EdgeRuntimeSemantics,
+  type InlinePreview,
+} from './cognitiveHud'
 import { canCarryToInput } from './connectionRules'
 import { connectionKindLabels, connectionStatusLabels, formatDataTypeLabel } from './displayLabels'
+import { summarizeConnectionRuntimePolicy } from './edgeRuntimePolicy'
 import { findPort, getInputPorts, getOutputPorts, getUnconnectedRequiredInputPorts } from './portRules'
 import type {
   ConnectionKind,
@@ -21,9 +27,12 @@ export type ReactFlowWorkflowNodeData = {
   connectedInputPortIds: string[]
   connectedOutputPortIds: string[]
   connectionCount: number
+  inlinePreview: InlinePreview
+  focusRole: ReactFlowFocusRole
 }
 
 export type ReactFlowWorkflowNode = Node<ReactFlowWorkflowNodeData, typeof reactFlowNodeType>
+export type ReactFlowFocusRole = 'normal' | 'selected' | 'attention' | 'path' | 'dimmed'
 
 type NodePositionMap = Record<string, XYPosition>
 type NodeLookup = Map<string, WorkflowNode>
@@ -42,6 +51,20 @@ function getStatusColor(status: WorkflowConnection['status']): string {
     case 'inactive':
     default:
       return '#8a98aa'
+  }
+}
+
+function getSemanticFocusColor(priority: 'normal' | 'watch' | 'alert' | 'critical'): string {
+  switch (priority) {
+    case 'critical':
+      return '#fb7185'
+    case 'alert':
+      return '#fbbf24'
+    case 'watch':
+      return '#67e8f9'
+    case 'normal':
+    default:
+      return '#2dd4bf'
   }
 }
 
@@ -207,6 +230,8 @@ export function toReactFlowNodes(
         connectedInputPortIds: connectedInputPortIdsByNodeId.get(node.id) ?? [],
         connectedOutputPortIds: connectedOutputPortIdsByNodeId.get(node.id) ?? [],
         connectionCount: connectionCountByNodeId.get(node.id) ?? 0,
+        inlinePreview: buildInlinePreview(node),
+        focusRole: 'normal',
       },
     }
   })
@@ -215,6 +240,13 @@ export function toReactFlowNodes(
 export function toReactFlowEdges(
   workflow: Workflow,
   selectedConnectionId?: string,
+  focusPath?: {
+    focusedConnectionIds: ReadonlySet<string>
+    dimUnfocused: boolean
+    source?: 'selection' | 'semantic' | 'none'
+    priority?: 'normal' | 'watch' | 'alert' | 'critical'
+  },
+  edgeRuntimeByConnectionId?: ReadonlyMap<string, EdgeRuntimeSemantics>,
 ): Edge[] {
   const nodeIds = new Set(workflow.nodes.map((node) => node.id))
   const nodeLookup = createNodeLookup(workflow)
@@ -230,6 +262,25 @@ export function toReactFlowEdges(
         connection,
       )
       const stroke = getStatusColor(connection.status)
+      const selected = connection.id === selectedConnectionId
+      const focused = focusPath?.focusedConnectionIds.has(connection.id) ?? false
+      const dimmed = focusPath?.dimUnfocused === true && !focused && !selected
+      const semanticFocused = focused && focusPath?.source === 'semantic'
+      const runtime = edgeRuntimeByConnectionId?.get(connection.id)
+      const policySummary = summarizeConnectionRuntimePolicy(connection)
+      const hasPolicy = connection.runtimePolicy !== undefined
+      const className = [
+        selected ? 'focus-selected-edge' : null,
+        focused ? 'focus-path-edge' : null,
+        semanticFocused ? `focus-semantic-edge focus-semantic-edge-${focusPath?.priority ?? 'watch'}` : null,
+        dimmed ? 'focus-dimmed-edge' : null,
+        hasPolicy ? 'edge-runtime-policy-configured' : null,
+        runtime?.className ?? null,
+      ]
+        .filter(Boolean)
+        .join(' ')
+      const semanticStroke =
+        semanticFocused ? getSemanticFocusColor(focusPath?.priority ?? 'watch') : stroke
 
       return {
         id: connection.id,
@@ -238,26 +289,36 @@ export function toReactFlowEdges(
         sourceHandle,
         targetHandle,
         selectable: true,
-        animated: connection.status === 'active',
-        selected: connection.id === selectedConnectionId,
+        animated: connection.status === 'active' || runtime?.state === 'active',
+        selected,
+        className,
         markerEnd: {
           type: MarkerType.ArrowClosed,
-          color: stroke,
+          color: semanticStroke,
         },
         style: {
-          stroke,
-          strokeWidth: 2.5,
+          stroke: semanticStroke,
+          strokeWidth: selected || focused ? 3.4 : 2.5,
+          opacity: dimmed ? 0.28 : 1,
         },
-        label: connectionKindLabels[connection.kind],
+        label: [
+          !runtime || runtime.state === 'idle'
+            ? connectionKindLabels[connection.kind]
+            : `${connectionKindLabels[connection.kind]} / ${runtime.stateLabel}`,
+          hasPolicy ? 'policy' : null,
+        ].filter(Boolean).join(' / '),
         ariaLabel: [
           `${connection.sourceNodeId} から ${connection.targetNodeId}`,
           connectionKindLabels[connection.kind],
           connection.carries.map((dataType) => formatDataTypeLabel(dataType)).join(', '),
           connectionStatusLabels[connection.status],
+          hasPolicy ? policySummary.safeCopyLines.join(' / ') : '',
         ].join(' / '),
         data: {
           kind: connection.kind,
           carries: connection.carries,
+          runtimeState: runtime?.state,
+          runtimeHealth: runtime?.health,
         },
       }
     })

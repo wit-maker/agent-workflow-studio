@@ -76,10 +76,16 @@ type BottomMonitorProps = {
   onResetStorage: () => void
   runHistoryCount: number
   runHistoryRecords: WorkflowRunRecord[]
+  selectedRunDetailRunId: string | null
+  selectedNodeId: string
+  selectedConnectionId: string | null
   hudSnapshot: HudSnapshot
   runTrace: RunTrace | null
   settings: AppSettings
   onChangeActiveTab: (tab: string) => void
+  onSelectRunDetailRunId: (runId: string | null) => void
+  onSelectNode: (nodeId: string) => void
+  onSelectConnectionId: (connectionId: string | null) => void
   onImportBundle: (bundle: {
     workflow: Workflow
     templates: import('../storage/localTemplates').SavedWorkflowTemplate[]
@@ -159,10 +165,16 @@ export function BottomMonitor({
   onResetStorage,
   runHistoryCount,
   runHistoryRecords,
+  selectedRunDetailRunId,
+  selectedNodeId,
+  selectedConnectionId,
   hudSnapshot,
   runTrace,
   settings,
   onChangeActiveTab,
+  onSelectRunDetailRunId,
+  onSelectNode,
+  onSelectConnectionId,
   onImportBundle,
 }: BottomMonitorProps) {
   const activeTab = normalizeMonitorTab(settings.activeTab)
@@ -192,6 +204,11 @@ export function BottomMonitor({
 
   const bottleneck = selectBottleneckNode(workflow)
   const queueNodes = selectActiveQueueNodes(workflow)
+  const persistedTraceCount = runHistoryRecords.filter((record) => record.traceAudit).length
+  const persistedAuditEvidenceCount = runHistoryRecords.reduce(
+    (total, record) => total + (record.traceAudit?.evidenceCount ?? 0),
+    0,
+  )
   const reviewSteps =
     executionGraph?.steps.filter((step) => step.status === 'review_required') ?? []
   const retrySteps =
@@ -438,7 +455,7 @@ export function BottomMonitor({
           <div className="storage-tab-panel">
             <StorageBoundaryPanel />
             <div className="run-history-summary muted">
-              実行履歴: {runHistoryCount} 件（localStorage 暫定保存 / 最新 50 件）
+              実行履歴: {runHistoryCount} 件 / durable trace: {persistedTraceCount} 件 / evidence: {persistedAuditEvidenceCount} 件（既存 RUN_HISTORY key / 最新 50 件）
             </div>
             <ImportExportPanel
               workflow={workflow}
@@ -473,7 +490,17 @@ export function BottomMonitor({
 
         {activeTab === 'RunDetail' ? (
           <div className="run-detail-tab-panel">
-            <RunDetailPanel runTrace={runTrace} />
+            <RunDetailPanel
+              runTrace={runTrace}
+              runHistoryRecords={runHistoryRecords}
+              connections={workflow.connections}
+              selectedRunId={selectedRunDetailRunId}
+              focusedNodeId={selectedNodeId}
+              focusedConnectionId={selectedConnectionId}
+              onSelectRunId={onSelectRunDetailRunId}
+              onSelectNode={onSelectNode}
+              onSelectConnection={onSelectConnectionId}
+            />
           </div>
         ) : null}
       </section>

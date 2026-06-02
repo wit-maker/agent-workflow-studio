@@ -20,7 +20,7 @@
   - Inspector / Canvas / BottomMonitor / StagePreview の通常改修
   - localStorage mock
   - JSON import/export 強化
-- `GPT-5.4 mini low` / `GPT-5.4 mini medium` / 利用可能な `GPT-5.2` / `GPT-5.3`
+- `GPT-5.4-mini medium` / 利用可能な `GPT-5.2` / `GPT-5.3`
   - ドキュメント修正
   - lint 修正
   - CSS 微調整

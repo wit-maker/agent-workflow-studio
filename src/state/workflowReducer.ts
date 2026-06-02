@@ -230,6 +230,27 @@ export function workflowReducer(
           updatedAt: new Date().toISOString(),
         })
 
+    case 'updateConnectionRuntimePolicy': {
+      const changed = state.workflow.connections.some((connection) =>
+        connection.id === action.connectionId &&
+        JSON.stringify(connection.runtimePolicy ?? null) !== JSON.stringify(action.runtimePolicy ?? null),
+      )
+
+      if (!changed) {
+        return state
+      }
+
+      return withHistory(state, {
+          ...state.workflow,
+          connections: state.workflow.connections.map((connection) =>
+            connection.id === action.connectionId
+              ? { ...connection, runtimePolicy: action.runtimePolicy }
+              : connection,
+          ),
+          updatedAt: new Date().toISOString(),
+        })
+    }
+
     case 'deleteConnection':
       return withHistory(state, {
           ...state.workflow,
@@ -702,6 +723,12 @@ export function workflowReducer(
         ...state,
         isRunning: false,
         completedRun: { runId: action.runId, runStatus: action.runStatus },
+        executionGraph: state.executionGraph
+          ? {
+              ...state.executionGraph,
+              activeStepId: undefined,
+            }
+          : state.executionGraph,
         workflow: {
           ...state.workflow,
           status: action.workflowStatus,

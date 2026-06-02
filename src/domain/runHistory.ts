@@ -9,6 +9,10 @@
 import type { Workflow, WorkflowRunLog } from './workflow'
 import type { WorkflowDocument } from './workflowDocument'
 import { CURRENT_WORKFLOW_SCHEMA_VERSION } from './workflowDocument'
+import {
+  normalizeRunTraceAuditSummary,
+  type RunTraceAuditSummary,
+} from './runAudit'
 
 // ---- Public types ----
 
@@ -44,6 +48,7 @@ export type WorkflowRunRecord = {
   errorCount: number
   warningCount: number
   artifactId?: string
+  traceAudit?: RunTraceAuditSummary
   sourceWorkflowDocument?: {
     workflowId: string
     schemaVersion: string
@@ -181,6 +186,11 @@ export type CreateWorkflowRunRecordInput = {
   errorCount?: number
   warningCount?: number
   artifactId?: string
+  /**
+   * Credential-safe trace/audit snapshot.
+   * Raw logs, prompts, payloads, config, credentials, and artifact body are not stored.
+   */
+  traceAudit?: RunTraceAuditSummary
   /** `WorkflowDocument` 由来である場合の出所サマリ。 */
   sourceWorkflowDocument?: WorkflowRunRecord['sourceWorkflowDocument']
 }
@@ -259,6 +269,7 @@ export function createWorkflowRunRecord(input: CreateWorkflowRunRecordInput): Wo
     errorCount,
     warningCount,
     artifactId: input.artifactId,
+    traceAudit: input.traceAudit,
     sourceWorkflowDocument,
   }
 }
@@ -278,7 +289,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function normalizeRunRecord(raw: unknown): WorkflowRunRecord | null {
+function normalizeRunRecord(raw: unknown, now: string): WorkflowRunRecord | null {
   if (!isRecord(raw)) return null
   if (typeof raw.runId !== 'string' || raw.runId.trim() === '') return null
   if (typeof raw.workflowId !== 'string' || raw.workflowId.trim() === '') return null
@@ -324,6 +335,7 @@ function normalizeRunRecord(raw: unknown): WorkflowRunRecord | null {
     errorCount: finiteOr(raw.errorCount, 0),
     warningCount: finiteOr(raw.warningCount, 0),
     artifactId: typeof raw.artifactId === 'string' ? raw.artifactId : undefined,
+    traceAudit: normalizeRunTraceAuditSummary(raw.traceAudit, now),
     sourceWorkflowDocument,
   }
 }
@@ -338,7 +350,7 @@ export function normalizeRunHistory(raw: unknown, now = new Date().toISOString()
   const rawRecords = Array.isArray(raw.records) ? raw.records : []
   const records: WorkflowRunRecord[] = []
   for (const item of rawRecords) {
-    const normalized = normalizeRunRecord(item)
+    const normalized = normalizeRunRecord(item, now)
     if (normalized) records.push(normalized)
   }
 

@@ -4,11 +4,18 @@ import {
   connectionStatusLabels,
   formatDataTypeLabel,
 } from '../domain/displayLabels'
+import {
+  normalizeConnectionRuntimePolicy,
+  summarizeConnectionRuntimePolicy,
+} from '../domain/edgeRuntimePolicy'
 import { findPort, getInputPorts, getOutputPorts } from '../domain/portRules'
 import {
   connectionKinds,
   type ConnectionKind,
   type Workflow,
+  type WorkflowConnection,
+  type WorkflowConnectionConditionMode,
+  type WorkflowConnectionRuntimePolicy,
   type WorkflowPort,
 } from '../domain/workflow'
 import type { ConnectionValidationResult } from '../state/workflowSelectors'
@@ -31,6 +38,10 @@ type ConnectionEditorProps = {
     targetPortId: string
     kind: ConnectionKind
   }) => void
+  onUpdateConnectionRuntimePolicy: (
+    connectionId: string,
+    runtimePolicy: WorkflowConnectionRuntimePolicy | undefined,
+  ) => void
   onDeleteConnection: (connectionId: string) => void
 }
 
@@ -38,6 +49,7 @@ export function ConnectionEditor({
   workflow,
   connectionValidation,
   onCreateConnection,
+  onUpdateConnectionRuntimePolicy,
   onDeleteConnection,
 }: ConnectionEditorProps) {
   const [sourceNodeId, setSourceNodeId] = useState(workflow.nodes[0]?.id ?? '')
@@ -227,6 +239,11 @@ export function ConnectionEditor({
                 <span className={validation?.valid ? 'success-text' : 'error-text'}>
                   {validation?.valid ? '有効' : validation?.reason}
                 </span>
+                <ConnectionRuntimePolicyEditor
+                  connection={connection}
+                  nodes={workflow.nodes}
+                  onSave={onUpdateConnectionRuntimePolicy}
+                />
               </div>
               <button type="button" className="icon-button" onClick={() => onDeleteConnection(connection.id)}>
                 削除
@@ -236,5 +253,197 @@ export function ConnectionEditor({
         })}
       </div>
     </section>
+  )
+}
+
+const conditionModeOptions: Array<{ value: WorkflowConnectionConditionMode; label: string }> = [
+  { value: 'always', label: '常に通す' },
+  { value: 'on_success', label: '成功時' },
+  { value: 'on_failure', label: '失敗時' },
+  { value: 'on_review', label: 'レビュー時' },
+  { value: 'expression', label: '安全な式' },
+]
+
+type ConnectionRuntimePolicyEditorProps = {
+  connection: WorkflowConnection
+  nodes: Workflow['nodes']
+  onSave: (connectionId: string, runtimePolicy: WorkflowConnectionRuntimePolicy | undefined) => void
+}
+
+function ConnectionRuntimePolicyEditor({
+  connection,
+  nodes,
+  onSave,
+}: ConnectionRuntimePolicyEditorProps) {
+  const policy = connection.runtimePolicy
+  const summary = summarizeConnectionRuntimePolicy(connection)
+  const [conditionMode, setConditionMode] = useState<WorkflowConnectionConditionMode>(
+    policy?.condition?.mode ?? 'always',
+  )
+  const [conditionLabel, setConditionLabel] = useState(policy?.condition?.label ?? '')
+  const [conditionExpression, setConditionExpression] = useState(policy?.condition?.expression ?? '')
+  const [delayMs, setDelayMs] = useState(String(policy?.delayMs ?? 0))
+  const [retryEnabled, setRetryEnabled] = useState(policy?.retry?.enabled ?? false)
+  const [maxAttempts, setMaxAttempts] = useState(String(policy?.retry?.maxAttempts ?? 2))
+  const [backoffMs, setBackoffMs] = useState(String(policy?.retry?.backoffMs ?? 500))
+  const [errorRouteEnabled, setErrorRouteEnabled] = useState(policy?.errorRoute?.enabled ?? false)
+  const [errorRouteTargetNodeId, setErrorRouteTargetNodeId] = useState(
+    policy?.errorRoute?.targetNodeId ?? '',
+  )
+  const [errorRouteLabel, setErrorRouteLabel] = useState(policy?.errorRoute?.label ?? '')
+
+  function savePolicy() {
+    const normalized = normalizeConnectionRuntimePolicy({
+      condition: {
+        mode: conditionMode,
+        label: conditionLabel,
+        expression: conditionExpression,
+      },
+      delayMs: Number(delayMs),
+      retry: {
+        enabled: retryEnabled,
+        maxAttempts: Number(maxAttempts),
+        backoffMs: Number(backoffMs),
+      },
+      errorRoute: {
+        enabled: errorRouteEnabled,
+        targetNodeId: errorRouteTargetNodeId,
+        label: errorRouteLabel,
+      },
+    })
+    onSave(connection.id, normalized)
+  }
+
+  function clearPolicy() {
+    setConditionMode('always')
+    setConditionLabel('')
+    setConditionExpression('')
+    setDelayMs('0')
+    setRetryEnabled(false)
+    setMaxAttempts('2')
+    setBackoffMs('500')
+    setErrorRouteEnabled(false)
+    setErrorRouteTargetNodeId('')
+    setErrorRouteLabel('')
+    onSave(connection.id, undefined)
+  }
+
+  return (
+    <details className="connection-runtime-policy">
+      <summary>
+        Runtime policy
+        <span>{summary.conditionSummary} / {summary.retrySummary}</span>
+      </summary>
+      <div className="connection-runtime-policy-grid">
+        <label className="field-label">
+          条件
+          <select value={conditionMode} onChange={(event) => setConditionMode(event.target.value as WorkflowConnectionConditionMode)}>
+            {conditionModeOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field-label">
+          条件ラベル
+          <input
+            value={conditionLabel}
+            onChange={(event) => setConditionLabel(event.target.value)}
+            placeholder="例: high-confidence only"
+          />
+        </label>
+        <label className="field-label">
+          安全な式
+          <input
+            value={conditionExpression}
+            onChange={(event) => setConditionExpression(event.target.value)}
+            placeholder="例: score >= 0.8"
+            disabled={conditionMode !== 'expression'}
+          />
+        </label>
+        <label className="field-label">
+          Delay ms
+          <input
+            type="number"
+            min="0"
+            max="30000"
+            value={delayMs}
+            onChange={(event) => setDelayMs(event.target.value)}
+          />
+        </label>
+        <label className="field-label checkbox-field">
+          <input
+            type="checkbox"
+            checked={retryEnabled}
+            onChange={(event) => setRetryEnabled(event.target.checked)}
+          />
+          Retry enabled
+        </label>
+        <label className="field-label">
+          Max attempts
+          <input
+            type="number"
+            min="1"
+            max="8"
+            value={maxAttempts}
+            onChange={(event) => setMaxAttempts(event.target.value)}
+          />
+        </label>
+        <label className="field-label">
+          Backoff ms
+          <input
+            type="number"
+            min="0"
+            max="30000"
+            value={backoffMs}
+            onChange={(event) => setBackoffMs(event.target.value)}
+          />
+        </label>
+        <label className="field-label checkbox-field">
+          <input
+            type="checkbox"
+            checked={errorRouteEnabled}
+            onChange={(event) => setErrorRouteEnabled(event.target.checked)}
+          />
+          Error route
+        </label>
+        <label className="field-label">
+          Error target
+          <select
+            value={errorRouteTargetNodeId}
+            onChange={(event) => setErrorRouteTargetNodeId(event.target.value)}
+            disabled={!errorRouteEnabled}
+          >
+            <option value="">未指定</option>
+            {nodes.map((node) => (
+              <option key={node.id} value={node.id}>
+                {node.title}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field-label">
+          Error label
+          <input
+            value={errorRouteLabel}
+            onChange={(event) => setErrorRouteLabel(event.target.value)}
+            placeholder="例: fallback review"
+            disabled={!errorRouteEnabled}
+          />
+        </label>
+      </div>
+      <div className="connection-runtime-policy-actions">
+        <button type="button" className="primary-button inline-action" onClick={savePolicy}>
+          Policy 保存
+        </button>
+        <button type="button" className="icon-button" onClick={clearPolicy}>
+          クリア
+        </button>
+      </div>
+      <p className="muted">
+        表示と比較には安全な policy summary だけを使います。機密らしい文字列は保存時に除外します。
+      </p>
+    </details>
   )
 }
