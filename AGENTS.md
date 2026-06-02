@@ -1,136 +1,115 @@
-# Agent Workflow Studio 作業ルール
+# AGENTS.md - Agent Workflow Studio
 
-## モデル運用
+## Commands
 
-実装前に現在モデルを確認し、作業リスクとスコープに対して十分な中で、できるだけコスト効率の良いモデルを選びます。
+- Install: `npm ci`
+- Dev: `npm run dev`
+- Preview: `npm run preview -- --host 127.0.0.1 --port 4178`
+- Type check: `npm run typecheck`
+- Lint: `npm run lint`
+- Build: `npm run build`
 
-- `GPT-5.5 xhigh`
-  - アーキテクチャ変更
-  - 仕様矛盾の裁定
-  - セキュリティ、Credential、危険な Git 操作
-  - 大規模リファクタ判断
-- `GPT-5.5 high` / `GPT-5.4 high`
-  - 通常の React / TypeScript 実装
-  - 状態管理
-  - 型設計
-  - 仕様照合
-  - 複数ファイル変更
-- `GPT-5.4 medium` / `GPT-5.4 high`
-  - UI コンポーネント追加
-  - Inspector / Canvas / BottomMonitor / StagePreview の通常改修
-  - localStorage mock
-  - JSON import/export 強化
-- `GPT-5.4-mini medium` / 利用可能な `GPT-5.2` / `GPT-5.3`
-  - ドキュメント修正
-  - lint 修正
-  - CSS 微調整
-  - 文言修正
-  - 小さな表示改善
+変更後は `typecheck`、`lint`、`build` を必ず実行する。
+UI変更時は Browser QA または headless QA を行う。できない場合は理由と代替検証を書く。
 
-推奨モデルと一致しないことだけを理由に停止してはいけません。実際の作業リスクに対してモデルが不十分な場合のみ停止し、以下を報告します。
+## Project Rule
 
-```text
-モデル変更が必要です。
-現在モデル:
-推奨モデル:
-作業開始条件: 推奨モデルへ変更後に再実行
-```
+このリポジトリは、AI作業を設計・実行・観測・改善・再利用するローカル優先のAIワークフローOS。
+汎用ワークフローエディタ、n8n clone、React Flow demo、mock-only prototype に寄せない。
 
-ユーザーが不十分なモデルでの続行を明示的に許可した場合のみ、その事実を `PROJECT_STATE.md` に記録して続行できます。
+仕様判断は `docs/project/SOURCE_OF_TRUTH.md` に従う。
+`docs/source-specs/**` は原文仕様として扱い、勝手に一般論へ置き換えない。
 
-Goal / Plan / Source of Truth / 安全境界 / Credential / アーキテクチャに触れる作業では、モデル不一致を軽い注意で流さず、現在モデル、推奨モデル、許容モデル、ユーザー継続許可の有無を `PROJECT_STATE.md` に残します。
+## Work Flow
 
-## Goal / Plan / Task / Prompt
+作業は可能な限り最後まで進める。
 
-このリポジトリでは、長期Goalと現在Planを混ぜません。
+1. 現状確認
+2. 実装または修正
+3. 検証
+4. 必要最小限のdocs更新
+5. commit
+6. push
+7. PR作成または更新
+8. merge可能ならmerge
+9. base / integration branch を pull
+10. base validation
+11. 最終報告
 
-- Goal: 最終到達点、判断基準、安全原則、完成形
-- Plan: 現在フェーズの作戦、順序、リスク、完了条件
-- Task: 1PR / 1ブランチ / 1作業単位の具体指示
-- Prompt: 今回だけのAI coding agentへの入力
+実装完了、commit、push、PR作成、merge、base validation が残っていることを理由に停止しない。
 
-判断に迷った場合は `docs/project/PROJECT_GOAL.md` と `docs/project/PLAN_PROTOCOL.md` を先に確認します。
+## Git Rules
 
-## Source of Truth
+作業開始時に必ず実行する。
 
-仕様判断の優先順位は `docs/project/SOURCE_OF_TRUTH.md` に従います。
+- `git rev-parse HEAD`
+- `git branch --show-current`
+- `git status --short`
 
-MVPの都合で長期Goalを縮小してはいけません。現在実装との差分は `docs/audit/` に記録し、Source Specを書き換えて解消しないでください。
+ルール:
 
-## Stop Rules
+- 予期しない dirty worktree なら停止
+- `git add .` 禁止
+- 変更ファイルだけ明示して add
+- 1 lane = 1 thread = 1 worktree = 1 branch / PR
+- 同じ checkout を複数 thread で編集しない
+- main へ直接作業しない
 
-以下に該当する場合は実装を止め、最小の安全な次手を報告します。詳細は `docs/project/STOP_RULES.md` に従います。
+## Model Policy
 
-- モデル未確認または作業リスクに対して不足している
-- Goal と作業内容が矛盾している
-- Source of Truth の優先順位が不明
-- Credential値を保存しそうになっている
-- 外部API接続を Adapter なしで直結しようとしている
-- `main` / `develop` へ直接反映が必要になっている
-- 1PRとして大きすぎる
-- Browser QA不能なのに完了扱いにしようとしている
+通常実装:
 
-## 日本語優先ルール
+- `gpt-5.5`
+- reasoning: `high`
 
-このリポジトリでは、以下を日本語優先にします。
+docs / Markdown / PR本文 / 小さなCSS / 文言修正:
 
-- UI表示文言
-- ドキュメント本文
-- PR本文
-- Issue本文
-- 主要コミットメッセージ
+- `gpt-5.4-mini`
+- reasoning: `medium`
 
-ただし、以下は技術的安定性を優先して英語のままで維持して構いません。
+`xhigh` はユーザーが `ALLOW_XHIGH` と明示した場合のみ使用する。
+現在モデルが不明、または作業リスクに対して不足している場合のみ停止する。
 
-- コード識別子
-- 型名
-- ファイル名
-- ディレクトリ名
-- npm script
-- branch名
-- JSON key
-- 内部 enum 値
+## Stop Conditions
 
-## リポジトリ分離
+以下の場合のみ停止する。
 
-このリポジトリは `agent-workflow-studio` 専用です。既存 `ai-workflow-lab` の clone、編集、コピー、push などは行いません。
+- 予期しない dirty worktree
+- merge conflict
+- typecheck / lint / build が直せない
+- forbidden file 編集が必要
+- dependency / backend / API / credential / storage key 変更が必要
+- destructive git 操作が必要
+- GitHub 権限エラー
+- ユーザー承認が明示されている
+- `ALLOW_XHIGH` が必要だが未提供
 
-## ブランチとGit
+## Safety
 
-- `main` への直接作業は bootstrap 初回のみ
-- 以降は `feature/*` または `fix/*` を使用
-- `git add .` は使用しない
-- 作業前後に `git status` を確認する
-- commit 前に `git diff --stat` を確認する
+禁止:
 
-## 秘密情報と外部接続
+- `.env` / API key / credential / token / password の保存・表示・commit
+- raw prompt / raw payload / credential の HUD・audit・summary・copy 混入
+- 明示承認なしの実API接続
+- Adapterなしの外部サービス直結
+- mock connector を real 扱いすること
+- 勝手な dependency 追加
+- 勝手な localStorage key 追加
 
-- `.env`、API key、credential、token、ローカル秘密情報を commit しない
-- 秘密情報をログへ出さない
-- 明示的な承認なしに実外部 API へ接続しない
-- bootstrap / MVP 段階では外部 AI や connector は mock のまま維持する
+HUD、Run Detail、audit、summary、copy text は安全な派生 metadata のみ使う。
 
-## 品質ゲート
+## Report
 
-実装後は必ず以下を実行します。
+PR本文と最終報告は、開発者用語より先にユーザー機能で説明する。
 
-```bash
-npm run build
-npm run lint
-npm run typecheck
-```
+必ず最初に書く。
 
-`npm run typecheck` は `package.json` の `typecheck` script を使って実行します。存在しない場合は、回避策で済ませず、品質ゲートの標準化タスクとして `typecheck` script の追加を優先します。
+> この変更でユーザーは何ができるようになったか:
 
-いずれかを実行できない場合は、その理由を `PROJECT_STATE.md` と最終報告の両方へ記録します。
+悪い例:
 
-## 仕様書の扱い
+> runtime audit contract を追加した。
 
-`docs/source-specs/` 配下のファイルは原文仕様です。一般的な workflow app の思い込みで置き換えたり、原文を書き換えたりしてはいけません。
+良い例:
 
-現在実装と最大構想の差分は以下に記録します。
-
-- `docs/audit/current-implementation-map.md`
-- `docs/audit/spec-coverage-matrix.md`
-- `docs/audit/missing-systems.md`
-- `docs/audit/technical-debt.md`
+> ユーザーは、ワークフロー実行経路を prompt や credential を漏らさず HUD で確認できるようになった。
