@@ -4,6 +4,7 @@ import type {
   WorkflowSchemaVersion,
   WorkflowStatus,
 } from './workflow'
+import { normalizeConnectionRuntimePolicy } from './edgeRuntimePolicy'
 import { connectionKinds, normalizeNodeCategory } from './workflow'
 
 const workflowStatuses = [
@@ -187,6 +188,7 @@ function normalizeConnections(raw: unknown, nodeIds: Set<string>): WorkflowConne
         kind,
         carries: Array.isArray(item.carries) ? (item.carries as WorkflowConnection['carries']) : [],
         status: 'inactive' as const,
+        runtimePolicy: normalizeConnectionRuntimePolicy(item.runtimePolicy),
         metrics: isRecord(item.metrics) ? (item.metrics as WorkflowConnection['metrics']) : undefined,
       }
     })

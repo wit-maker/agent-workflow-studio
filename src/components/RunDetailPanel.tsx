@@ -1,11 +1,14 @@
 import { useState, useMemo } from 'react'
 import type {
+  RunDetailComparisonView,
   RunDetailFocusTarget,
   RunDetailMode,
+  RunDetailScopedDiffView,
+  RunDetailStepEvidenceDiffGroup,
   RunDetailSummary,
   StepEvidenceSummary,
 } from '../domain/runDetail'
-import { buildRunDetailReplayView, summarizeRunDetail } from '../domain/runDetail'
+import { buildRunComparisonView, buildRunDetailReplayView, summarizeRunDetail } from '../domain/runDetail'
 import type { WorkflowRunRecord } from '../domain/runHistory'
 import type { EvidenceSeverity } from '../domain/runStepEvidence'
 import type { RunTrace } from '../domain/runTrace'
@@ -47,6 +50,9 @@ export function RunDetailPanel({
   onSelectConnection,
 }: RunDetailPanelProps) {
   const [mode, setMode] = useState<RunDetailMode>('all')
+  const [compareEnabled, setCompareEnabled] = useState(false)
+  const [compareLeftRunId, setCompareLeftRunId] = useState<string | null>(null)
+  const [compareRightRunId, setCompareRightRunId] = useState<string | null>(null)
   const replay = useMemo(
     () =>
       buildRunDetailReplayView({
@@ -58,6 +64,27 @@ export function RunDetailPanel({
         connections,
       }),
     [connections, focusedConnectionId, focusedNodeId, runHistoryRecords, runTrace, selectedRunId],
+  )
+  const comparison = useMemo(
+    () =>
+      buildRunComparisonView({
+        runHistoryRecords,
+        leftRunId: compareLeftRunId ?? (replay.selectedSource === 'run-history' ? replay.selectedRunId : null),
+        rightRunId: compareRightRunId,
+        focusNodeId: focusedNodeId,
+        focusConnectionId: focusedConnectionId,
+        connections,
+      }),
+    [
+      compareLeftRunId,
+      compareRightRunId,
+      connections,
+      focusedConnectionId,
+      focusedNodeId,
+      replay.selectedRunId,
+      replay.selectedSource,
+      runHistoryRecords,
+    ],
   )
   const summary = useMemo(
     () => summarizeRunDetail(replay.selectedTrace, mode),
@@ -103,6 +130,14 @@ export function RunDetailPanel({
             ))}
           </select>
         </label>
+        <label className="run-detail-compare-toggle">
+          <input
+            type="checkbox"
+            checked={compareEnabled}
+            onChange={(event) => setCompareEnabled(event.target.checked)}
+          />
+          <span>Compare audits</span>
+        </label>
       </div>
 
       <RunDetailHeader
@@ -111,6 +146,18 @@ export function RunDetailPanel({
         replaySummary={replay.replaySummary}
         focusTarget={replay.focusTarget}
         onSelectConnection={onSelectConnection}
+      />
+
+      <RunComparisonPanel
+        enabled={compareEnabled}
+        comparison={comparison}
+        onSelectLeftRun={(runId) => {
+          setCompareLeftRunId(runId)
+          if (compareRightRunId === runId) {
+            setCompareRightRunId(null)
+          }
+        }}
+        onSelectRightRun={(runId) => setCompareRightRunId(runId)}
       />
 
       {summary.safetyWarnings.length > 0 ? (
@@ -141,6 +188,215 @@ export function RunDetailPanel({
         </div>
       )}
     </section>
+  )
+}
+
+type RunComparisonPanelProps = {
+  enabled: boolean
+  comparison: RunDetailComparisonView
+  onSelectLeftRun: (runId: string) => void
+  onSelectRightRun: (runId: string) => void
+}
+
+function RunComparisonPanel({
+  enabled,
+  comparison,
+  onSelectLeftRun,
+  onSelectRightRun,
+}: RunComparisonPanelProps) {
+  if (!enabled) return null
+
+  return (
+    <section className="run-detail-comparison" aria-label="Run Detail multi-run comparison">
+      <div className="run-detail-comparison-header">
+        <div>
+          <span className="run-detail-comparison-kicker">safe audit summary only</span>
+          <strong>Multi-run diff</strong>
+        </div>
+        <span className="run-detail-comparison-summary">{comparison.summary}</span>
+      </div>
+
+      <div className="run-detail-comparison-selectors">
+        <label className="field-label run-detail-compare-field">
+          <span>Base audit</span>
+          <select
+            value={comparison.leftOptionId}
+            disabled={comparison.options.length < 2}
+            onChange={(event) => onSelectLeftRun(event.target.value)}
+          >
+            {comparison.options.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label} / {option.meta}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field-label run-detail-compare-field">
+          <span>Compare audit</span>
+          <select
+            value={comparison.rightOptionId}
+            disabled={comparison.options.length < 2}
+            onChange={(event) => onSelectRightRun(event.target.value)}
+          >
+            {comparison.options.map((option) => (
+              <option
+                key={option.id}
+                value={option.id}
+                disabled={option.id === comparison.leftOptionId}
+              >
+                {option.label} / {option.meta}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {comparison.warning ? (
+        <p className="run-detail-comparison-warning">{comparison.warning}</p>
+      ) : (
+        <>
+          <div className="run-detail-comparison-runs">
+            <div>
+              <span>Base</span>
+              <strong>{comparison.leftRun?.label}</strong>
+              <small>{comparison.leftRun?.startedAtLabel}</small>
+            </div>
+            <div>
+              <span>Compare</span>
+              <strong>{comparison.rightRun?.label}</strong>
+              <small>{comparison.rightRun?.startedAtLabel}</small>
+            </div>
+          </div>
+
+          <div className="run-detail-diff-table" role="table" aria-label="Run metadata diff">
+            <div className="run-detail-diff-row run-detail-diff-heading" role="row">
+              <span role="columnheader">Metric</span>
+              <span role="columnheader">Base</span>
+              <span role="columnheader">Compare</span>
+              <span role="columnheader">Delta</span>
+            </div>
+            {comparison.rows.map((row) => (
+              <div
+                key={row.id}
+                className={`run-detail-diff-row run-detail-diff-${row.severity}`}
+                role="row"
+              >
+                <span role="cell">{row.label}</span>
+                <span role="cell">{row.leftValue}</span>
+                <span role="cell">{row.rightValue}</span>
+                <strong role="cell">{row.deltaLabel}</strong>
+              </div>
+            ))}
+          </div>
+
+          <StepEvidenceDiffPanel groups={comparison.stepGroups} />
+          <ScopedEvidenceDiffPanel scope={comparison.focusScope} />
+        </>
+      )}
+    </section>
+  )
+}
+
+type StepEvidenceDiffPanelProps = {
+  groups: RunDetailStepEvidenceDiffGroup[]
+}
+
+function StepEvidenceDiffPanel({ groups }: StepEvidenceDiffPanelProps) {
+  if (groups.length === 0) {
+    return (
+      <div className="run-detail-step-diff-empty">
+        safe step evidence diff はありません。
+      </div>
+    )
+  }
+
+  return (
+    <section className="run-detail-step-diff" aria-label="Step evidence diff">
+      <div className="run-detail-step-diff-heading">
+        <div>
+          <span className="run-detail-comparison-kicker">safe step evidence grouping</span>
+          <strong>Step evidence diff</strong>
+        </div>
+        <span>{groups.filter((group) => group.severity !== 'same').length} changed</span>
+      </div>
+      <div className="run-detail-step-diff-list">
+        {groups.map((group) => (
+          <StepEvidenceDiffCard key={group.id} group={group} compact={false} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+type ScopedEvidenceDiffPanelProps = {
+  scope: RunDetailScopedDiffView
+}
+
+function ScopedEvidenceDiffPanel({ scope }: ScopedEvidenceDiffPanelProps) {
+  return (
+    <section className="run-detail-scoped-diff" aria-label="Focused node edge scoped diff">
+      <div className="run-detail-step-diff-heading">
+        <div>
+          <span className="run-detail-comparison-kicker">focused node / edge scope</span>
+          <strong>{scope.targetLabel}</strong>
+        </div>
+        <span>{scope.groups.length} group</span>
+      </div>
+      <p>{scope.summary}</p>
+      {scope.groups.length > 0 ? (
+        <div className="run-detail-step-diff-list">
+          {scope.groups.map((group) => (
+            <StepEvidenceDiffCard key={`scope-${group.id}`} group={group} compact />
+          ))}
+        </div>
+      ) : null}
+    </section>
+  )
+}
+
+type StepEvidenceDiffCardProps = {
+  group: RunDetailStepEvidenceDiffGroup
+  compact: boolean
+}
+
+function StepEvidenceDiffCard({ group, compact }: StepEvidenceDiffCardProps) {
+  return (
+    <article className={`run-detail-step-diff-card run-detail-diff-${group.severity}`}>
+      <div className="run-detail-step-diff-card-header">
+        <div>
+          <strong>{group.title}</strong>
+          <span>{group.nodeId ?? 'run level'}</span>
+        </div>
+        <strong>{group.deltaLabel}</strong>
+      </div>
+      <div className="run-detail-step-diff-grid">
+        <div>
+          <span>Base</span>
+          <strong>{group.leftStatus}</strong>
+          <small>
+            {group.leftEvidenceCount} evidence / {group.leftHighestSeverity}
+          </small>
+        </div>
+        <div>
+          <span>Compare</span>
+          <strong>{group.rightStatus}</strong>
+          <small>
+            {group.rightEvidenceCount} evidence / {group.rightHighestSeverity}
+          </small>
+        </div>
+      </div>
+      <div className="run-detail-step-diff-kinds">
+        <span>Base: {group.leftKinds.join(', ') || 'none'}</span>
+        <span>Compare: {group.rightKinds.join(', ') || 'none'}</span>
+      </div>
+      {!compact && group.safeEvidence.length > 0 ? (
+        <ul className="run-detail-step-diff-evidence">
+          {group.safeEvidence.map((entry, index) => (
+            <li key={`${group.id}-evidence-${index}`}>{entry}</li>
+          ))}
+        </ul>
+      ) : null}
+    </article>
   )
 }
 

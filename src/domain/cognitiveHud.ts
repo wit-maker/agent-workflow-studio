@@ -20,6 +20,7 @@ import {
   routeKindLabels,
   statusLabels,
 } from './displayLabels'
+import { summarizeConnectionRuntimePolicy } from './edgeRuntimePolicy'
 import type { ExecutionGraph, ExecutionRouteKind, ExecutionStepStatus } from './executionGraph'
 import {
   getInputPorts,
@@ -659,6 +660,7 @@ export function buildSelectedEdgeHudView(options: {
       : '未指定'
   const conditionKinds: ConnectionKind[] = ['decision', 'approval', 'error', 'retry']
   const hasCondition =
+    summarizeConnectionRuntimePolicy(connection).hasCondition ||
     conditionKinds.includes(connection.kind) ||
     runtime.observedRouteKinds.some((kind) => kind !== 'main')
   const flowTypeLabel = connectionKindLabels[connection.kind]
@@ -702,6 +704,7 @@ export function buildSelectedEdgeHudView(options: {
       `status: ${statusLabel}`,
       `carries: ${carriesSummary}`,
       `runtime: ${runtime.stateLabel} / ${runtime.routeSummary}`,
+      ...summarizeConnectionRuntimePolicy(connection).safeCopyLines,
       `source: ${runtime.sourceStepStatus}`,
       `target: ${runtime.targetStepStatus}`,
       `health: ${runtime.healthLabel}`,
@@ -719,6 +722,7 @@ function buildEdgeRuntimeSemantics(options: {
   validation?: ConnectionValidationSummary
 }): EdgeRuntimeSemantics {
   const { connection, executionGraph, runTrace, validation } = options
+  const policySummary = summarizeConnectionRuntimePolicy(connection)
   const sourceSteps = collectRuntimeSteps(connection.sourceNodeId, executionGraph, runTrace)
   const targetSteps = collectRuntimeSteps(connection.targetNodeId, executionGraph, runTrace)
   const latestSourceStep = sourceSteps[sourceSteps.length - 1] ?? null
@@ -811,7 +815,9 @@ function buildEdgeRuntimeSemantics(options: {
         ? 'step evidence only'
         : 'not observed'
   const delaySummary =
-    observedDurationMs > 0
+    connection.runtimePolicy?.delayMs !== undefined
+      ? policySummary.delaySummary
+      : observedDurationMs > 0
       ? `observed ${observedDurationMs} ms`
       : estimatedLatencyMs > 0
         ? `estimate ${estimatedLatencyMs} ms`
@@ -819,7 +825,9 @@ function buildEdgeRuntimeSemantics(options: {
           ? 'runtime timing pending'
           : 'no delay sample'
   const retrySummary =
-    retryRouteCount > 0
+    connection.runtimePolicy?.retry
+      ? policySummary.retrySummary
+      : retryRouteCount > 0
       ? `runtime retry observed (${retryRouteCount})`
       : retryCandidateCount > 0
         ? `${retryCandidateCount} retry candidate(s)`
@@ -827,13 +835,17 @@ function buildEdgeRuntimeSemantics(options: {
           ? 'retry branch configured'
           : 'no runtime retry'
   const errorRouteSummary =
-    errorRouteCount > 0
+    connection.runtimePolicy?.errorRoute
+      ? policySummary.errorRouteSummary
+      : errorRouteCount > 0
       ? `runtime error path observed (${errorRouteCount})`
       : connection.kind === 'error'
         ? 'error branch configured'
         : 'no runtime error route'
   const conditionSummary =
-    observedRouteKinds.length > 0
+    connection.runtimePolicy?.condition
+      ? policySummary.conditionSummary
+      : observedRouteKinds.length > 0
       ? `runtime ${routeSummary}`
       : ['decision', 'approval', 'error', 'retry'].includes(connection.kind)
         ? `${connectionKindLabels[connection.kind]} branch configured`

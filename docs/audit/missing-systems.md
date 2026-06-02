@@ -16,14 +16,15 @@ Priority scale:
 - `CanvasCommandHud`, `HudNotificationBundle`, `CanvasMiniMapHud`, `WorkflowGroupLayer`, `SelectedObjectHud`, and `SelectedEdgeHud` exist as receivers.
 - Zoom mode (`overview / map / normal / detail / deep`) and inline preview are implemented as class/data projections.
 - Selected node/edge HUDs now use measured HUD size plus DOM collision rects for command HUD, drawers, MiniMap, Console, and React Flow controls; Game HUD mode also disables the legacy 1024px horizontal body scroll.
-- Selected edge HUD and React Flow edges now derive runtime state / health / observed route / evidence count from `WorkflowConnection`, `ExecutionGraph`, `RunTrace`, and connection validation.
+- Selected edge HUD and React Flow edges now derive runtime state / health / observed route / evidence count from `WorkflowConnection`, `ExecutionGraph`, `RunTrace`, connection validation, and optional safe connection `runtimePolicy` metadata.
 - HUD notification bundle, run-history summary, and session-only `quiet / balanced / deep` density policy now exist as read-only HUD projections.
 - Run Detail can now select current trace or durable safe `traceAudit` snapshots, and can deep-link node/edge focus back to the canvas.
+- Run Detail has a two-run comparison view for safe audit metadata, step-level safe evidence grouping, and focused node/edge scoped diff.
 - Still missing (foundation only, not full implementation):
   - Advanced HUD placement policy with priority-weighted escape zones, viewport-specific density reduction, and animated reflow
   - Animated replayable trace/audit-backed semantic focus. Current semantic focus is a current-state read-only projection from failure / approval / validation / retry / running / bottleneck signals, while completed runs now keep safe trace/audit snapshots for evidence recall and Run Detail selection.
   - Richer visual emphasis rules beyond the current central HUD variants and semantic edge/node focus
-  - Enforced edge runtime contract for retry policy, condition expressions, edge-level audit events, and durable route replay beyond the current read-only projection and selection deep link
+  - Enforced edge runtime contract, expression evaluation, edge-level audit events, and durable route replay beyond the current optional `runtimePolicy` metadata, read-only projection, and selection deep link
   - Situation Assistant real channels beyond 4D text (voice, avatar, video, news-style video, dynamic next-action banners)
   - Durable notification read / ack / pin state and persisted HUD preferences beyond the current session-only density projection
   - Critical short-tone audio channel
@@ -47,7 +48,7 @@ Priority scale:
 | WorkflowDocument model | The current `Workflow` is useful but not yet the full saved/executed/audited document described by source specs. |
 | Category normalization | MVP categories need mapping to complete source-spec categories before the parts library grows. |
 | Durable run history | Safe trace/audit summaries now survive in run history records, but logs, metrics timeline, connector queue, and review states still need a richer run record model. |
-| Trace and audit log | Safe `traceAudit` snapshot recall and Run Detail run selection exist. Safety, animated replay, QA, and external adapter work still require replayable audit records and policy-backed events. |
+| Trace and audit log | Safe `traceAudit` snapshot recall and Run Detail run selection exist. Connection `runtimePolicy` summaries can be shown safely, but safety, animated replay, QA, and external adapter work still require replayable audit records and policy-backed events. |
 | Validate / Stop / Resume / Replay run modes | The run model must expand before full execution/runtime work. |
 | Cognitive HUD state model | HUD cannot be added as decoration; L0-L5 priority, alert, focus, and depth concepts need data support. |
 | Safety gate model | Spec check, secret scan placeholder, git guard, publish gate, command risk check, cost/loop limits, and approval records need a shared shape. |
@@ -62,7 +63,7 @@ Priority scale:
 | SQLite / local database | Needed for durable run history, audit logs, templates, and search at product scale. |
 | Secure credential store | Required before real credential-bearing integrations. |
 | Recipes and knowledge assets | Templates need to evolve into reusable success patterns, failure patterns, and knowledge cards. |
-| Multi-run comparison and replay | Run Detail can select one safe audit snapshot at a time, but comparison and animated replay are needed for inspection, regression analysis, and reproducible workflows. |
+| Multi-run comparison and replay | Run Detail now has two-run safe audit metadata comparison plus step-level safe evidence grouping, focused node/edge scoped diff, and safe connection policy summaries, but visual replay animation, edge-level durable route diff, and reproducible route replay are still needed for inspection, regression analysis, and reproducible workflows. |
 | Publish and external write workflow | Real write-capable adapters require approval, audit, rollback, and human confirmation. |
 | Full HUD UI settings | Session-only density/danger/collapse projection exists, but users still need persisted control over danger visibility, focus, notifications, and collapse rules. |
 | Desktop QA matrix | Tauri, file persistence, and secure storage need OS-specific verification. |

@@ -29,7 +29,7 @@ These items do not block SA-1, but they should be tracked so that SA-5 onward do
 - `CanvasCommandHud` shows model as static `GPT-5.5 high`. It must read from settings once the model selection lives in product state.
 - `CognitiveHudOverlay` now renders central HUD variants driven by semantic focus (`failure`, `approval`, `validation`, `running`, `bottleneck`), `HudNotificationBundle` renders on-demand notification/history/density controls with Replay links, and selected node/edge HUDs use measured viewport-anchored placement with DOM collision rects. Selected node history and Run Detail can read/select durable audit evidence summaries, and node/edge deep links return focus to the canvas. Remaining debt is persisted HUD preferences, durable notification read/ack/pin state, richer very-small-viewport reflow, and policy-backed depth/collapse behavior.
 - `node-hud-badge` covers four statuses (failed / review_required / blocked / retry_ready). The full HUD badge spec includes severity, priority, human-gate, and failure-cause variants on top of status.
-- `SelectedEdgeHud` and React Flow edges now derive delay / retry / error-route / health from current `ExecutionGraph`, `RunTrace`, `WorkflowConnection`, and validation results. Edge selection is lifted to `AppShell` for Run Detail deep links. Remaining debt is turning that read-only projection into an enforced runtime contract with condition expressions, retry policy editing, durable route replay, and edge-level audit records.
+- `SelectedEdgeHud` and React Flow edges now derive delay / retry / error-route / health from current `ExecutionGraph`, `RunTrace`, `WorkflowConnection`, validation results, and optional connection `runtimePolicy` metadata. Edge selection is lifted to `AppShell` for Run Detail deep links. Remaining debt is turning that safe metadata/read-only projection into an enforced runtime contract with expression evaluation, durable route replay, and edge-level audit records.
 
 
 
@@ -38,7 +38,7 @@ These items do not block SA-1, but they should be tracked so that SA-5 onward do
 - `Workflow` is still closer to a browser MVP state object than the full `WorkflowDocument` described in source specs.
 - Node category labels differ from the complete source-spec category set.
 - `WorkflowNode` lacks first-class risk, HUD, owner, node log, connector binding, and approval metadata.
-- Connection kinds are typed, and edge runtime semantics are now projected into HUD/React Flow from execution trace state, but they are not yet enforced by the runtime or persisted as edge-level audit events.
+- Connection kinds are typed, and optional connection `runtimePolicy` metadata can describe condition / delay / retry / error-route summaries. Edge runtime semantics are projected into HUD/React Flow from execution trace state and safe policy metadata, but they are not yet enforced by the runtime or persisted as edge-level audit events.
 - schemaVersion exists, but migration policy and compatibility tests are not yet implemented.
 
 ## Execution Debt
@@ -52,9 +52,9 @@ These items do not block SA-1, but they should be tracked so that SA-5 onward do
 ## Observability Debt
 
 - Logs, metrics, queue, and execution graph are visible; completed runs now store a credential-safe `traceAudit` snapshot inside the existing run history record.
-- `RunTrace` exists as a read-only derived view and can be revived from `traceAudit` when current runtime logs are not present. Run Detail can now select current trace or a safe audit snapshot and deep-link node/edge focus. This is durable evidence recall, not a full animated replayable audit model.
-- There is no durable audit log for safety decisions, approvals, external calls, command risk checks, publish gates, replay, or multi-run diff.
-- Metrics do not yet cover error rate, parallelism, resource load, or multi-run comparisons.
+- `RunTrace` exists as a read-only derived view and can be revived from `traceAudit` when current runtime logs are not present. Run Detail can now select current trace or a safe audit snapshot, deep-link node/edge focus, and compare two safe audit snapshots with metadata rows, step-level safe evidence grouping, and focused node/edge scoped diff. This is durable evidence recall and scoped diff, not a full animated replayable audit model.
+- There is no durable audit log for safety decisions, approvals, external calls, command risk checks, publish gates, replay, visual multi-run replay animation, or edge-level route event diff. Connection runtime policy summaries are metadata only, not durable route evidence.
+- Metrics do not yet cover error rate, parallelism, resource load, or policy-backed multi-run regression analysis.
 
 ## Storage Debt
 
@@ -75,7 +75,7 @@ These items do not block SA-1, but they should be tracked so that SA-5 onward do
 
 - React Flow and standard canvas coexist; full migration/retirement strategy is not settled.
 - Node add/delete, complex edge editing, auto layout, and DnD interactions remain incomplete or partially browser-QA-limited. MiniMap exists as a HUD, but overview behavior is still basic.
-- UI-11 now has session-only notification/history/density controls, but persisted HUD settings and durable notification state are missing. UI-12 now has durable safe trace snapshots, run selection, and node/edge deep links, but animated replay, multi-run diff, and audit policy controls are incomplete.
+- UI-11 now has session-only notification/history/density controls, but persisted HUD settings and durable notification state are missing. UI-12 now has durable safe trace snapshots, run selection, node/edge deep links, safe metadata diff, step-level safe evidence grouping, focused scoped diff, and safe connection policy summaries, but animated replay, edge-level durable route diff, and audit policy controls are incomplete.
 - Inspector lacks first-class prompt, tools, security, test run, last-run details, and settings history panels.
 
 ## Template / Reuse Debt

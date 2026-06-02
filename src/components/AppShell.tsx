@@ -27,6 +27,7 @@ import type {
   ConnectionKind,
   Workflow,
   WorkflowArtifact,
+  WorkflowConnectionRuntimePolicy,
   WorkflowNode,
   WorkflowRunLog,
   WorkflowStatus,
@@ -1039,6 +1040,22 @@ export function AppShell() {
     })
   }
 
+  function handleUpdateConnectionRuntimePolicy(
+    connectionId: string,
+    runtimePolicy: WorkflowConnectionRuntimePolicy | undefined,
+  ) {
+    dispatch({ type: 'updateConnectionRuntimePolicy', connectionId, runtimePolicy })
+    dispatch({
+      type: 'appendLog',
+      log: makeLog(
+        executionGraph?.runId ?? `connection-policy-${Date.now()}`,
+        runtimePolicy ? '接続 runtime policy を保存しました。' : '接続 runtime policy をクリアしました。',
+        undefined,
+        'info',
+      ),
+    })
+  }
+
   function handleSaveTemplate(input: {
     name: string
     description: string
@@ -1774,6 +1791,7 @@ export function AppShell() {
       onAddNode={handleAddNode}
       onSaveNode={handleSaveNode}
       onCreateConnection={handleCreateConnection}
+      onUpdateConnectionRuntimePolicy={handleUpdateConnectionRuntimePolicy}
       onCreateConnectionDraft={createConnectionFromDraft}
       onDeleteConnection={handleDeleteConnection}
       onDeleteNode={handleDeleteNode}

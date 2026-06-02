@@ -4,6 +4,237 @@ Last updated: 2026-06-02
 
 ---
 
+## Phase UI-2m: Runtime Edge Policy Minimal Slice
+
+- Branch: `codex/selection-overlay-minimal-hud`
+- Date: 2026-06-02
+- Model gate: `ALLOW_XHIGH` はないため、`GPT-5.5 high` のまま実施した。モデル変更が必要な具体的破壊リスクは出ていない。
+- Scope: UI-2l の次スライス。`WorkflowConnection` に任意の `runtimePolicy` を追加し、condition / delay / retry / error-route の安全な編集・表示・比較導線を最小実装する。新 localStorage key、backend/API、credential 保存、実 AI API、外部 asset、依存追加は行わない。Canvas HUD / Game HUD 全体レイアウトは変更しない。
+
+### Implemented
+
+- `src/domain/workflow.ts` に optional `WorkflowConnectionRuntimePolicy` を追加した。既存接続は `runtimePolicy` 未指定のまま読み込める。
+- `src/domain/edgeRuntimePolicy.ts` を追加し、policy normalization、機密らしい文字列の除外、safe summary / copy lines を pure helper として分離した。
+- `validateWorkflowImport(...)` と `normalizeWorkflowDocument(...)` が既存 workflow import/export 経路で `runtimePolicy` を互換的に正規化するようにした。新規 storage key は追加していない。
+- `ConnectionEditor` に connection runtime policy の最小 editor を追加し、Inspector / Detail HUD 経由で保存・クリアできるようにした。
+- `workflowActions.ts` / `workflowReducer.ts` に `updateConnectionRuntimePolicy` を追加し、既存 undo/redo history に乗せて更新するようにした。
+- Selected edge HUD / React Flow edge labels / Run Detail focused edge scoped diff が safe policy summary を読むようにした。raw config、prompt 本文、payload、credential/API key/password/token は view model と copy summary に含めない。
+- sample workflow の decision edges に安全な example `runtimePolicy` を付与し、初期表示で policy edge を確認できるようにした。
+
+### Design asset alignment
+
+- `07_node-detail-hud.png` / `11_selection-overlay.png`: edge 選択 HUD に runtime policy context が出るが、常時 panel 化せず選択時の flow HUD に留めた。
+- `10_inline-preview.png`: Run Detail focused edge scope では safe metadata だけを短く比較し、raw 本文を出していない。
+- `12_minimal-always-on-hud.png`: always-on HUD は増やさず、policy 編集は Detail HUD の Inspector に限定した。
+- `13_dark-theme-finished-canvas.png`: policy configured edge は暗色 canvas 上で細い dash/label 表現に留め、過剰な glow を避けた。
+
+### Existing behavior preserved
+
+- mock-only execution、既存 localStorage key、JSON import/export、Run/Reset/Undo/Redo、Palette/Detail/Console/MiniMap/Notification/Density toggles、selected node HUD、selected edge HUD、semantic focus、zoom mode は維持。
+- runtime policy は optional metadata であり、現時点では実行 engine に条件分岐や retry enforcement を追加していない。
+- 保存済み workflow に `runtimePolicy` がなくても読み込み可能。危険語を含む imported policy text は正規化で除外される。
+
+### Validation
+
+- `git rev-parse HEAD`: `9df3393294ae95c2a628f6df05269dcd9a207041`
+- `git status --short` before work: UI-2j/UI-2k/UI-2l 系の未コミット差分あり。reset / rebase / force overwrite は行っていない。
+- `npm.cmd run typecheck`: pass
+- `npm.cmd run lint`: pass
+- `npm.cmd run build`: pass
+- Vite chunk-size warning のみ発生。既存許容警告として扱う。
+- `npx.cmd tsx` direct validation: `normalizeConnectionRuntimePolicy(...)` / `summarizeConnectionRuntimePolicy(...)` / `validateWorkflowImport(...)` が pass。sensitive expression は除外され、safe summary に危険語が出ないことを確認した。
+
+### Browser QA
+
+- Preview: `http://127.0.0.1:4179/`
+- Codex in-app Browser は `Browser is not available: iab` だったため、Microsoft Edge headless + CDP で fallback QA を実施した。
+- fresh sample workflow で Detail HUD を開き、connection runtime policy editor、sample policy 表示、edge 選択 HUD、condition / retry summary、既存 workflow storage 内の policy count を確認した。
+- Browser QA result: `detailOpened: true`, `policyEditorVisible: true`, `samplePolicyVisible: true`, `edgeHudVisible: true`, `conditionVisible: true`, `retryVisible: true`, `currentWorkflowPolicyCount: 3`, `hasRawLeak: false`, `externalResources: []`, console errors: none。
+- QA 用の一時 script、preview server、headless Edge、一時 profile / log は削除した。
+
+### Remaining gaps
+
+- `runtimePolicy` はまだ実行 engine の branch/retry/error-route enforcement ではない。
+- durable edge-level audit events、route replay、multi-run edge route diff は未実装。
+- condition expression は安全な短い metadata として保持するだけで、式評価 engine は未実装。
+- policy editor は最小版であり、visual branch authoring、policy validation diagnostics、edge tooltip density policy は未実装。
+
+### Next recommended slice
+
+1. Edge-level durable route events を safe audit snapshot に追加し、Run Detail focused edge diff を実 edge event 比較へ拡張する。
+2. Runtime policy enforcement の前に、condition expression の許可範囲と mock evaluator contract を設計する。
+3. Connection editor の policy validation diagnostics と branch visual authoring を小スライスで追加する。
+4. 軽微な文言修正・小さい CSS 調整のみなら `GPT-5.4-mini medium`、上記の実装スライスは `GPT-5.5 high` を推奨する。`ALLOW_XHIGH` なしで xhigh は提案・継続しない。
+
+---
+
+## Phase UI-2l: Run Detail Step Evidence Scoped Diff
+
+- Branch: `codex/selection-overlay-minimal-hud`
+- Date: 2026-06-02
+- Model gate: `ALLOW_XHIGH` はないため `GPT-5.5 high` のまま実施した。モデル変更が必要な具体的破壊リスクは出ていない。
+- Scope: Run Detail multi-run comparison の次スライス。2つの safe `traceAudit` snapshot 比較を、step-level safe evidence grouping と focused node/edge scoped diff へ拡張する。UI は `RunDetailPanel` 内に限定し、Canvas HUD / Game HUD 全体レイアウト、新 localStorage key、backend/API、credential 保存、実 AI API、外部 asset、依存追加は行わない。
+
+### Implemented
+
+- `src/domain/runDetail.ts` に `RunDetailStepEvidenceDiffGroup`, `RunDetailScopedDiffView` と、safe audit evidence を node/run-level 単位に集計する pure helper を追加した。
+- `buildRunComparisonView(...)` が `focusNodeId`, `focusConnectionId`, `connections` を任意で受け取り、比較 metadata rows に加えて `stepGroups` と `focusScope` を返すようにした。
+- 比較対象は既存 `WorkflowRunRecord.traceAudit.steps[].evidence` / `runEvidence` の safe summary と、node id/title/status/route/evidence kind/severity/count だけに限定した。raw config、prompt 本文、raw payload、artifact 本文、credential/token/password/API key は view model に含めない。
+- `RunDetailPanel` の既存 `Compare audits` section 内に `Step evidence diff` と `focused node / edge scope` を追加した。状態は既存 selector/toggle の session React state のみで保持する。
+- `src/index.css` に dark HUD surface 向けの compact step diff / scoped diff card styles を追加した。
+
+### Design asset alignment
+
+- `03_hud-layer-model.png`: 比較詳細は Bottom Console 内の on-demand detail surface に留め、Canvas HUD へ常駐 panel を増やしていない。
+- `11_selection-overlay.png`: canvas selection の node/edge focus を Run Detail scoped diff に連動させ、選択文脈だけ詳細化する。
+- `12_minimal-always-on-hud.png`: 常時 HUD は変更せず、比較表示は `T` / Run Detail 経由の明示操作に限定した。
+- `13_dark-theme-finished-canvas.png`: 追加カードは半透明 dark HUD と細い border の既存表現に合わせた。
+
+### Existing behavior preserved
+
+- mock-only execution、既存 localStorage key、JSON import/export、Run/Reset/Undo/Redo、Palette/Detail/Console/MiniMap/Notification/Density toggles、selected node HUD、selected edge HUD、semantic focus、zoom mode は維持。
+- `WorkflowRunRecord` / `RunTraceAuditSummary` の schema は変更していない。比較は read-only の pure view model で、外部 API / credential / browser storage mutation に依存しない。
+
+### Validation
+
+- `git rev-parse HEAD`: `9df3393294ae95c2a628f6df05269dcd9a207041`
+- `git status --short` before work: UI-2j/UI-2k の未コミット差分あり。reset / rebase / force overwrite は行っていない。
+- `npm.cmd run typecheck`: pass
+- `npm.cmd run lint`: pass
+- `npm.cmd run build`: pass
+- Vite chunk-size warning のみ発生。既存許容警告として扱う。
+- `npx.cmd tsx` direct validation: `buildRunComparisonView(...)` が `rows: 15`, `stepGroups: 1`, `focusGroups: 1` を返し、危険語 `credential/password/api key/raw payload` の出力がないことを確認した。
+
+### Browser QA
+
+- Preview: `http://127.0.0.1:4178/`
+- Codex in-app Browser は `Browser is not available: iab` だったため、Microsoft Edge headless + CDP で fallback QA を実施した。
+- 一時 profile で既存 key `agent-workflow-studio.run-history.v1` に safe `traceAudit` 付き record を2件だけ投入し、HUD `T` action から Run Detail を開いた。
+- `Compare audits` toggle、`Multi-run diff`、`Step evidence diff`、`safe step evidence grouping`、focused node scoped diff、`Node` deep link を確認した。
+- `hasRawLeak: false`, `externalResources: []`, captured console errors: none。
+- QA 用の一時 script、preview server、headless Edge、一時 profile / log は削除した。
+
+### Remaining gaps
+
+- scoped diff は safe audit summary の read-only 集計であり、animated replay、timeline scrubber、edge-level durable route event diff、原因分析 rule engine ではない。
+- edge scoped diff は選択 edge の source/target node evidence を比較する最小版で、edge 自体の durable route events はまだ未実装。
+- 比較 severity は error/warn/evidence count/status/kind の軽量ルールであり、policy-backed regression analysis ではない。
+
+### Next recommended slice
+
+1. Runtime edge semantics を connection condition model / retry policy editor / edge-level audit events へ拡張する。
+2. Run Detail compare に edge-level durable route event diff を追加する。
+3. Notification bundle を既読/ack/pin 付きの durable notification model へ拡張する（既存 localStorage key 方針を設計してから）。
+4. 軽微な文言修正・小さい CSS 調整のみなら `GPT-5.4-mini medium`、上記の実装スライスは `GPT-5.5 high` を推奨する。
+
+---
+
+## Phase UI-2k: Run Completion Headless QA Recheck
+
+- Branch: `codex/selection-overlay-minimal-hud`
+- Date: 2026-06-02
+- Model gate: ユーザー方針に従い、`ALLOW_XHIGH` なしでは xhigh を提案・継続しない。今回の追試は `GPT-5.5 high` の範囲で実施した。モデル変更が必要な具体的破壊リスクは出ていない。
+- Scope: UI-2j の残ギャップだった「headless Browser QA で Run 完了待ちが timeout した」事象の最小追試。Canvas HUD / Game HUD レイアウト、Run Detail comparison UI、domain model、localStorage schema は変更しない。
+
+### Implemented
+
+- コード変更は行っていない。
+- `AppShell.tsx` の通常 Run 経路、`workflowReducer` の `runFinished`、既存 `RUN_HISTORY` key への append effect を確認した。
+- `runFinished` 到達後は `isRunning:false`、`completedRun`、既存 `agent-workflow-studio.run-history.v1` への safe `traceAudit` 付き record 保存に進む構造であることを確認した。
+
+### Validation
+
+- `git rev-parse HEAD`: `9df3393294ae95c2a628f6df05269dcd9a207041`
+- `git status --short` before work: UI-2j の未コミット差分あり。reset / rebase / force overwrite は行っていない。
+- `npm.cmd run typecheck`: pass
+- `npm.cmd run lint`: pass
+- `npm.cmd run build`: pass
+- Vite chunk-size warning のみ発生。既存許容警告として扱う。
+
+### Browser QA
+
+- Dev server: `http://127.0.0.1:4191/`
+- Codex in-app Browser は今回も `Browser is not available: iab` だったため、Microsoft Edge headless + CDP で fallback QA を実施した。
+- 一時 profile で `localStorage.clear()` 後に初期表示し、HUD の `Run` を click した。
+- Result: Run は terminal state `failed` まで進み、Run button は再有効化、Stop button は無効化、既存 `agent-workflow-studio.run-history.v1` に `traceAudit` 付き run record が 1 件保存された。
+- `externalResources: []` を確認した。
+- QA 用の一時 script、dev server、headless Edge、一時 profile / log は削除した。
+
+### Remaining gaps
+
+- UI-2j の timeout は今回のソース状態では再現しなかった。前回 timeout は headless 待機条件、preview/dev server 差、または一時 profile 状態に由来した可能性が高いが、確定原因は未特定。
+- 本追試は Run terminal state と run history append の確認に限定し、Run Detail compare の全操作再検証は UI-2j の Browser QA 結果を維持する。
+
+### Next recommended slice
+
+1. Run Detail compare を step-level safe evidence grouping / focused node-edge scoped diff へ拡張する。
+2. Runtime edge semantics を connection condition model / retry policy editor / edge-level audit events へ拡張する。
+3. Notification bundle を既読/ack/pin 付きの durable notification model へ拡張する（既存 localStorage key 方針を設計してから）。
+4. 軽微な文言修正・小さい CSS 調整のみなら `GPT-5.4-mini medium`、上記の実装スライスは `GPT-5.5 high` を推奨する。
+
+---
+
+## Phase UI-2j: Run Detail Minimal Multi-run Comparison
+
+- Branch: `codex/selection-overlay-minimal-hud`
+- Date: 2026-06-02
+- Model gate: ユーザーが `ALLOW_XHIGH` していないため、今回の実装は `GPT-5.5 high` として継続した。今後このスレッドでは、明示的な `ALLOW_XHIGH` がない限り xhigh を提案・継続しない。単純な文言修正・小さい CSS 調整は `GPT-5.4-mini medium` 扱いに修正した。
+- Scope: Run Detail multi-run comparison の最小版。2つの run/audit snapshot を選択し、safe audit summary と run metadata のみを比較する。UI は `RunDetailPanel` 内に限定し、Canvas HUD / Game HUD 全体レイアウトは変更しない。新規 localStorage key、backend/API、credential 保存、実 AI API、外部 asset、依存追加は行わない。
+
+### Implemented
+
+- `src/domain/runDetail.ts` に `RunDetailComparisonView`, `RunDetailComparisonOption`, `RunDetailComparisonRun`, `RunDetailDiffRow`, `buildRunComparisonView(...)` を追加した。
+- 比較対象は既存 `WorkflowRunRecord.traceAudit` 付き run に限定し、current trace、raw config、prompt 本文、raw payload、artifact 本文、credential/token/password/API key は比較 view に含めない。
+- `RunDetailPanel` に session-only の `Compare audits` toggle と `Base audit` / `Compare audit` selector を追加した。selector state は `RunDetailPanel` 内の React state のみで保持し、新規 localStorage key は追加していない。
+- Diff 表は metadata 中心に限定し、status、mode、duration、step count、evidence count、audit events、failed/review/retry/excluded/safety counts、error/warning logs、node/connection count を表示する。
+- `src/index.css` に dark HUD surface 向けの compact comparison card / selector / diff table styles を追加した。
+- `AGENTS.md` のモデル運用表を、軽微な文言修正・小さい CSS 調整は `GPT-5.4-mini medium` 扱いになるよう最小修正した。
+
+### Design asset alignment
+
+- `03_hud-layer-model.png`: Run Detail compare は Bottom Console 内の補助 detail surface に限定し、Canvas HUD へ新しい常駐 panel を増やしていない。
+- `12_minimal-always-on-hud.png`: 常時 HUD は変更せず、比較 UI は明示的に Run Detail を開いた後の on-demand toggle に留めた。
+- `13_dark-theme-finished-canvas.png`: comparison card / diff table は半透明 dark surface と細い border に寄せ、Game HUD の見た目を壊さない。
+
+### Existing behavior preserved
+
+- mock-only execution、既存 localStorage key、JSON import/export、Run/Reset/Undo/Redo、Palette/Detail/Console/MiniMap/Notification/Density toggles、selected node HUD、selected edge HUD、semantic focus、zoom mode は維持。
+- `WorkflowRunRecord` / `RunTraceAuditSummary` の schema は変更していない。既存保存済み run history は `traceAudit` がなければ比較候補から除外されるだけで読み込み互換を維持する。
+- 比較は read-only の pure view model で、外部 API / credential / browser storage mutation に依存しない。
+
+### Validation
+
+- `git rev-parse HEAD`: `9df3393294ae95c2a628f6df05269dcd9a207041`
+- `git status --short` before edit: clean in `C:\dev\github\wit-maker\agent-workflow-studio`
+- `npm.cmd run typecheck`: pass
+- `npm.cmd run lint`: pass
+- `npm.cmd run build`: pass
+- Vite chunk-size warning のみ発生。既存許容警告として扱った。
+- `npx.cmd tsx` direct validation: `createSampleWorkflow(...)` -> `buildRunTrace(...)` -> `createRunTraceAuditSummary(...)` -> `createWorkflowRunRecord(...)` -> `buildRunComparisonView(...)` が pass。`options: 2`, `rows: 15`, `summary: "Audit diff / changed 4 / improved 0 / regressed 2"`, `failedDelta: "+1"`, `rawPayloadPresent: false` を確認した。
+
+### Browser QA
+
+- Preview: `http://127.0.0.1:4187/`
+- Codex in-app Browser はこのセッションで `iab` が利用不可だったため、Microsoft Edge headless + CDP で限定 QA を実施した。
+- 実 UI の `Run` click は開始できたが、headless 待機中に run history 保存完了まで到達せず timeout したため、比較 UI の検証は既存 key `agent-workflow-studio.run-history.v1` に safe `traceAudit` 付き record を2件だけ入れた一時 profile で補完した。新規 key は追加していない。
+- Run Detail `T` action、`RunDetailPanel` 表示、`Compare audits` toggle、2つの audit selector、diff table 表示を確認した。
+- Browser QA result: `historyCount: 2`, `recordsWithAudit: 2`, `runDetailVisible: true`, `compareToggleChecked: true`, `comparisonVisible: true`, `diffRows: 16`, `compareOptionNodes: 4`, `hasSafeOnlyLabel: true`, `hasDiffSummary: true`, `rawLeakInComparison: false`, `externalResources: []`, console errors/warnings: none captured。
+
+### Remaining gaps
+
+- 比較は minimal metadata diff であり、step-by-step animation、timeline scrubber、multi-run visual replay、edge-level durable route event diff ではない。
+- Browser QA の実 UI Run 完了待ちは headless 環境で timeout した。今回の変更対象である comparison UI は safe audit seed で確認済みだが、Run 完了経路そのものの追加調査は別スライスにする。
+- Diff severity は count metadata に基づく read-only 表示であり、原因分析や regression rule engine は未実装。
+
+### Next recommended slice
+
+1. Run 完了待ち timeout の原因を小スライスで調査し、headless QA でも run history 完了が安定するようにする。
+2. Runtime edge semantics を connection condition model / retry policy editor / edge-level audit events へ拡張する。
+3. Run Detail compare を step-level safe evidence grouping / focused node-edge scoped diff へ拡張する。
+4. Notification bundle を既読/ack/pin 付きの durable notification model へ拡張する（既存 localStorage key 方針を設計してから）。
+
+---
+
 ## Phase UI-2i: Run Detail Audit Replay / Deep Link
 
 - Branch: `codex/selection-overlay-minimal-hud`

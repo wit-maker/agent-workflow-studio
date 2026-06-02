@@ -8,6 +8,7 @@ import type {
   WorkflowMetric,
   WorkflowNode,
   WorkflowNodeStatus,
+  WorkflowConnectionRuntimePolicy,
   WorkflowRunLog,
   WorkflowStatus,
 } from '../domain/workflow'
@@ -24,6 +25,11 @@ export type WorkflowAction =
   | { type: 'updateNodePositions'; positions: Record<string, WorkflowNode['position']> }
   | { type: 'updateNodeConfig'; nodeId: string; updates: NodeEditableFields }
   | { type: 'createConnection'; connection: WorkflowConnection }
+  | {
+      type: 'updateConnectionRuntimePolicy'
+      connectionId: string
+      runtimePolicy: WorkflowConnectionRuntimePolicy | undefined
+    }
   | { type: 'deleteConnection'; connectionId: string }
   | { type: 'runWorkflowStart'; runId: string; log: WorkflowRunLog; nodeIds?: string[] }
   | { type: 'clearExecutionGraph' }

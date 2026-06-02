@@ -6,6 +6,7 @@ import {
 } from './cognitiveHud'
 import { canCarryToInput } from './connectionRules'
 import { connectionKindLabels, connectionStatusLabels, formatDataTypeLabel } from './displayLabels'
+import { summarizeConnectionRuntimePolicy } from './edgeRuntimePolicy'
 import { findPort, getInputPorts, getOutputPorts, getUnconnectedRequiredInputPorts } from './portRules'
 import type {
   ConnectionKind,
@@ -266,11 +267,14 @@ export function toReactFlowEdges(
       const dimmed = focusPath?.dimUnfocused === true && !focused && !selected
       const semanticFocused = focused && focusPath?.source === 'semantic'
       const runtime = edgeRuntimeByConnectionId?.get(connection.id)
+      const policySummary = summarizeConnectionRuntimePolicy(connection)
+      const hasPolicy = connection.runtimePolicy !== undefined
       const className = [
         selected ? 'focus-selected-edge' : null,
         focused ? 'focus-path-edge' : null,
         semanticFocused ? `focus-semantic-edge focus-semantic-edge-${focusPath?.priority ?? 'watch'}` : null,
         dimmed ? 'focus-dimmed-edge' : null,
+        hasPolicy ? 'edge-runtime-policy-configured' : null,
         runtime?.className ?? null,
       ]
         .filter(Boolean)
@@ -297,14 +301,18 @@ export function toReactFlowEdges(
           strokeWidth: selected || focused ? 3.4 : 2.5,
           opacity: dimmed ? 0.28 : 1,
         },
-        label: !runtime || runtime.state === 'idle'
-          ? connectionKindLabels[connection.kind]
-          : `${connectionKindLabels[connection.kind]} / ${runtime.stateLabel}`,
+        label: [
+          !runtime || runtime.state === 'idle'
+            ? connectionKindLabels[connection.kind]
+            : `${connectionKindLabels[connection.kind]} / ${runtime.stateLabel}`,
+          hasPolicy ? 'policy' : null,
+        ].filter(Boolean).join(' / '),
         ariaLabel: [
           `${connection.sourceNodeId} から ${connection.targetNodeId}`,
           connectionKindLabels[connection.kind],
           connection.carries.map((dataType) => formatDataTypeLabel(dataType)).join(', '),
           connectionStatusLabels[connection.status],
+          hasPolicy ? policySummary.safeCopyLines.join(' / ') : '',
         ].join(' / '),
         data: {
           kind: connection.kind,

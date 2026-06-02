@@ -152,6 +152,38 @@ export type ConnectionStatus =
   | 'invalid'
   | 'throttled'
 
+export type WorkflowConnectionConditionMode =
+  | 'always'
+  | 'on_success'
+  | 'on_failure'
+  | 'on_review'
+  | 'expression'
+
+export type WorkflowConnectionCondition = {
+  mode: WorkflowConnectionConditionMode
+  label?: string
+  expression?: string
+}
+
+export type WorkflowConnectionRetryPolicy = {
+  enabled: boolean
+  maxAttempts: number
+  backoffMs: number
+}
+
+export type WorkflowConnectionErrorRoute = {
+  enabled: boolean
+  targetNodeId?: string
+  label?: string
+}
+
+export type WorkflowConnectionRuntimePolicy = {
+  condition?: WorkflowConnectionCondition
+  retry?: WorkflowConnectionRetryPolicy
+  delayMs?: number
+  errorRoute?: WorkflowConnectionErrorRoute
+}
+
 export type AgentRole =
   | 'human'
   | 'dev_leader_ai'
@@ -205,6 +237,7 @@ export type WorkflowConnection = {
   kind: ConnectionKind
   carries: WorkflowDataType[]
   status: ConnectionStatus
+  runtimePolicy?: WorkflowConnectionRuntimePolicy
   metrics?: {
     flowRate?: number
     tokens?: number

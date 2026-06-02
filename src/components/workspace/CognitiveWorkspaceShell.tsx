@@ -14,6 +14,7 @@ import type {
   ConnectionKind,
   Workflow,
   WorkflowConnection,
+  WorkflowConnectionRuntimePolicy,
   WorkflowNode,
   WorkflowStatus,
 } from '../../domain/workflow'
@@ -97,6 +98,10 @@ type CognitiveWorkspaceShellProps = {
     targetPortId: string
     kind: ConnectionKind
   }) => void
+  onUpdateConnectionRuntimePolicy: (
+    connectionId: string,
+    runtimePolicy: WorkflowConnectionRuntimePolicy | undefined,
+  ) => void
   onCreateConnectionDraft: (draft: {
     sourceNodeId: string
     sourcePortId: string

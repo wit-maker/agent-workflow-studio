@@ -13,6 +13,7 @@ import type {
   ConnectionKind,
   Workflow,
   WorkflowConnection,
+  WorkflowConnectionRuntimePolicy,
   WorkflowNode,
 } from '../../domain/workflow'
 import type { ConnectionValidationResult } from '../../state/workflowSelectors'
@@ -69,6 +70,10 @@ type WorkspaceRightPanelProps = {
     targetPortId: string
     kind: ConnectionKind
   }) => void
+  onUpdateConnectionRuntimePolicy: (
+    connectionId: string,
+    runtimePolicy: WorkflowConnectionRuntimePolicy | undefined,
+  ) => void
   onDeleteConnection: (connectionId: string) => void
   onDeleteNode: (nodeId: string) => void
   onMoveNode: (nodeId: string, position: WorkflowNode['position']) => void
@@ -90,6 +95,7 @@ export function WorkspaceRightPanel({
   humanReview,
   onSaveNode,
   onCreateConnection,
+  onUpdateConnectionRuntimePolicy,
   onDeleteConnection,
   onDeleteNode,
   onMoveNode,
@@ -173,6 +179,7 @@ export function WorkspaceRightPanel({
             connectionValidation={connectionValidation}
             onSaveNode={onSaveNode}
             onCreateConnection={onCreateConnection}
+            onUpdateConnectionRuntimePolicy={onUpdateConnectionRuntimePolicy}
             onDeleteConnection={onDeleteConnection}
             onDeleteNode={onDeleteNode}
             onMoveNode={onMoveNode}

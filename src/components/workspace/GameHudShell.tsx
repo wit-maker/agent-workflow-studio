@@ -28,6 +28,7 @@ import type {
   ConnectionKind,
   Workflow,
   WorkflowConnection,
+  WorkflowConnectionRuntimePolicy,
   WorkflowNode,
   WorkflowStatus,
 } from '../../domain/workflow'
@@ -95,6 +96,10 @@ export type GameHudShellProps = {
     targetPortId: string
     kind: ConnectionKind
   }) => void
+  onUpdateConnectionRuntimePolicy: (
+    connectionId: string,
+    runtimePolicy: WorkflowConnectionRuntimePolicy | undefined,
+  ) => void
   onCreateConnectionDraft: (draft: {
     sourceNodeId: string
     sourcePortId: string
@@ -356,6 +361,7 @@ export function GameHudShell(props: GameHudShellProps) {
             humanReview={props.humanReview}
             onSaveNode={props.onSaveNode}
             onCreateConnection={props.onCreateConnection}
+            onUpdateConnectionRuntimePolicy={props.onUpdateConnectionRuntimePolicy}
             onDeleteConnection={props.onDeleteConnection}
             onDeleteNode={props.onDeleteNode}
             onMoveNode={props.onMoveNode}
