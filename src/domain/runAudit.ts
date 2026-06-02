@@ -2,6 +2,11 @@ import type { ExecutionRouteKind, ExecutionStepStatus } from './executionGraph'
 import type { WorkflowRunMode, WorkflowRunStatus } from './runHistory'
 import type { RunStep, RunTrace } from './runTrace'
 import {
+  buildRunAuditRouteEvents,
+  normalizeRunAuditRouteEvents,
+} from './runAuditRouteEvents'
+import type { RuntimeAuditContractEvent } from './runtimeAuditContract'
+import {
   makeRunStepEvidence,
   type EvidenceKind,
   type EvidenceSafetyLevel,
@@ -123,6 +128,7 @@ export type RunTraceAuditSummary = {
   steps: RunAuditStep[]
   runEvidence: RunAuditEvidence[]
   events: RunAuditEvent[]
+  runtimeEvents: RuntimeAuditContractEvent[]
 }
 
 export type CreateRunTraceAuditSummaryOptions = {
@@ -363,6 +369,7 @@ export function createRunTraceAuditSummary(
     .slice(-MAX_AUDIT_RUN_EVIDENCE)
   const evidenceCount =
     runEvidence.length + steps.reduce((total, step) => total + step.evidence.length, 0)
+  const events = createAuditEvents(trace, steps, runEvidence, options)
 
   return {
     schemaVersion: RUN_TRACE_AUDIT_SCHEMA_VERSION,
@@ -384,7 +391,11 @@ export function createRunTraceAuditSummary(
     safetyWarnings: trace.safetyWarnings,
     steps,
     runEvidence,
-    events: createAuditEvents(trace, steps, runEvidence, options),
+    events,
+    runtimeEvents: buildRunAuditRouteEvents({
+      runId: trace.runId,
+      steps,
+    }),
   }
 }
 
@@ -554,6 +565,7 @@ export function normalizeRunTraceAuditSummary(
           .filter((event): event is RunAuditEvent => event !== null)
           .slice(-MAX_AUDIT_EVENTS)
       : [],
+    runtimeEvents: normalizeRunAuditRouteEvents(raw.runtimeEvents),
   }
 }
 
