@@ -1,4 +1,10 @@
-import type { CentralHudView, HudSnapshot, ZoomHudView } from '../../domain/cognitiveHud'
+import type {
+  CentralHudView,
+  HudDensityView,
+  HudNotificationBundleView,
+  HudSnapshot,
+  ZoomHudView,
+} from '../../domain/cognitiveHud'
 import { hudPriorityLabels } from '../../domain/cognitiveHud'
 import { workflowStatusLabels } from '../../domain/displayLabels'
 import type { RunTrace } from '../../domain/runTrace'
@@ -16,15 +22,21 @@ type CanvasCommandHudProps = {
   centralHudView: CentralHudView | null
   runTrace: RunTrace | null
   runHistoryCount: number
+  hudDensity: HudDensityView
+  notificationBundle: HudNotificationBundleView
   zoomHud: ZoomHudView
   paletteOpen: boolean
   detailOpen: boolean
   miniMapVisible: boolean
   consoleOpen: boolean
+  notificationOpen: boolean
   onTogglePalette: () => void
   onToggleDetail: () => void
   onToggleMiniMap: () => void
   onToggleConsole: () => void
+  onToggleNotification: () => void
+  onCycleHudDensity: () => void
+  onOpenRunDetail: () => void
   onRun: () => void
   onRunSelected: () => void
   onRunFromSelected: () => void
@@ -50,15 +62,21 @@ export function CanvasCommandHud({
   centralHudView,
   runTrace,
   runHistoryCount,
+  hudDensity,
+  notificationBundle,
   zoomHud,
   paletteOpen,
   detailOpen,
   miniMapVisible,
   consoleOpen,
+  notificationOpen,
   onTogglePalette,
   onToggleDetail,
   onToggleMiniMap,
   onToggleConsole,
+  onToggleNotification,
+  onCycleHudDensity,
+  onOpenRunDetail,
   onRun,
   onRunSelected,
   onRunFromSelected,
@@ -103,6 +121,9 @@ export function CanvasCommandHud({
           title={runTrace?.source === 'run-history' ? '最新の durable audit snapshot を参照中' : '現在の runtime trace を参照中'}
         >
           {runTrace?.source === 'run-history' ? 'audit' : 'trace'} {runTrace?.auditEventCount ?? 0}
+        </span>
+        <span className="mini-hud-chip" title={hudDensity.description}>
+          HUD {hudDensity.label}
         </span>
       </div>
 
@@ -194,6 +215,31 @@ export function CanvasCommandHud({
           title="コンソール表示切替"
         >
           C
+        </button>
+        <button
+          type="button"
+          className={`hud-icon-button ${notificationOpen ? 'active' : ''}`}
+          onClick={onToggleNotification}
+          aria-pressed={notificationOpen}
+          title={`通知/履歴HUD表示切替: ${notificationBundle.notificationItems.length}件`}
+        >
+          N{notificationBundle.notificationItems.length}
+        </button>
+        <button
+          type="button"
+          className="hud-icon-button"
+          onClick={onOpenRunDetail}
+          title="Run Detail / audit replay を開く"
+        >
+          T
+        </button>
+        <button
+          type="button"
+          className="hud-icon-button"
+          onClick={onCycleHudDensity}
+          title={`HUD密度切替: ${hudDensity.label}`}
+        >
+          {hudDensity.shortLabel}
         </button>
       </div>
     </section>

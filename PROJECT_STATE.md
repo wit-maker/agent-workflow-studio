@@ -4,6 +4,142 @@ Last updated: 2026-06-02
 
 ---
 
+## Phase UI-2i: Run Detail Audit Replay / Deep Link
+
+- Branch: `codex/selection-overlay-minimal-hud`
+- Date: 2026-06-02
+- Model gate: 「ユーザー明示により GPT-5.5 high として継続」を継続記録する。今回の実行時点では、ユーザーが GPT-5.5 xhigh に変更したので実施と明示したため、その前提で実装した。
+- Scope: UI-2h の次スライスとして、Run Detail に audit replay / run selection / node and edge deep link を追加する。新規 localStorage key、backend/API、credential 保存、実 AI API、外部 asset、依存追加は行わない。
+
+### Implemented
+
+- `src/domain/runDetail.ts` に `RunDetailReplayView`, `RunDetailReplayOption`, `RunDetailFocusTarget`, `buildRunDetailReplayView(...)` を追加し、current trace と既存 run history 内の safe `traceAudit` snapshot を切り替えられる pure view model を実装した。
+- `RunDetailPanel` に `Replay source` selector を追加し、current runtime trace / durable audit snapshot を on-demand に切り替えられるようにした。
+- `RunDetailPanel` は選択 node / 選択 edge を focus target として受け取り、関連 step evidence を強調し、`Node` / `Edge` deep link button から canvas selection へ戻れるようにした。
+- `AppShell` に session-only の `selectedConnectionId` と `selectedRunDetailRunId` を追加し、React Flow edge selection を `CognitiveWorkflowCanvas` 内部から上位 state へ lift した。新規 localStorage key は追加していない。
+- `SelectedObjectHud` と `SelectedEdgeHud` に `Open trace` quick action を追加し、選択中の node/edge context から Bottom Console の `RunDetail` へ到達できるようにした。
+- `HudNotificationBundle` の run history 行に `Replay` 導線を追加し、履歴から特定 run の audit snapshot を Run Detail で開けるようにした。
+- `CanvasCommandHud` に `T` quick action を追加し、always-on HUD から audit replay surface を開けるようにした。
+
+### Design asset alignment
+
+- `07_node-detail-hud.png` / `11_selection-overlay.png`: selected node/edge HUD から trace detail を on-demand に開く導線を追加し、HUD 内に大きな詳細 page を抱え込まない構造にした。
+- `03_hud-layer-model.png`: Run Detail は Bottom Console の detail surface として残しつつ、Canvas selection / notification / always-on HUD から呼び出される補助レイヤーへ位置づけた。
+- `12_minimal-always-on-hud.png`: 常時表示は `T` の短い trace action に留め、run selector と replay 本文は on-demand console へ逃がした。
+- `13_dark-theme-finished-canvas.png`: Run Detail の replay controls / focus highlight / deep link row を dark HUD surface として追加した。
+
+### Existing behavior preserved
+
+- mock-only execution、既存 localStorage key、JSON import/export、Run/Reset/Undo/Redo、Palette/Detail/Console/MiniMap/Notification/Density toggles、selected node HUD、selected edge HUD、semantic focus、zoom mode は維持。
+- run selection / selected edge state は session React state のみで保持し、新規 localStorage key は追加していない。
+- audit replay は既存 `WorkflowRunRecord.traceAudit` の safe snapshot から `RunTrace` を復元するだけで、raw logs、prompt 本文、raw payload、artifact 本文、credential/token/password/API key は表示・保存しない。
+
+### Validation
+
+- `npm.cmd run typecheck`: pass
+- `npm.cmd run lint`: pass
+- `npm.cmd run build`: pass
+- Vite chunk-size warning のみ発生。既存許容警告として扱った。
+- `npx.cmd tsx` direct validation: `createSampleWorkflow(...)` -> `buildRunTrace(...)` -> `createRunTraceAuditSummary(...)` -> `createWorkflowRunRecord(...)` -> `normalizeRunHistory(...)` -> `buildRunDetailReplayView(...)` -> `summarizeRunDetail(...)` -> `validateWorkflowImport(...)` が pass。`selectedSource: run-history`, `focusType: connection`, `stepCount: 12`, `evidenceCount: 13`, `options: 2` を確認した。
+
+### Browser QA
+
+- Preview: `http://127.0.0.1:4186/`
+- Codex in-app Browser route はこのセッションで取得できなかったため、Microsoft Edge headless + CDP で実ブラウザ DOM / interaction QA を実施した。
+- Initial canvas: command HUD / React Flow canvas / 12 nodes / 13 edges / MiniMap / `zoom-mode-overview` / `hud-density-balanced` / external asset なしを確認。
+- Always-on trace: `T` quick action で Bottom Console が開き、`RunDetailPanel`、`Replay source` selector、current trace replay line が表示されることを確認。
+- Node deep link: React Flow node click で `SelectedObjectHud` が出ること、Run Detail 内の `Node` deep link から node HUD selection へ戻ることを確認。
+- Edge deep link: React Flow edge click で `SelectedEdgeHud` が出ること、`Open trace` で Run Detail が edge focus になり、`Edge` deep link から selected edge HUD へ戻ることを確認。
+- Run: `Run` で実行し、完了後 `失敗`, `history 1`, `trace 32` を確認。
+- Notification replay: `N` -> 履歴タブ -> `Replay` で run history の safe audit snapshot が Run Detail に選択され、`selectedOption` が run id、source label が `durable audit snapshot / events 32` になることを確認。
+- Browser console errors/warnings: none captured
+- External script/link/image assets outside localhost: none captured
+- QA screenshot: `.codex-logs/run-detail-replay-qa.png`
+
+### Remaining gaps
+
+- Run Detail の replay は safe `traceAudit` snapshot の読み替えであり、時系列再生 engine、step-by-step animation、multi-run diff、edge-level durable route replay ではない。
+- run selection は session state であり、URL deep link や persisted run inspector preference は未実装。
+- edge deep link は `WorkflowConnection` 単位の選択へ戻す導線であり、edge-level audit event の個別選択や route event scrubber は未実装。
+
+### Next recommended slice
+
+1. Run Detail に multi-run comparison / diff view を追加する。
+2. Runtime edge semantics を connection condition model / retry policy editor / edge-level audit events へ拡張する。
+3. Notification bundle を既読/ack/pin 付きの durable notification model へ拡張する（既存 localStorage key 方針を設計してから）。
+4. Bottom Console の重複タブを整理し、Workflow Library / Templates を Palette drawer 側へ昇格する。
+
+---
+
+## Phase UI-2h: HUD History / Notification Bundle / Density Settings
+
+- Branch: `codex/selection-overlay-minimal-hud`
+- Date: 2026-06-02
+- Model gate: 「ユーザー明示により GPT-5.5 high として継続」を継続記録する。今回の実行時点では、ユーザーが GPT-5.5 xhigh のまま実施と明示したため、その前提で実装した。
+- Scope: UI-2g の次スライスとして、HUD history / notification bundle / density settings を Canvas First の overlay として追加する。新規 localStorage key、backend/API、credential 保存、実 AI API、外部 asset、依存追加は行わない。
+
+### Implemented
+
+- `src/domain/cognitiveHud.ts` に `HudDensityMode`, `HudDensityView`, `HudNotificationBundleView`, `HudNotificationItem`, `HudHistoryEntry` を追加した。
+- `buildHudDensityView(...)`, `getNextHudDensityMode(...)`, `buildHudNotificationBundle(...)` を pure helper として追加し、`HudSnapshot`, `CentralHudView`, `RunTrace`, `WorkflowRunRecord[]` から credential-safe な通知/履歴/密度設定 view を導出する。
+- `HudNotificationBundle` を追加し、Canvas 上の `HUD Feed` overlay として通知、Run history、密度設定を小タブで表示する。
+- `CanvasCommandHud` に `N` 通知/履歴 toggle と `Q/B/D` density cycle を追加した。常時 HUD は小 chip と短い icon-like button のまま維持した。
+- `GameHudShell` は session state のみで通知 HUD 開閉と density mode を管理する。Palette/Detail を開くと通知 HUD を閉じ、Canvas First の重なりを抑える。
+- `ReactFlowCanvas` の HUD collision reserved rect に notification bundle を追加し、選択 node/edge HUD が通知 overlay を避けるようにした。
+- `src/index.css` に dark translucent notification HUD、履歴 list、density settings、quiet/deep density class を追加した。
+
+### Design asset alignment
+
+- `03_hud-layer-model.png`: HUD を単一 panel ではなく、always-on / notification / selected overlay の複数層に分けた。
+- `11_selection-overlay.png`: notification bundle を canvas 上の一時 overlay として扱い、selected HUD と collision する場合は placement 側で避ける。
+- `12_minimal-always-on-hud.png`: always-on は `N` と `Q/B/D` の短い操作だけにし、本文は on-demand HUD へ逃がした。
+- `13_dark-theme-finished-canvas.png`: notification/history/settings も暗色半透明 HUD に統一した。
+
+### Existing behavior preserved
+
+- mock-only execution、既存 localStorage key、JSON import/export、Run/Reset/Undo/Redo、Palette/Detail/Console/MiniMap toggles、selected node HUD、selected edge HUD、semantic focus、zoom mode は維持。
+- density / notification open state は session React state のみで保持し、新規 localStorage key は追加していない。
+- HUD notification / history / copy summary は run counts、status、evidence count、signal summary の派生情報に限定し、raw `node.config`、prompt 本文、raw payload、artifact 本文、credential/token/password/API key は含めない。
+
+### Validation
+
+- `npm.cmd run typecheck`: pass
+- `npm.cmd run lint`: pass
+- `npm.cmd run build`: pass
+- Vite chunk-size warning のみ発生。既存許容警告として扱った。
+- `npx.cmd tsx` direct validation: `createSampleWorkflow(...)` -> `validateWorkflowImport(...)` -> `createWorkflowBundle(...)` -> `validateImportBundle(...)` が pass。`buildHudNotificationBundle(...)` と `buildHudDensityView(...)` も import 経路で確認した（12 nodes / 13 connections / notifications 3 / density deep）。
+
+### Browser QA
+
+- Preview: `http://127.0.0.1:4185/`
+- Codex in-app Browser route はこのセッションで取得できなかったため、Microsoft Edge headless + CDP で実ブラウザ DOM / interaction QA を実施した。
+- Initial canvas: command HUD / React Flow canvas / 12 nodes / 13 edges / MiniMap / `hud-density-balanced` / external asset なしを確認。
+- Notification HUD: `N` toggle で `HudNotificationBundle` が開き、通知 / 履歴 / 密度タブを確認。履歴なし状態、density settings、copy summary 導線を確認。
+- Density: settings の `Cycle density` で `hud-density-balanced` -> `hud-density-deep` と HUD chip `HUD Deep` への切替を確認。
+- MiniMap / Palette / Detail / Console toggles: open / close と相互排他の挙動を確認。
+- Selected node HUD: node click で概要/設定/入出力/履歴タブ付き HUD を確認。
+- Selected edge HUD: edge click で runtime / observed / source step / target step / evidence / trace を確認。
+- Run: `Run` で実行中表示へ入り、完了後 `失敗`, `history 1`, `trace 32`, `edge-runtime-observed 7`, `edge-runtime-blocked 3`, `edge-runtime-health-watch 3` を確認。
+- Reset: `Reset` 後に `準備完了`, `audit 32`, `semantic-focus-bottleneck` へ戻ることを確認。
+- JSON import/export: in-browser download/file picker は直接扱わず、DOM 導線の存在と direct code-path validation で補完した。
+- Browser console errors/warnings: none captured
+- External script/link/image assets outside localhost: none captured
+
+### Remaining gaps
+
+- HUD density は session state であり、ユーザー設定として永続化する product settings model は未実装。
+- Notification bundle は current HUD/run-history からの read-only projection であり、通知の既読/未読、pin、ack、durable notification log は未実装。
+- Critical short-tone audio、assistant non-text channel、edge-level durable replay、multi-run comparison は未実装。
+
+### Next recommended slice
+
+1. Run Detail に audit replay / run selection / node and edge deep link を追加する。
+2. Notification bundle を既読/ack/pin 付きの durable notification model へ拡張する（既存 localStorage key 方針を設計してから）。
+3. Runtime edge semantics を connection condition model / retry policy editor / edge-level audit events へ拡張する。
+4. Bottom Console の重複タブを整理し、Workflow Library / Templates を Palette drawer 側へ昇格する。
+
+---
+
 ## Phase UI-2g: Runtime-backed Edge Semantics
 
 - Branch: `codex/selection-overlay-minimal-hud`

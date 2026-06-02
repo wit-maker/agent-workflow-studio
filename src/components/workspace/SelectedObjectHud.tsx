@@ -10,6 +10,7 @@ type SelectedObjectHudProps = {
   view: SelectedNodeHudView | null
   onRunSelected: () => void
   onOpenDetail: () => void
+  onOpenRunDetail: () => void
   onMoveRight: () => void
   onDeleteSelected: () => void
   anchor?: CanvasHudAnchor | null
@@ -29,6 +30,7 @@ export function SelectedObjectHud({
   view,
   onRunSelected,
   onOpenDetail,
+  onOpenRunDetail,
   onMoveRight,
   onDeleteSelected,
   anchor,
@@ -259,6 +261,9 @@ export function SelectedObjectHud({
         </button>
         <button type="button" className="icon-button" onClick={onOpenDetail}>
           Open detail
+        </button>
+        <button type="button" className="icon-button" onClick={onOpenRunDetail}>
+          Open trace
         </button>
         <button type="button" className="icon-button" onClick={onMoveRight}>
           Move right

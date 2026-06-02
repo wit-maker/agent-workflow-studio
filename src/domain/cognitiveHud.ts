@@ -37,6 +37,7 @@ import type {
   WorkflowConnection,
   WorkflowNode,
 } from './workflow'
+import type { WorkflowRunRecord, WorkflowRunStatus } from './runHistory'
 import type { RunStep, RunTrace } from './runTrace'
 import { formatEvidenceSummary } from './runStepEvidence'
 
@@ -242,6 +243,7 @@ export type CanvasHudCollisionState = {
   paletteOpen: boolean
   detailOpen: boolean
   consoleOpen: boolean
+  notificationOpen: boolean
   miniMapVisible: boolean
   nodeHudSize: CanvasHudSize | null
   edgeHudSize: CanvasHudSize | null
@@ -296,6 +298,64 @@ export type CentralHudView = {
   focusLabel: string | null
   sourceLabel: string
   signalCount: number
+}
+
+export type HudDensityMode = 'quiet' | 'balanced' | 'deep'
+
+export type HudDangerVisibility = 'critical-only' | 'attention' | 'all'
+
+export type HudDensityView = {
+  mode: HudDensityMode
+  label: string
+  shortLabel: string
+  description: string
+  className: string
+  signalLimit: number
+  historyLimit: number
+  dangerVisibility: HudDangerVisibility
+  dangerVisibilityLabel: string
+  collapsePolicy: string
+}
+
+export type HudNotificationTone = HudPriority | 'info'
+
+export type HudNotificationItem = {
+  id: string
+  tone: HudNotificationTone
+  alertLevel: HudAlertLevel
+  title: string
+  detail: string
+  sourceLabel: string
+  targetType: HudFocusTargetType
+  targetId: string | null
+  targetLabel: string | null
+}
+
+export type HudHistoryEntry = {
+  id: string
+  runId: string
+  title: string
+  status: WorkflowRunStatus
+  statusLabel: string
+  modeLabel: string
+  summary: string
+  startedAtLabel: string
+  durationLabel: string
+  evidenceCount: number
+  issueCount: number
+}
+
+export type HudNotificationBundleView = {
+  density: HudDensityView
+  headline: string
+  statusLine: string
+  notificationItems: HudNotificationItem[]
+  hiddenNotificationCount: number
+  historyEntries: HudHistoryEntry[]
+  hiddenHistoryCount: number
+  latestRunSummary: string
+  evidenceSummary: string
+  safeCopySummary: string
 }
 
 export type ConnectionValidationSummary = {
@@ -1152,6 +1212,160 @@ export function buildCentralHudView(options: {
   }
 }
 
+export function buildHudDensityView(mode: HudDensityMode): HudDensityView {
+  const views: Record<HudDensityMode, HudDensityView> = {
+    quiet: {
+      mode: 'quiet',
+      label: 'Quiet',
+      shortLabel: 'Q',
+      description: '常時表示を最小化し、critical と現在フォーカスだけを優先します。',
+      className: 'hud-density-quiet',
+      signalLimit: 2,
+      historyLimit: 3,
+      dangerVisibility: 'critical-only',
+      dangerVisibilityLabel: 'Critical only',
+      collapsePolicy: '通常時は圧縮、L4 以上のみ展開候補にします。',
+    },
+    balanced: {
+      mode: 'balanced',
+      label: 'Balanced',
+      shortLabel: 'B',
+      description: '通知、履歴、選択 HUD の密度を標準にします。',
+      className: 'hud-density-balanced',
+      signalLimit: 4,
+      historyLimit: 5,
+      dangerVisibility: 'attention',
+      dangerVisibilityLabel: 'Attention',
+      collapsePolicy: 'L2 以上と直近履歴をまとめ、詳細は on-demand に逃がします。',
+    },
+    deep: {
+      mode: 'deep',
+      label: 'Deep',
+      shortLabel: 'D',
+      description: '監査と診断向けに通知と履歴を多めに表示します。',
+      className: 'hud-density-deep',
+      signalLimit: 8,
+      historyLimit: 8,
+      dangerVisibility: 'all',
+      dangerVisibilityLabel: 'All levels',
+      collapsePolicy: '低優先度も表示し、履歴と evidence count を濃く見せます。',
+    },
+  }
+
+  return views[mode]
+}
+
+export function getNextHudDensityMode(mode: HudDensityMode): HudDensityMode {
+  switch (mode) {
+    case 'quiet':
+      return 'balanced'
+    case 'balanced':
+      return 'deep'
+    case 'deep':
+      return 'quiet'
+  }
+}
+
+export function buildHudNotificationBundle(options: {
+  hudSnapshot: HudSnapshot
+  centralHudView: CentralHudView | null
+  runTrace?: RunTrace | null
+  runHistoryRecords?: readonly WorkflowRunRecord[]
+  densityMode?: HudDensityMode
+}): HudNotificationBundleView {
+  const {
+    hudSnapshot,
+    centralHudView,
+    runTrace = null,
+    runHistoryRecords = [],
+    densityMode = 'balanced',
+  } = options
+  const density = buildHudDensityView(densityMode)
+  const centralItem = centralHudView
+    ? [{
+        id: `central:${centralHudView.variant}:${centralHudView.headline}`,
+        tone: centralHudView.priority,
+        alertLevel: centralHudView.alertLevel,
+        title: sanitizeHudText(centralHudView.headline),
+        detail: sanitizeHudText(centralHudView.nextAction),
+        sourceLabel: centralHudView.sourceLabel,
+        targetType: hudSnapshot.focusTargetType,
+        targetId: hudSnapshot.focusTargetId,
+        targetLabel: sanitizeOptionalHudText(centralHudView.focusLabel ?? hudSnapshot.focusTargetLabel),
+      } satisfies HudNotificationItem]
+    : []
+  const signalItems = hudSnapshot.signals.map((signal) => ({
+    id: signal.id,
+    tone: signal.priority,
+    alertLevel: signal.alertLevel,
+    title: sanitizeHudText(signal.title),
+    detail: sanitizeHudText(signal.detail),
+    sourceLabel: hudSignalKindLabels[signal.kind],
+    targetType: signal.targetType,
+    targetId: signal.targetId,
+    targetLabel: sanitizeOptionalHudText(signal.targetLabel),
+  } satisfies HudNotificationItem))
+  const safetyItems = (runTrace?.safetyWarnings ?? []).slice(0, 2).map((warning, index) => ({
+    id: `trace-safety:${index}`,
+    tone: 'watch',
+    alertLevel: 2 as HudAlertLevel,
+    title: 'Trace safety filter',
+    detail: sanitizeHudText(warning),
+    sourceLabel: runTrace?.source === 'run-history' ? 'Audit snapshot' : 'Current trace',
+    targetType: 'storage' as HudFocusTargetType,
+    targetId: runTrace?.runId ?? null,
+    targetLabel: 'Run trace',
+  } satisfies HudNotificationItem))
+  const allNotifications = uniqueHudNotifications([
+    ...centralItem,
+    ...signalItems,
+    ...safetyItems,
+  ])
+  const notificationItems = allNotifications.slice(0, density.signalLimit)
+  const historyRecords = [...runHistoryRecords].reverse()
+  const historyEntries = historyRecords
+    .slice(0, density.historyLimit)
+    .map(buildHudHistoryEntry)
+  const latestRecord = historyRecords[0]
+  const totalEvidenceCount =
+    (runTrace?.steps.reduce((sum, step) => sum + step.evidence.length, 0) ?? 0) +
+    (runTrace?.runEvidence.length ?? 0)
+  const latestRunSummary = latestRecord
+    ? `${formatRunStatusLabel(latestRecord.status)} / ${formatRunModeLabel(latestRecord.mode)} / ${formatDuration(latestRecord.durationMs)}`
+    : '実行履歴なし'
+  const evidenceSummary = runTrace
+    ? `${runTrace.source === 'run-history' ? 'audit' : 'trace'} ${runTrace.auditEventCount ?? totalEvidenceCount} events / evidence ${totalEvidenceCount}`
+    : 'trace なし'
+  const headline = sanitizeHudText(centralHudView?.headline ?? hudSnapshot.summary)
+  const statusLine = [
+    `L${hudSnapshot.alertLevel} ${hudPriorityLabels[hudSnapshot.priority]}`,
+    `signals ${hudSnapshot.signals.length}`,
+    evidenceSummary,
+  ].join(' / ')
+
+  return {
+    density,
+    headline,
+    statusLine,
+    notificationItems,
+    hiddenNotificationCount: Math.max(0, allNotifications.length - notificationItems.length),
+    historyEntries,
+    hiddenHistoryCount: Math.max(0, historyRecords.length - historyEntries.length),
+    latestRunSummary,
+    evidenceSummary,
+    safeCopySummary: [
+      `HUD: ${headline}`,
+      statusLine,
+      `density: ${density.label}`,
+      `danger visibility: ${density.dangerVisibilityLabel}`,
+      `collapse policy: ${density.collapsePolicy}`,
+      `latest run: ${latestRunSummary}`,
+      ...notificationItems.map((item) => `signal: L${item.alertLevel} ${item.title} - ${item.detail}`),
+      ...historyEntries.map((entry) => `history: ${entry.runId} ${entry.statusLabel} ${entry.summary}`),
+    ].join('\n'),
+  }
+}
+
 // ---- Internal ----
 
 const semanticFocusSourceLabels: Record<SemanticFocusSource, string> = {
@@ -1356,6 +1570,105 @@ function createSemanticFocusPath(options: {
   }
 }
 
+function uniqueHudNotifications(items: HudNotificationItem[]): HudNotificationItem[] {
+  const seen = new Set<string>()
+  const result: HudNotificationItem[] = []
+
+  for (const item of items) {
+    const signature = `${item.title}:${item.targetType}:${item.targetId ?? 'none'}`
+    if (seen.has(signature)) {
+      continue
+    }
+    seen.add(signature)
+    result.push(item)
+  }
+
+  return result
+}
+
+function buildHudHistoryEntry(record: WorkflowRunRecord): HudHistoryEntry {
+  const evidenceCount = record.traceAudit?.events.length ?? 0
+  const issueCount = record.errorCount + record.warningCount
+  const statusLabel = formatRunStatusLabel(record.status)
+  const modeLabel = formatRunModeLabel(record.mode)
+
+  return {
+    id: `history:${record.runId}`,
+    runId: record.runId,
+    title: sanitizeHudText(record.workflowTitle || record.workflowId),
+    status: record.status,
+    statusLabel,
+    modeLabel,
+    summary: [
+      `${record.nodeCount} nodes`,
+      `${record.connectionCount} edges`,
+      `${record.logCount} logs`,
+      issueCount > 0 ? `${issueCount} issues` : 'no issues',
+    ].join(' / '),
+    startedAtLabel: formatTimestampCompact(record.startedAt),
+    durationLabel: formatDuration(record.durationMs),
+    evidenceCount,
+    issueCount,
+  }
+}
+
+function formatRunStatusLabel(status: WorkflowRunStatus): string {
+  switch (status) {
+    case 'queued':
+      return '待機列'
+    case 'running':
+      return '実行中'
+    case 'success':
+      return '成功'
+    case 'failed':
+      return '失敗'
+    case 'cancelled':
+      return 'キャンセル'
+    case 'review_required':
+      return '確認待ち'
+  }
+}
+
+function formatRunModeLabel(mode: WorkflowRunRecord['mode']): string {
+  switch (mode) {
+    case 'validate':
+      return 'Validate'
+    case 'mock':
+      return 'Mock'
+    case 'dryRun':
+      return 'Dry run'
+    case 'partial':
+      return 'Partial'
+    case 'full':
+      return 'Full'
+    case 'replay':
+      return 'Replay'
+  }
+}
+
+function formatDuration(durationMs: number | undefined): string {
+  if (typeof durationMs !== 'number' || !Number.isFinite(durationMs)) {
+    return 'duration n/a'
+  }
+  if (durationMs < 1000) {
+    return `${Math.round(durationMs)} ms`
+  }
+  return `${(durationMs / 1000).toFixed(1)} s`
+}
+
+function formatTimestampCompact(value: string): string {
+  const timestamp = Date.parse(value)
+  if (!Number.isFinite(timestamp)) {
+    return 'time n/a'
+  }
+  const date = new Date(timestamp)
+  const month = `${date.getMonth() + 1}`.padStart(2, '0')
+  const day = `${date.getDate()}`.padStart(2, '0')
+  const hour = `${date.getHours()}`.padStart(2, '0')
+  const minute = `${date.getMinutes()}`.padStart(2, '0')
+  return `${month}/${day} ${hour}:${minute}`
+}
+
 function uniqueString(value: string, index: number, array: string[]): boolean {
   return array.indexOf(value) === index
 }
@@ -1375,6 +1688,17 @@ function truncateText(value: string, maxLength: number): string {
   const normalized = value.replace(/\s+/g, ' ').trim()
   if (normalized.length <= maxLength) return normalized
   return `${normalized.slice(0, maxLength - 1)}…`
+}
+
+const SENSITIVE_HUD_TEXT_PATTERN =
+  /\b(api[_ -]?key|bearer|credential|password|secret|token)\b|sk-[a-z0-9_-]+/gi
+
+function sanitizeHudText(value: string, maxLength = PREVIEW_MAX_LENGTH): string {
+  return truncateText(value, maxLength).replace(SENSITIVE_HUD_TEXT_PATTERN, '[redacted]')
+}
+
+function sanitizeOptionalHudText(value: string | null): string | null {
+  return value ? sanitizeHudText(value) : null
 }
 
 function summarizePorts(

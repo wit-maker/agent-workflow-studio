@@ -138,6 +138,9 @@ const MINI_MAP_WIDTH = 220
 const MINI_MAP_HEIGHT = 138
 const MINI_MAP_RIGHT = 18
 const MINI_MAP_BOTTOM = 72
+const NOTIFICATION_BUNDLE_WIDTH = 390
+const NOTIFICATION_BUNDLE_HEIGHT = 360
+const NOTIFICATION_BUNDLE_TOP = 66
 const CANVAS_CONTROLS_WIDTH = 42
 const CANVAS_CONTROLS_HEIGHT = 96
 
@@ -408,6 +411,16 @@ function buildReservedHudRects(
       y: panelSize.top + Math.max(HUD_TOP_SAFE_ZONE, panelSize.height - MINI_MAP_BOTTOM - MINI_MAP_HEIGHT),
       width: MINI_MAP_WIDTH,
       height: MINI_MAP_HEIGHT,
+    })
+  }
+
+  if (hudCollisionState.notificationOpen) {
+    rects.push({
+      id: 'notification-bundle',
+      x: panelSize.left + 14,
+      y: panelSize.top + NOTIFICATION_BUNDLE_TOP,
+      width: Math.min(NOTIFICATION_BUNDLE_WIDTH, Math.max(0, panelSize.width - 28)),
+      height: Math.min(NOTIFICATION_BUNDLE_HEIGHT, Math.max(0, panelSize.height - NOTIFICATION_BUNDLE_TOP - 18)),
     })
   }
 
@@ -686,6 +699,7 @@ export function ReactFlowCanvas({
         reservedRectFromElement(panelRect, 'palette-drawer', shell.querySelector('.game-hud-palette-drawer.open')),
         reservedRectFromElement(panelRect, 'detail-drawer', shell.querySelector('.game-hud-detail-drawer.open')),
         reservedRectFromElement(panelRect, 'minimap', minimapElement),
+        reservedRectFromElement(panelRect, 'notification-bundle', shell.querySelector('.hud-notification-bundle.open')),
       ])
     },
     [hudCollisionState],

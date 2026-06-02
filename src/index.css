@@ -2788,8 +2788,10 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
+.run-detail-source-field,
 .run-detail-mode-field {
   display: flex;
   align-items: center;
@@ -2797,11 +2799,26 @@ button:disabled {
   font-size: 0.85rem;
 }
 
+.run-detail-source-field select {
+  width: min(520px, 58vw);
+}
+
 .run-detail-header {
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--surface);
   padding: 12px;
+}
+
+.run-detail-replay-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  color: var(--text-muted);
+  font-family: monospace;
+  font-size: 0.78rem;
 }
 
 .run-detail-stat-row {
@@ -2868,6 +2885,11 @@ button:disabled {
   gap: 8px;
 }
 
+.run-detail-step-focused {
+  border-color: rgba(34, 211, 238, 0.72);
+  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.22), 0 0 18px rgba(34, 211, 238, 0.12);
+}
+
 .run-detail-step-error {
   border-color: var(--color-error, #d9534f);
   background: color-mix(in srgb, var(--color-error, #d9534f) 6%, var(--surface));
@@ -2908,6 +2930,12 @@ button:disabled {
 .run-detail-step-badges {
   display: flex;
   align-items: center;
+  gap: 6px;
+}
+
+.run-detail-deep-link-row {
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
@@ -3962,6 +3990,223 @@ body:has(.game-hud-workspace) #root {
   padding: 8px 12px;
   background: rgba(8, 14, 26, 0.9);
   box-shadow: var(--shadow);
+}
+
+.hud-notification-bundle {
+  position: absolute;
+  top: 66px;
+  left: 14px;
+  z-index: 40;
+  display: grid;
+  width: min(390px, calc(100vw - 28px));
+  max-height: min(560px, calc(100vh - 146px));
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(8, 14, 26, 0.84);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  backdrop-filter: blur(16px);
+  pointer-events: auto;
+}
+
+.hud-notification-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--border);
+  padding: 10px 10px 8px;
+}
+
+.hud-notification-header > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.hud-notification-header strong {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hud-notification-status,
+.hud-notification-summary,
+.hud-notification-empty,
+.hud-notification-overflow,
+.hud-notification-footer {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.hud-notification-tabs {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--border);
+  padding: 8px 10px;
+}
+
+.hud-notification-tabs button {
+  min-height: 28px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 6px;
+  padding: 0 9px;
+  background: rgba(15, 23, 42, 0.76);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.hud-notification-tabs button.active {
+  border-color: rgba(103, 232, 249, 0.52);
+  color: var(--text);
+  background: rgba(8, 47, 73, 0.72);
+}
+
+.hud-notification-panel {
+  min-height: 0;
+  max-height: min(382px, calc(100vh - 276px));
+  overflow: auto;
+  padding: 10px;
+}
+
+.hud-notification-list,
+.hud-history-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hud-notification-item,
+.hud-history-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-left: 3px solid rgba(148, 163, 184, 0.44);
+  border-radius: 8px;
+  padding: 8px;
+  background: rgba(15, 23, 42, 0.58);
+}
+
+.hud-notification-item > div,
+.hud-history-entry > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.hud-notification-item strong,
+.hud-history-entry strong {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hud-notification-item p,
+.hud-history-entry p {
+  margin: 0;
+  color: rgba(203, 213, 225, 0.84);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.hud-history-entry p,
+.hud-history-meta {
+  grid-column: 1 / -1;
+}
+
+.hud-notification-source,
+.hud-notification-target,
+.hud-history-entry span,
+.hud-history-meta {
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+  font-size: 10.5px;
+}
+
+.hud-notification-critical,
+.hud-notification-alert,
+.run-status-failed {
+  border-left-color: var(--red);
+  background: rgba(127, 29, 29, 0.22);
+}
+
+.hud-notification-watch,
+.run-status-review_required,
+.run-status-cancelled {
+  border-left-color: var(--amber);
+  background: rgba(120, 53, 15, 0.18);
+}
+
+.hud-notification-normal,
+.hud-notification-info,
+.run-status-success {
+  border-left-color: var(--green);
+}
+
+.hud-density-panel dl {
+  display: grid;
+  gap: 7px;
+  margin: 0 0 10px;
+}
+
+.hud-density-panel div {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.hud-density-panel dt {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.hud-density-panel dd {
+  margin: 0;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.hud-notification-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+  padding: 8px 10px;
+}
+
+.hud-density-quiet .canvas-command-hud-status {
+  max-width: min(620px, 54vw);
+}
+
+.hud-density-quiet .mini-hud-chip:nth-of-type(n + 6) {
+  display: none;
+}
+
+.hud-density-quiet .cognitive-hud-overlay-action,
+.hud-density-quiet .cognitive-hud-overlay-path {
+  display: none;
+}
+
+.hud-density-deep .canvas-command-hud-status {
+  max-width: min(1040px, 68vw);
+}
+
+.hud-density-deep .hud-notification-bundle {
+  width: min(460px, calc(100vw - 28px));
+  max-height: min(680px, calc(100vh - 112px));
 }
 
 .game-hud-drawer {

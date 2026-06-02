@@ -1,8 +1,15 @@
 import { useState, useMemo } from 'react'
-import type { RunDetailMode, RunDetailSummary, StepEvidenceSummary } from '../domain/runDetail'
-import { summarizeRunDetail } from '../domain/runDetail'
+import type {
+  RunDetailFocusTarget,
+  RunDetailMode,
+  RunDetailSummary,
+  StepEvidenceSummary,
+} from '../domain/runDetail'
+import { buildRunDetailReplayView, summarizeRunDetail } from '../domain/runDetail'
+import type { WorkflowRunRecord } from '../domain/runHistory'
 import type { EvidenceSeverity } from '../domain/runStepEvidence'
 import type { RunTrace } from '../domain/runTrace'
+import type { WorkflowConnection } from '../domain/workflow'
 
 const modeLabels: Record<RunDetailMode, string> = {
   all: '全証拠',
@@ -18,25 +25,71 @@ const severityLabels: Record<EvidenceSeverity, string> = {
 
 type RunDetailPanelProps = {
   runTrace: RunTrace | null
+  runHistoryRecords: WorkflowRunRecord[]
+  connections: WorkflowConnection[]
+  selectedRunId: string | null
+  focusedNodeId?: string | null
+  focusedConnectionId?: string | null
+  onSelectRunId: (runId: string | null) => void
+  onSelectNode: (nodeId: string) => void
+  onSelectConnection: (connectionId: string | null) => void
 }
 
-export function RunDetailPanel({ runTrace }: RunDetailPanelProps) {
+export function RunDetailPanel({
+  runTrace,
+  runHistoryRecords,
+  connections,
+  selectedRunId,
+  focusedNodeId,
+  focusedConnectionId,
+  onSelectRunId,
+  onSelectNode,
+  onSelectConnection,
+}: RunDetailPanelProps) {
   const [mode, setMode] = useState<RunDetailMode>('all')
-  const summary = useMemo(() => summarizeRunDetail(runTrace, mode), [runTrace, mode])
+  const replay = useMemo(
+    () =>
+      buildRunDetailReplayView({
+        currentTrace: runTrace,
+        runHistoryRecords,
+        selectedRunId,
+        focusNodeId: focusedNodeId,
+        focusConnectionId: focusedConnectionId,
+        connections,
+      }),
+    [connections, focusedConnectionId, focusedNodeId, runHistoryRecords, runTrace, selectedRunId],
+  )
+  const summary = useMemo(
+    () => summarizeRunDetail(replay.selectedTrace, mode),
+    [mode, replay.selectedTrace],
+  )
   const sourceLabel =
-    !runTrace
+    !replay.selectedTrace
       ? 'traceなし'
-      : runTrace.source === 'run-history'
-      ? `durable audit snapshot${runTrace.auditEventCount ? ` / events ${runTrace.auditEventCount}` : ''}`
-      : 'current runtime trace / completion時に audit 保存'
+      : replay.selectedTrace.source === 'run-history'
+        ? `durable audit snapshot${replay.selectedTrace.auditEventCount ? ` / events ${replay.selectedTrace.auditEventCount}` : ''}`
+        : 'current runtime trace / completion時に audit 保存'
 
   return (
     <section className="run-detail-panel" aria-label="実行詳細">
       <div className="run-detail-mock-banner" role="note">
-        ⚠ read-only — {sourceLabel} / 実 AI API 未接続
+        ⚠ read-only replay — {sourceLabel} / 実 AI API 未接続
       </div>
 
       <div className="run-detail-controls">
+        <label className="field-label run-detail-source-field">
+          <span>Replay source</span>
+          <select
+            value={replay.selectedOptionId}
+            onChange={(event) => onSelectRunId(event.target.value === 'current' ? null : event.target.value)}
+          >
+            {replay.options.map((option) => (
+              <option key={option.id} value={option.id} disabled={option.disabled}>
+                {option.label} / {option.meta}
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="field-label run-detail-mode-field">
           <span>表示モード</span>
           <select
@@ -52,7 +105,13 @@ export function RunDetailPanel({ runTrace }: RunDetailPanelProps) {
         </label>
       </div>
 
-      <RunDetailHeader summary={summary} runTrace={runTrace} />
+      <RunDetailHeader
+        summary={summary}
+        runTrace={replay.selectedTrace}
+        replaySummary={replay.replaySummary}
+        focusTarget={replay.focusTarget}
+        onSelectConnection={onSelectConnection}
+      />
 
       {summary.safetyWarnings.length > 0 ? (
         <div className="run-detail-safety-banner" role="alert">
@@ -70,7 +129,14 @@ export function RunDetailPanel({ runTrace }: RunDetailPanelProps) {
       ) : (
         <div className="run-detail-step-list">
           {summary.stepEvidence.map((stepSummary) => (
-            <StepEvidenceCard key={stepSummary.stepId ?? `run-level-${stepSummary.runId}`} stepSummary={stepSummary} />
+            <StepEvidenceCard
+              key={stepSummary.stepId ?? `run-level-${stepSummary.runId}`}
+              stepSummary={stepSummary}
+              focusTarget={replay.focusTarget}
+              connections={connections}
+              onSelectNode={onSelectNode}
+              onSelectConnection={onSelectConnection}
+            />
           ))}
         </div>
       )}
@@ -81,11 +147,32 @@ export function RunDetailPanel({ runTrace }: RunDetailPanelProps) {
 type RunDetailHeaderProps = {
   summary: RunDetailSummary
   runTrace: RunTrace | null
+  replaySummary: string
+  focusTarget: RunDetailFocusTarget
+  onSelectConnection: (connectionId: string | null) => void
 }
 
-function RunDetailHeader({ summary, runTrace }: RunDetailHeaderProps) {
+function RunDetailHeader({
+  summary,
+  runTrace,
+  replaySummary,
+  focusTarget,
+  onSelectConnection,
+}: RunDetailHeaderProps) {
   return (
     <div className="run-detail-header">
+      <div className="run-detail-replay-line">
+        <span>{replaySummary}</span>
+        {focusTarget.type === 'connection' && focusTarget.connectionId ? (
+          <button
+            type="button"
+            className="icon-button"
+            onClick={() => onSelectConnection(focusTarget.connectionId)}
+          >
+            Focus edge
+          </button>
+        ) : null}
+      </div>
       <div className="run-detail-stat-row">
         <div className="run-detail-stat">
           <span className="run-detail-stat-label">Run ID</span>
@@ -130,14 +217,34 @@ function RunDetailHeader({ summary, runTrace }: RunDetailHeaderProps) {
 
 type StepEvidenceCardProps = {
   stepSummary: StepEvidenceSummary
+  focusTarget: RunDetailFocusTarget
+  connections: WorkflowConnection[]
+  onSelectNode: (nodeId: string) => void
+  onSelectConnection: (connectionId: string | null) => void
 }
 
-function StepEvidenceCard({ stepSummary }: StepEvidenceCardProps) {
+function StepEvidenceCard({
+  stepSummary,
+  focusTarget,
+  connections,
+  onSelectNode,
+  onSelectConnection,
+}: StepEvidenceCardProps) {
   const severityClass = `run-detail-step-${stepSummary.highestSeverity}`
   const label = stepSummary.nodeTitle ?? stepSummary.stepId ?? stepSummary.runId
+  const isFocused = !!stepSummary.nodeId && focusTarget.nodeIds.includes(stepSummary.nodeId)
+  const relatedConnections = stepSummary.nodeId
+    ? connections
+        .filter(
+          (connection) =>
+            connection.sourceNodeId === stepSummary.nodeId ||
+            connection.targetNodeId === stepSummary.nodeId,
+        )
+        .slice(0, 3)
+    : []
 
   return (
-    <div className={`run-detail-step-card ${severityClass}`}>
+    <div className={`run-detail-step-card ${severityClass} ${isFocused ? 'run-detail-step-focused' : ''}`}>
       <div className="run-detail-step-header">
         <div className="run-detail-step-meta">
           <strong className="run-detail-step-label">{label}</strong>
@@ -155,6 +262,32 @@ function StepEvidenceCard({ stepSummary }: StepEvidenceCardProps) {
           <span className="run-detail-evidence-count">{stepSummary.evidenceCount} 件</span>
         </div>
       </div>
+
+      {stepSummary.nodeId || relatedConnections.length > 0 ? (
+        <div className="run-detail-deep-link-row" aria-label="Run Detail deep links">
+          {stepSummary.nodeId ? (
+            <button
+              type="button"
+              className="hud-icon-button"
+              onClick={() => onSelectNode(stepSummary.nodeId as string)}
+              title="キャンバス上の node を選択"
+            >
+              Node
+            </button>
+          ) : null}
+          {relatedConnections.map((connection) => (
+            <button
+              key={connection.id}
+              type="button"
+              className={`hud-icon-button ${focusTarget.connectionId === connection.id ? 'active' : ''}`}
+              onClick={() => onSelectConnection(connection.id)}
+              title={`${connection.sourceNodeId} -> ${connection.targetNodeId}`}
+            >
+              Edge
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       <div className="run-detail-evidence-kinds">
         {stepSummary.evidenceKinds.map((kind) => (

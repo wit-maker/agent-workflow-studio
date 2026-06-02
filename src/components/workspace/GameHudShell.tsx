@@ -1,9 +1,15 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import {
   buildCentralHudView,
+  buildHudDensityView,
+  buildHudNotificationBundle,
   buildSemanticFocusPathView,
   buildZoomHudView,
+  getNextHudDensityMode,
   type CentralHudView,
+  type HudDensityMode,
+  type HudDensityView,
+  type HudNotificationBundleView,
   type HudSnapshot,
   type SemanticFocusPathView,
   type ZoomHudView,
@@ -31,6 +37,7 @@ import { CanvasCommandHud } from './CanvasCommandHud'
 import { CognitiveWorkflowCanvas } from './CognitiveWorkflowCanvas'
 import { CriticalOverlay } from './CriticalOverlay'
 import { DetailDrawerDock } from './DetailDrawerDock'
+import { HudNotificationBundle } from './HudNotificationBundle'
 import { WorkspaceLeftRail } from './WorkspaceLeftRail'
 import { WorkspaceRightPanel } from './WorkspaceRightPanel'
 
@@ -54,6 +61,8 @@ export type GameHudShellProps = {
   runTrace: RunTrace | null
   runHistoryRecords: WorkflowRunRecord[]
   runHistoryCount: number
+  selectedConnectionId: string | null
+  selectedRunDetailRunId: string | null
   onRun: () => void
   onRunSelected: () => void
   onRunFromSelected: () => void
@@ -66,6 +75,9 @@ export type GameHudShellProps = {
   onImportJson: (file: File) => void
   onChangeCanvasMode: (mode: CanvasMode) => void
   onSelectNode: (nodeId: string) => void
+  onSelectConnectionId: (connectionId: string | null) => void
+  onSelectRunDetailRunId: (runId: string | null) => void
+  onOpenRunDetail: () => void
   onAddNode: (part: WorkflowNode) => void
   onSaveNode: (
     nodeId: string,
@@ -102,11 +114,18 @@ export type GameHudShellProps = {
 }
 
 export function GameHudShell(props: GameHudShellProps) {
+  const { onOpenRunDetail } = props
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [detailOpen, setDetailOpen] = useState(false)
   const [consoleOpen, setConsoleOpen] = useState(false)
   const [miniMapVisible, setMiniMapVisible] = useState(true)
+  const [notificationOpen, setNotificationOpen] = useState(false)
+  const [hudDensityMode, setHudDensityMode] = useState<HudDensityMode>('balanced')
   const [zoomHud, setZoomHud] = useState<ZoomHudView>(() => buildZoomHudView(1))
+  const hudDensity = useMemo<HudDensityView>(
+    () => buildHudDensityView(hudDensityMode),
+    [hudDensityMode],
+  )
 
   const handleZoomChange = useCallback((next: ZoomHudView) => {
     setZoomHud((current) =>
@@ -116,18 +135,38 @@ export function GameHudShell(props: GameHudShellProps) {
   const togglePalette = useCallback(() => {
     setPaletteOpen((value) => !value)
     setDetailOpen(false)
+    setNotificationOpen(false)
   }, [])
   const toggleDetail = useCallback(() => {
     setDetailOpen((value) => !value)
     setPaletteOpen(false)
+    setNotificationOpen(false)
   }, [])
+  const toggleNotification = useCallback(() => {
+    setNotificationOpen((value) => {
+      const next = !value
+      if (next) {
+        setPaletteOpen(false)
+        setDetailOpen(false)
+      }
+      return next
+    })
+  }, [])
+  const cycleHudDensity = useCallback(() => {
+    setHudDensityMode((current) => getNextHudDensityMode(current))
+  }, [])
+  const openRunDetail = useCallback(() => {
+    setConsoleOpen(true)
+    onOpenRunDetail()
+  }, [onOpenRunDetail])
   const hudSurfaceState = useMemo(
     () => ({
       paletteOpen,
       detailOpen,
       consoleOpen,
+      notificationOpen,
     }),
-    [consoleOpen, detailOpen, paletteOpen],
+    [consoleOpen, detailOpen, notificationOpen, paletteOpen],
   )
   const semanticFocusPath = useMemo<SemanticFocusPathView | null>(
     () =>
@@ -158,16 +197,29 @@ export function GameHudShell(props: GameHudShellProps) {
       }),
     [props.hudSnapshot, semanticFocusPath],
   )
+  const notificationBundle = useMemo<HudNotificationBundleView>(
+    () =>
+      buildHudNotificationBundle({
+        hudSnapshot: props.hudSnapshot,
+        centralHudView,
+        runTrace: props.runTrace,
+        runHistoryRecords: props.runHistoryRecords,
+        densityMode: hudDensityMode,
+      }),
+    [centralHudView, hudDensityMode, props.hudSnapshot, props.runHistoryRecords, props.runTrace],
+  )
 
   const workspaceClassName = [
     'cognitive-workspace',
     'game-hud-workspace',
     zoomHud.className,
+    hudDensity.className,
     semanticFocusPath ? `semantic-focus-${semanticFocusPath.source}` : '',
     paletteOpen ? 'palette-open' : '',
     detailOpen ? 'detail-open' : '',
     consoleOpen ? 'console-open' : '',
     miniMapVisible ? 'minimap-open' : '',
+    notificationOpen ? 'notification-open' : '',
   ].filter(Boolean).join(' ')
 
   return (
@@ -178,6 +230,7 @@ export function GameHudShell(props: GameHudShellProps) {
           canvasMode={props.canvasMode}
           selectedNodeId={props.selectedNodeId}
           selectedNode={props.selectedNode}
+          selectedConnectionId={props.selectedConnectionId}
           connectionValidation={props.connectionValidation}
           executionGraph={props.executionGraph}
           hudSnapshot={props.hudSnapshot}
@@ -188,8 +241,10 @@ export function GameHudShell(props: GameHudShellProps) {
           hudSurfaceState={hudSurfaceState}
           onZoomHudChange={handleZoomChange}
           onOpenDetail={() => setDetailOpen(true)}
+          onOpenRunDetail={openRunDetail}
           onRunSelected={props.onRunSelected}
           onSelectNode={props.onSelectNode}
+          onSelectConnectionId={props.onSelectConnectionId}
           onCreateConnection={props.onCreateConnectionDraft}
           onDeleteConnection={props.onDeleteConnection}
           onDeleteNode={props.onDeleteNode}
@@ -207,15 +262,21 @@ export function GameHudShell(props: GameHudShellProps) {
           centralHudView={centralHudView}
           runTrace={props.runTrace}
           runHistoryCount={props.runHistoryCount}
+          hudDensity={hudDensity}
+          notificationBundle={notificationBundle}
           zoomHud={zoomHud}
           paletteOpen={paletteOpen}
           detailOpen={detailOpen}
           miniMapVisible={miniMapVisible}
           consoleOpen={consoleOpen}
+          notificationOpen={notificationOpen}
           onTogglePalette={togglePalette}
           onToggleDetail={toggleDetail}
           onToggleMiniMap={() => setMiniMapVisible((value) => !value)}
           onToggleConsole={() => setConsoleOpen((value) => !value)}
+          onToggleNotification={toggleNotification}
+          onCycleHudDensity={cycleHudDensity}
+          onOpenRunDetail={openRunDetail}
           onRun={props.onRun}
           onRunSelected={props.onRunSelected}
           onRunFromSelected={props.onRunFromSelected}
@@ -228,6 +289,22 @@ export function GameHudShell(props: GameHudShellProps) {
           onImportJson={props.onImportJson}
           onChangeCanvasMode={props.onChangeCanvasMode}
           onResetPositions={props.onResetReactFlowPositions}
+        />
+
+        <HudNotificationBundle
+          view={notificationBundle}
+          open={notificationOpen}
+          onClose={() => setNotificationOpen(false)}
+          onSelectNode={(nodeId) => {
+            props.onSelectNode(nodeId)
+            setNotificationOpen(false)
+          }}
+          onSelectRun={(runId) => {
+            props.onSelectRunDetailRunId(runId)
+            openRunDetail()
+            setNotificationOpen(false)
+          }}
+          onCycleHudDensity={cycleHudDensity}
         />
 
         <div className="game-hud-alert-stack" aria-live="polite">

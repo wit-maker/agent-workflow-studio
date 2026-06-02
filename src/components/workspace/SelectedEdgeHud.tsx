@@ -10,6 +10,7 @@ type SelectedEdgeHudProps = {
   onSelectSource: (nodeId: string) => void
   onSelectTarget: (nodeId: string) => void
   onDeleteEdge: (connectionId: string) => void
+  onOpenRunDetail: () => void
   anchor?: CanvasHudAnchor | null
   onMeasuredSizeChange?: (size: CanvasHudSize | null) => void
 }
@@ -19,6 +20,7 @@ export function SelectedEdgeHud({
   onSelectSource,
   onSelectTarget,
   onDeleteEdge,
+  onOpenRunDetail,
   anchor,
   onMeasuredSizeChange,
 }: SelectedEdgeHudProps) {
@@ -163,6 +165,9 @@ export function SelectedEdgeHud({
         </button>
         <button type="button" className="icon-button" onClick={copySummary}>
           {copied ? 'Copied' : 'Copy edge summary'}
+        </button>
+        <button type="button" className="icon-button" onClick={onOpenRunDetail}>
+          Open trace
         </button>
         <button type="button" className="icon-button danger-action" onClick={deleteEdge}>
           Delete edge

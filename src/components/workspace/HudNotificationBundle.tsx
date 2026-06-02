@@ -1,0 +1,205 @@
+import { useState } from 'react'
+import type { HudNotificationBundleView, HudNotificationItem } from '../../domain/cognitiveHud'
+
+type HudNotificationBundleProps = {
+  view: HudNotificationBundleView
+  open: boolean
+  onClose: () => void
+  onSelectNode: (nodeId: string) => void
+  onSelectRun: (runId: string) => void
+  onCycleHudDensity: () => void
+}
+
+type HudNotificationTab = 'signals' | 'history' | 'settings'
+
+const tabLabels: Record<HudNotificationTab, string> = {
+  signals: '通知',
+  history: '履歴',
+  settings: '密度',
+}
+
+export function HudNotificationBundle({
+  view,
+  open,
+  onClose,
+  onSelectNode,
+  onSelectRun,
+  onCycleHudDensity,
+}: HudNotificationBundleProps) {
+  const [tab, setTab] = useState<HudNotificationTab>('signals')
+  const [copied, setCopied] = useState(false)
+
+  if (!open) {
+    return null
+  }
+
+  function copySummary() {
+    if (!navigator.clipboard) {
+      return
+    }
+    void navigator.clipboard.writeText(view.safeCopySummary).then(() => {
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1600)
+    })
+  }
+
+  return (
+    <aside
+      className={`hud-notification-bundle open ${view.density.className}`}
+      aria-label="HUD通知と履歴"
+    >
+      <header className="hud-notification-header">
+        <div>
+          <span className="eyebrow">HUD Feed</span>
+          <strong>{view.headline}</strong>
+          <span className="hud-notification-status">{view.statusLine}</span>
+        </div>
+        <button type="button" className="hud-icon-button" onClick={onClose} title="通知HUDを閉じる">
+          Close
+        </button>
+      </header>
+
+      <nav className="hud-notification-tabs" aria-label="HUD通知タブ">
+        {(['signals', 'history', 'settings'] as const).map((item) => (
+          <button
+            key={item}
+            type="button"
+            className={tab === item ? 'active' : ''}
+            onClick={() => setTab(item)}
+          >
+            {tabLabels[item]}
+          </button>
+        ))}
+      </nav>
+
+      {tab === 'signals' ? (
+        <section className="hud-notification-panel" aria-label="HUD通知">
+          {view.notificationItems.length > 0 ? (
+            <ul className="hud-notification-list">
+              {view.notificationItems.map((item) => (
+                <HudNotificationRow
+                  key={item.id}
+                  item={item}
+                  onSelectNode={onSelectNode}
+                />
+              ))}
+            </ul>
+          ) : (
+            <p className="hud-notification-empty">現在表示すべき通知はありません。</p>
+          )}
+          {view.hiddenNotificationCount > 0 ? (
+            <p className="hud-notification-overflow">
+              +{view.hiddenNotificationCount} signals collapsed by {view.density.label}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
+      {tab === 'history' ? (
+        <section className="hud-notification-panel" aria-label="HUD履歴">
+          <p className="hud-notification-summary">{view.latestRunSummary}</p>
+          {view.historyEntries.length > 0 ? (
+            <ul className="hud-history-list">
+              {view.historyEntries.map((entry) => (
+                <li key={entry.id} className={`hud-history-entry run-status-${entry.status}`}>
+                  <div>
+                    <strong>{entry.statusLabel}</strong>
+                    <span>{entry.modeLabel} / {entry.durationLabel}</span>
+                  </div>
+                  <p>{entry.summary}</p>
+                  <span className="hud-history-meta">
+                    {entry.startedAtLabel} / audit {entry.evidenceCount}
+                  </span>
+                  <button
+                    type="button"
+                    className="hud-icon-button"
+                    onClick={() => onSelectRun(entry.runId)}
+                    disabled={entry.evidenceCount === 0}
+                    title="Run Detail で audit replay を開く"
+                  >
+                    Replay
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="hud-notification-empty">Run history はまだありません。</p>
+          )}
+          {view.hiddenHistoryCount > 0 ? (
+            <p className="hud-notification-overflow">
+              +{view.hiddenHistoryCount} runs collapsed by {view.density.label}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
+      {tab === 'settings' ? (
+        <section className="hud-notification-panel hud-density-panel" aria-label="HUD密度設定">
+          <dl>
+            <div>
+              <dt>Density</dt>
+              <dd>{view.density.label}</dd>
+            </div>
+            <div>
+              <dt>Danger</dt>
+              <dd>{view.density.dangerVisibilityLabel}</dd>
+            </div>
+            <div>
+              <dt>Collapse</dt>
+              <dd>{view.density.collapsePolicy}</dd>
+            </div>
+            <div>
+              <dt>Limits</dt>
+              <dd>
+                signals {view.density.signalLimit} / history {view.density.historyLimit}
+              </dd>
+            </div>
+          </dl>
+          <button type="button" className="primary-button" onClick={onCycleHudDensity}>
+            Cycle density
+          </button>
+        </section>
+      ) : null}
+
+      <footer className="hud-notification-footer">
+        <span>{view.evidenceSummary}</span>
+        <button type="button" className="icon-button" onClick={copySummary}>
+          {copied ? 'Copied' : 'Copy HUD summary'}
+        </button>
+      </footer>
+    </aside>
+  )
+}
+
+function HudNotificationRow({
+  item,
+  onSelectNode,
+}: {
+  item: HudNotificationItem
+  onSelectNode: (nodeId: string) => void
+}) {
+  const canFocusNode = item.targetType === 'node' && item.targetId
+
+  return (
+    <li className={`hud-notification-item hud-notification-${item.tone}`}>
+      <div>
+        <span className="hud-notification-source">
+          L{item.alertLevel} / {item.sourceLabel}
+        </span>
+        <strong>{item.title}</strong>
+        <p>{item.detail}</p>
+        {item.targetLabel ? <span className="hud-notification-target">{item.targetLabel}</span> : null}
+      </div>
+      {canFocusNode ? (
+        <button
+          type="button"
+          className="hud-icon-button"
+          onClick={() => onSelectNode(item.targetId as string)}
+          title="対象ノードへフォーカス"
+        >
+          Go
+        </button>
+      ) : null}
+    </li>
+  )
+}

@@ -76,10 +76,16 @@ type BottomMonitorProps = {
   onResetStorage: () => void
   runHistoryCount: number
   runHistoryRecords: WorkflowRunRecord[]
+  selectedRunDetailRunId: string | null
+  selectedNodeId: string
+  selectedConnectionId: string | null
   hudSnapshot: HudSnapshot
   runTrace: RunTrace | null
   settings: AppSettings
   onChangeActiveTab: (tab: string) => void
+  onSelectRunDetailRunId: (runId: string | null) => void
+  onSelectNode: (nodeId: string) => void
+  onSelectConnectionId: (connectionId: string | null) => void
   onImportBundle: (bundle: {
     workflow: Workflow
     templates: import('../storage/localTemplates').SavedWorkflowTemplate[]
@@ -159,10 +165,16 @@ export function BottomMonitor({
   onResetStorage,
   runHistoryCount,
   runHistoryRecords,
+  selectedRunDetailRunId,
+  selectedNodeId,
+  selectedConnectionId,
   hudSnapshot,
   runTrace,
   settings,
   onChangeActiveTab,
+  onSelectRunDetailRunId,
+  onSelectNode,
+  onSelectConnectionId,
   onImportBundle,
 }: BottomMonitorProps) {
   const activeTab = normalizeMonitorTab(settings.activeTab)
@@ -478,7 +490,17 @@ export function BottomMonitor({
 
         {activeTab === 'RunDetail' ? (
           <div className="run-detail-tab-panel">
-            <RunDetailPanel runTrace={runTrace} />
+            <RunDetailPanel
+              runTrace={runTrace}
+              runHistoryRecords={runHistoryRecords}
+              connections={workflow.connections}
+              selectedRunId={selectedRunDetailRunId}
+              focusedNodeId={selectedNodeId}
+              focusedConnectionId={selectedConnectionId}
+              onSelectRunId={onSelectRunDetailRunId}
+              onSelectNode={onSelectNode}
+              onSelectConnection={onSelectConnectionId}
+            />
           </div>
         ) : null}
       </section>

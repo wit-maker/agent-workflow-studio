@@ -62,6 +62,8 @@ type CognitiveWorkspaceShellProps = {
   runTrace: RunTrace | null
   runHistoryRecords: WorkflowRunRecord[]
   runHistoryCount: number
+  selectedConnectionId: string | null
+  selectedRunDetailRunId: string | null
   checkOutcome: 'PASS' | 'REVIEW' | 'FAIL'
   onRun: () => void
   onRunSelected: () => void
@@ -75,6 +77,9 @@ type CognitiveWorkspaceShellProps = {
   onImportJson: (file: File) => void
   onChangeCanvasMode: (mode: CanvasMode) => void
   onSelectNode: (nodeId: string) => void
+  onSelectConnectionId: (connectionId: string | null) => void
+  onSelectRunDetailRunId: (runId: string | null) => void
+  onOpenRunDetail: () => void
   onAddNode: (part: WorkflowNode) => void
   onSaveNode: (
     nodeId: string,

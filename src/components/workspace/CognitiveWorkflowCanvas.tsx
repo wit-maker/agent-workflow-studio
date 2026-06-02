@@ -43,6 +43,7 @@ type CognitiveWorkflowCanvasProps = {
   canvasMode: CanvasMode
   selectedNodeId: string
   selectedNode: WorkflowNode | undefined
+  selectedConnectionId: string | null
   connectionValidation: ConnectionValidationResult[]
   executionGraph: ExecutionGraph | null
   hudSnapshot: HudSnapshot
@@ -50,11 +51,13 @@ type CognitiveWorkflowCanvasProps = {
   semanticFocusPath: SemanticFocusPathView | null
   centralHudView: CentralHudView | null
   miniMapVisible: boolean
-  hudSurfaceState: Pick<CanvasHudCollisionState, 'paletteOpen' | 'detailOpen' | 'consoleOpen'>
+  hudSurfaceState: Pick<CanvasHudCollisionState, 'paletteOpen' | 'detailOpen' | 'consoleOpen' | 'notificationOpen'>
   onZoomHudChange: (view: ZoomHudView) => void
   onOpenDetail: () => void
+  onOpenRunDetail: () => void
   onRunSelected: () => void
   onSelectNode: (nodeId: string) => void
+  onSelectConnectionId: (connectionId: string | null) => void
   onCreateConnection: (draft: {
     sourceNodeId: string
     sourcePortId: string
@@ -73,6 +76,7 @@ export function CognitiveWorkflowCanvas({
   canvasMode,
   selectedNodeId,
   selectedNode,
+  selectedConnectionId,
   connectionValidation,
   executionGraph,
   hudSnapshot,
@@ -83,15 +87,16 @@ export function CognitiveWorkflowCanvas({
   hudSurfaceState,
   onZoomHudChange,
   onOpenDetail,
+  onOpenRunDetail,
   onRunSelected,
   onSelectNode,
+  onSelectConnectionId,
   onCreateConnection,
   onDeleteConnection,
   onDeleteNode,
   onMoveNode,
   belowCanvasSlot,
 }: CognitiveWorkflowCanvasProps) {
-  const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null)
   const [nodeHudAnchor, setNodeHudAnchor] = useState<CanvasHudAnchor | null>(null)
   const [edgeHudAnchor, setEdgeHudAnchor] = useState<CanvasHudAnchor | null>(null)
   const [nodeHudSize, setNodeHudSize] = useState<CanvasHudSize | null>(null)
@@ -177,7 +182,7 @@ export function CognitiveWorkflowCanvas({
             selectedNodeId={selectedNodeId}
             selectedConnectionId={selectedConnectionId}
             onSelectNode={onSelectNode}
-            onSelectConnectionId={setSelectedConnectionId}
+            onSelectConnectionId={onSelectConnectionId}
             connectionValidation={connectionValidation}
             miniMapVisible={miniMapVisible}
             workflowGroups={workflowGroups}
@@ -196,6 +201,7 @@ export function CognitiveWorkflowCanvas({
           view={visibleSelectedNodeHud}
           onRunSelected={onRunSelected}
           onOpenDetail={onOpenDetail}
+          onOpenRunDetail={onOpenRunDetail}
           onMoveRight={moveSelectedRight}
           onDeleteSelected={() => selectedNode ? onDeleteNode(selectedNode.id) : undefined}
           anchor={canvasMode === 'standard' ? null : nodeHudAnchor}
@@ -205,16 +211,17 @@ export function CognitiveWorkflowCanvas({
           view={selectedEdgeHud}
           onSelectSource={(nodeId) => {
             onSelectNode(nodeId)
-            setSelectedConnectionId(null)
+            onSelectConnectionId(null)
           }}
           onSelectTarget={(nodeId) => {
             onSelectNode(nodeId)
-            setSelectedConnectionId(null)
+            onSelectConnectionId(null)
           }}
           onDeleteEdge={(connectionId) => {
             onDeleteConnection(connectionId)
-            setSelectedConnectionId(null)
+            onSelectConnectionId(null)
           }}
+          onOpenRunDetail={onOpenRunDetail}
           anchor={canvasMode === 'standard' ? null : edgeHudAnchor}
           onMeasuredSizeChange={handleEdgeHudSizeChange}
         />
