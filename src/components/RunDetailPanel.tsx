@@ -94,8 +94,8 @@ export function RunDetailPanel({
     !replay.selectedTrace
       ? 'traceなし'
       : replay.selectedTrace.source === 'run-history'
-        ? `durable audit snapshot${replay.selectedTrace.auditEventCount ? ` / events ${replay.selectedTrace.auditEventCount}` : ''}`
-        : 'current runtime trace / completion時に audit 保存'
+        ? `durable audit snapshot${replay.selectedTrace.auditEventCount ? ` / events ${replay.selectedTrace.auditEventCount}` : ''} / runtime ${replay.selectedTrace.runtimeEvents?.length ?? 0}`
+        : `current runtime trace / runtime ${replay.selectedTrace.runtimeEvents?.length ?? 0} / completion時に audit 保存`
 
   return (
     <section className="run-detail-panel" aria-label="実行詳細">
@@ -259,12 +259,16 @@ function RunComparisonPanel({
             <div>
               <span>Base</span>
               <strong>{comparison.leftRun?.label}</strong>
-              <small>{comparison.leftRun?.startedAtLabel}</small>
+              <small>
+                {comparison.leftRun?.startedAtLabel} / runtime {comparison.leftRun?.runtimeEventCount ?? 0}
+              </small>
             </div>
             <div>
               <span>Compare</span>
               <strong>{comparison.rightRun?.label}</strong>
-              <small>{comparison.rightRun?.startedAtLabel}</small>
+              <small>
+                {comparison.rightRun?.startedAtLabel} / runtime {comparison.rightRun?.runtimeEventCount ?? 0}
+              </small>
             </div>
           </div>
 
@@ -461,6 +465,10 @@ function RunDetailHeader({
         <div className="run-detail-stat">
           <span className="run-detail-stat-label">Audit events</span>
           <strong className="run-detail-stat-value">{runTrace?.auditEventCount ?? 0}</strong>
+        </div>
+        <div className="run-detail-stat">
+          <span className="run-detail-stat-label">Runtime events</span>
+          <strong className="run-detail-stat-value">{runTrace?.runtimeEvents?.length ?? 0}</strong>
         </div>
         <div className="run-detail-stat">
           <span className="run-detail-stat-label">ブリーフィング参照証拠</span>

@@ -74,6 +74,7 @@ export type RunDetailComparisonOption = {
   statusLabel: string
   evidenceCount: number
   auditEventCount: number
+  runtimeEventCount: number
 }
 
 export type RunDetailComparisonRun = {
@@ -86,6 +87,7 @@ export type RunDetailComparisonRun = {
   stepCount: number
   evidenceCount: number
   auditEventCount: number
+  runtimeEventCount: number
   failedStepCount: number
   reviewStepCount: number
   retryCandidateCount: number
@@ -193,13 +195,14 @@ function formatSignedDelta(value: number): string {
 function buildHistoryOption(record: WorkflowRunRecord): RunDetailReplayOption {
   const evidenceCount = record.traceAudit?.evidenceCount ?? 0
   const eventCount = record.traceAudit?.events.length ?? 0
+  const runtimeEventCount = record.traceAudit?.runtimeEvents.length ?? 0
   return {
     id: record.runId,
     runId: record.runId,
     source: 'run-history',
     label: `${formatRunStatusLabel(record.status)} / ${record.runId}`,
     statusLabel: formatRunStatusLabel(record.status),
-    meta: `${formatStartedAt(record.startedAt)} / ${formatDurationLabel(record.durationMs)} / audit ${eventCount}`,
+    meta: `${formatStartedAt(record.startedAt)} / ${formatDurationLabel(record.durationMs)} / audit ${eventCount} / runtime ${runtimeEventCount}`,
     evidenceCount,
     disabled: !record.traceAudit,
   }
@@ -212,9 +215,10 @@ function buildComparisonOption(record: WorkflowRunRecord): RunDetailComparisonOp
     runId: record.runId,
     label: `${formatRunStatusLabel(record.status)} / ${record.runId}`,
     statusLabel: formatRunStatusLabel(record.status),
-    meta: `${formatStartedAt(record.startedAt)} / ${formatDurationLabel(record.durationMs)} / audit ${record.traceAudit.events.length}`,
+    meta: `${formatStartedAt(record.startedAt)} / ${formatDurationLabel(record.durationMs)} / audit ${record.traceAudit.events.length} / runtime ${record.traceAudit.runtimeEvents.length}`,
     evidenceCount: record.traceAudit.evidenceCount,
     auditEventCount: record.traceAudit.events.length,
+    runtimeEventCount: record.traceAudit.runtimeEvents.length,
   }
 }
 
@@ -231,6 +235,7 @@ function buildComparisonRun(record: WorkflowRunRecord): RunDetailComparisonRun |
     stepCount: audit.stepCount,
     evidenceCount: audit.evidenceCount,
     auditEventCount: audit.events.length,
+    runtimeEventCount: audit.runtimeEvents.length,
     failedStepCount: audit.failedStepIds.length,
     reviewStepCount: audit.reviewStepIds.length,
     retryCandidateCount: audit.retryCandidateStepIds.length,
@@ -333,6 +338,13 @@ function buildComparisonRows(
       label: 'Audit events',
       leftValue: leftRun.auditEventCount,
       rightValue: rightRun.auditEventCount,
+      neutral: true,
+    }),
+    compareNumberRow({
+      id: 'runtime-events',
+      label: 'Runtime events',
+      leftValue: leftRun.runtimeEventCount,
+      rightValue: rightRun.runtimeEventCount,
       neutral: true,
     }),
     compareNumberRow({
@@ -728,6 +740,10 @@ function countTraceEvidence(trace: RunTrace | null): number {
   return trace.runEvidence.length + trace.steps.reduce((total, step) => total + step.evidence.length, 0)
 }
 
+function countTraceRuntimeEvents(trace: RunTrace | null): number {
+  return trace?.runtimeEvents?.length ?? 0
+}
+
 function buildCurrentOption(trace: RunTrace | null): RunDetailReplayOption {
   return {
     id: 'current',
@@ -736,7 +752,7 @@ function buildCurrentOption(trace: RunTrace | null): RunDetailReplayOption {
     label: trace ? `current / ${trace.runId}` : 'current traceなし',
     statusLabel: trace ? trace.status : 'none',
     meta: trace
-      ? `${trace.source === 'run-history' ? 'audit snapshot' : 'runtime trace'} / evidence ${countTraceEvidence(trace)}`
+      ? `${trace.source === 'run-history' ? 'audit snapshot' : 'runtime trace'} / evidence ${countTraceEvidence(trace)} / runtime ${countTraceRuntimeEvents(trace)}`
       : 'Run を実行すると current trace が表示されます',
     evidenceCount: countTraceEvidence(trace),
     disabled: !trace,
@@ -820,6 +836,7 @@ export function buildRunDetailReplayView(options: {
     connections: options.connections,
   })
   const evidenceCount = countTraceEvidence(selectedTrace)
+  const runtimeEventCount = countTraceRuntimeEvents(selectedTrace)
   const sourceLabel =
     selectedOption.source === 'run-history'
       ? `Audit replay / ${selectedOption.statusLabel}`
@@ -837,7 +854,7 @@ export function buildRunDetailReplayView(options: {
     sourceLabel,
     options: replayOptions,
     focusTarget,
-    replaySummary: `${sourceLabel} / evidence ${evidenceCount} / focus ${focusTarget.label}`,
+    replaySummary: `${sourceLabel} / evidence ${evidenceCount} / runtime ${runtimeEventCount} / focus ${focusTarget.label}`,
   }
 }
 
