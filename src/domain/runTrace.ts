@@ -2,6 +2,8 @@ import type { ConnectorJob } from './connectorQueue'
 import type { ExecutionGraph, ExecutionStep, ExecutionStepStatus } from './executionGraph'
 import type { WorkflowRunRecord } from './runHistory'
 import { reviveRunTraceFromAuditSummary } from './runAudit'
+import { buildRuntimeAuditEvents } from './runtimeEvents'
+import type { RuntimeAuditContractEvent } from './runtimeAuditContract'
 import type { Workflow, WorkflowNode, WorkflowRunLog, WorkflowStatus } from './workflow'
 import {
   makeRunStepEvidence,
@@ -36,6 +38,7 @@ export type RunTrace = {
   retryCandidateStepIds: string[]
   safetyWarnings: string[]
   excludedEvidenceCount: number
+  runtimeEvents?: RuntimeAuditContractEvent[]
   source: RunTraceSource
   auditCreatedAt?: string
   auditEventCount?: number
@@ -292,6 +295,11 @@ export function buildRunTrace(input: BuildRunTraceInput): RunTrace {
     retryCandidateStepIds: input.executionGraph?.retryCandidates ?? [],
     safetyWarnings: [],
     excludedEvidenceCount: 0,
+    runtimeEvents: buildRuntimeAuditEvents({
+      workflow: input.workflow,
+      executionGraph: input.executionGraph,
+      runId,
+    }),
     source: 'current-state',
     auditCreatedAt: latestRecord?.traceAudit?.createdAt,
     auditEventCount: latestRecord?.traceAudit?.events.length,
