@@ -1,6 +1,71 @@
 # Project State
 
-Last updated: 2026-06-02
+Last updated: 2026-06-03
+
+---
+
+## Phase Runtime Audit Worktree QA / Docs
+
+- Branch: `codex/runtime-audit-qa-docs`
+- Base branch: `codex/runtime-audit-integration-base`
+- Date: 2026-06-03
+- Model gate: `ALLOW_XHIGH` はないため、Codex Desktop 運用ラベルとして `GPT-5.5 high` のまま実施した。API model id として記録する場合は `gpt-5.5` とする。
+- Scope: Runtime Audit worktree 並列運用で merge 済みになった Contract / Runtime Events / Durable Audit / Run Detail Replay-Diff / Edge HUD Deep Link の実装状態を docs / audit / QA 記録へ反映する。実装ファイル、source-specs、storage key、backend/API、credential 保存、依存関係は変更しない。
+
+### Integrated PRs
+
+| PR | Lane | Merge result |
+|---|---|---|
+| #38 | Shared Contract | `src/domain/runtimeAuditContract.ts` を追加し、runtime/audit event の safe metadata contract と normalization boundary を共有化した。 |
+| #39 | Integration Captain | 並列 Worktree の統合順序、file ownership、PR acceptance、stop conditions、final QA を文書化した。 |
+| #40 | Runtime Events | mock run の route/runtime event を safe 派生 metadata として `RunTrace.runtimeEvents` に載せた。 |
+| #41 | Durable Audit | 既存 run history record 内の `traceAudit.runtimeEvents` に safe route metadata を保存し、旧 record は `[]` へ互換 normalize するようにした。 |
+| #42 | Run Detail Replay / Diff | `RunDetailPanel` 内の二つの audit snapshot 比較へ `runtimeEvents` metadata count / diff row を追加した。 |
+| #43 | Edge HUD / Deep Link | Selected Edge HUD から Run Detail focused edge へ session state で到達できる最小 deep link と safe summary を追加した。 |
+
+### Implemented documentation updates
+
+- `docs/audit/current-implementation-map.md` に Runtime Audit worktree phase の実装済み範囲を追加した。
+- `docs/audit/spec-coverage-matrix.md` の UI-08 / UI-12 / metrics-audit coverage を safe runtime events / durable route metadata / focused edge deep link に合わせて更新した。
+- `docs/audit/missing-systems.md` と `docs/audit/technical-debt.md` の残ギャップを、edge-level durable route replay と enforced runtime policy に絞って更新した。
+- `docs/implementation/runtime-audit-next-phase.md` を追加し、A-D merge 後の現状、残ギャップ、次スライスを整理した。
+- `docs/tasks/Codex_Task_Runtime_Audit_Worktree_QA.md` を追加し、QA / Docs lane の完了条件と最終 QA 手順を記録した。
+
+### Existing behavior preserved
+
+- mock-only execution、既存 localStorage key、JSON import/export、Run/Reset/Undo/Redo、Canvas HUD / Game HUD layout、Run Detail、Selected Edge HUD は維持。
+- raw config、prompt 本文、payload、artifact 本文、credential/token/password/API key を docs 上でも safe metadata とは区別し、保存・表示・copy summary 対象外として記録した。
+- `docs/source-specs/**`、`package.json`、`package-lock.json`、Vite/TS config、storage key 定義、implementation source files は変更していない。
+
+### Validation
+
+- `git rev-parse HEAD` before work: `026e29dbf98f7dd6c5b6316433a4f30e5c4d10e9`
+- `git branch --show-current`: `codex/runtime-audit-qa-docs`
+- `git status --short` before work: clean
+- First `npm.cmd run typecheck`: failed because this new worktree did not have `node_modules` and `tsc` was unavailable.
+- `npm.cmd ci`: pass, 172 packages installed, 0 vulnerabilities.
+- `npm.cmd run typecheck`: pass
+- `npm.cmd run lint`: pass
+- `npm.cmd run build`: pass
+- Vite chunk-size warning のみ発生。既存許容警告として扱う。
+
+### Browser QA
+
+- Docs-only lane のため、interactive Browser QA は実施していない。
+- 最終統合 QA 手順、direct code-path fallback、raw leak / new localStorage key / external request 確認を docs に明記した。
+
+### Remaining gaps
+
+- Runtime event は safe metadata として保存・比較できるが、edge-level durable route replay、timeline scrubber、visual replay animation ではない。
+- Connection `runtimePolicy` は safe metadata / HUD projection であり、condition/retry/error-route enforcement や expression evaluator ではない。
+- Browser plugin が使えない環境では file picker/download/edge-click の一部を direct validation または headless fallback で補完する必要がある。
+
+### Next recommended slice
+
+1. Edge-level route event を `traceAudit.runtimeEvents` から Run Detail focused edge diff へ広げる。
+2. Runtime policy enforcement の前に mock evaluator contract と安全な expression subset を設計する。
+3. Final integration QA で #38-#43 の統合状態を preview / Browser / direct validation で再確認する。
+4. 軽微な文言修正・小さい CSS 調整のみなら `GPT-5.4-mini medium`、runtime/audit/domain/UI をまたぐ実装は `GPT-5.5 high` を推奨する。`ALLOW_XHIGH` なしで xhigh は提案・継続しない。
 
 ---
 
