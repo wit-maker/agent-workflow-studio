@@ -17,13 +17,16 @@ export function executeMockNode(
   outcome: CheckOutcome,
   mode: RunMode,
 ): MockNodeExecution {
-  if (mode === 'dryRun') {
+  if (mode === 'dryRun' || mode === 'validate') {
     return {
       route: 'skip',
       result: 'skipped',
       status: 'skipped',
       retryCandidate: false,
-      message: `${node.title} validated without execution.`,
+      message:
+        mode === 'validate'
+          ? `${node.title} passed validate mode without execution.`
+          : `${node.title} validated without execution.`,
     }
   }
 

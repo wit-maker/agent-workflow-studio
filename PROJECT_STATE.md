@@ -4,6 +4,55 @@ Last updated: 2026-06-03
 
 ---
 
+## Phase Issue Completion Pass: Five Pillar MVP Closure
+
+- Branch: `codex/complete-open-issues-plan-audit`
+- Date: 2026-06-03
+- Model gate: `ALLOW_XHIGH` はないため、Codex Desktop 運用ラベルとして `GPT-5.5 high` のまま実施した。API model id として記録する場合は `gpt-5.5` とする。
+- Scope: GitHub open issues #31 / #34 / #37 / #46 と未完了計画を現在実装に照合し、#46 の残条件だった Validate mode、runtimePolicy preset evaluator、補佐官の音声/アバター/動画ハイライト出力を最小垂直スライスとして追加する。新 localStorage key、backend/API、credential 保存、実 AI API、外部 asset、依存追加は行わない。
+
+### Implemented
+
+- `RunMode` に `validate` を追加し、Canvas command HUD の `Val` action から mock-only Validate mode を実行できるようにした。
+- Validate mode は nodes を実行せず safe validation summary / skipped steps / run history `mode=validate` として扱う。既存 Dry run / Run All / Run Selected / Run From Selected は維持。
+- `evaluateConnectionRuntimePolicy(...)` を pure helper として追加し、`always`, `on_success`, `on_failure`, `on_failed`, `on_review`, `on_review_required`, `on_high_cost`, `on_bottleneck`, `on_validation_warning` を固定プリセットとして評価する。
+- `expression` は raw 式評価を行わず、safe metadata として表示のみ行う。runtime audit event には `policyPassed` / `policyReason` の安全な派生 metadata だけを追加した。
+- `BriefingResult` に `voiceScript`, `avatarScript`, `visualTimeline`, `humanDecisionPrompt` を追加し、Mock Situation Assistant が HUD / Run Detail / execution summary から安全な補佐官出力を生成するようにした。
+- `BriefingPanel` に Voice / Avatar / Decision / Visual Timeline を表示し、テキストブリーフィングだけでなく音声台本・アバター台本・動画ハイライト指示まで通るようにした。
+- `docs/tasks/Codex_Task_Five_Pillar_MVP_Vertical_Slice.md` を追加し、5本柱MVPの到達点、柔軟性境界、残ギャップ、QA手順を記録した。
+
+### Issue alignment
+
+- #31: concept layer correction docs、SOURCE_OF_TRUTH、source-specs、audit docs、PROJECT_STATE 更新済み。現在の UI surfaces は最終本体ではなく MVP 表示面として整理済み。
+- #34: Game HUD / Canvas First shell、minimal always-on HUD、on-demand drawer、node/edge overlay、semantic focus、dark HUD theme が実装済み。
+- #37: Game HUD Canvas First completion plan の主要 acceptance は実装済み。MiniMap toggle、zoom mode、selected node/edge HUD、workflow group layer、inline preview、dark canvas、Browser QA 記録あり。
+- #46: 5本柱MVPは mock-only 垂直スライスとして、部品操作、mock connector、mock workflow run、HUD attention、Situation Assistant multi-channel output、safe audit、template save/load まで接続済み。
+
+### Remaining gaps
+
+- #46 の完全構想に含まれる実外部 connector、実AI、実 credential store、動画生成、音声生成、アバター描画、URL deep link、animated replay は非ゴールとして未実装。
+- runtimePolicy は固定プリセットの mock evaluator と safe audit metadata まで。任意式評価や本格 branch graph enforcement は実装しない。
+- Browser の file picker/download が使えない環境では、JSON import/export は direct code-path validation で補完する。
+
+### Validation
+
+- `npm.cmd run typecheck`: pass
+- `npm.cmd run lint`: pass
+- `npm.cmd run build`: pass
+- Vite chunk-size warning のみ発生。既存許容警告として扱う。
+
+### Browser QA
+
+- Preview: `http://127.0.0.1:4178/`
+- Initial render: title `agent-workflow-studio`, command HUD visible, React Flow nodes 12, edges 13, MiniMap visible.
+- Validate mode: `Val` action is present and `mode=validate` appears after execution.
+- Situation Assistant: Detail HUD -> 補佐官 -> ブリーフィング生成で `Voice`, `Avatar`, `Decision`, `Visual Timeline` sections visible.
+- Safety: value-like `password/token/secret/apiKey/credential/authorization` assignment pattern was not visible in the checked DOM.
+- External assets: script/link/image URLs were limited to `127.0.0.1`.
+- Console errors: 0.
+
+---
+
 ## Phase Runtime Audit Worktree QA / Docs
 
 - Branch: `codex/runtime-audit-qa-docs`

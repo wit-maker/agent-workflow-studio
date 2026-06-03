@@ -1,6 +1,6 @@
 import type { Workflow, WorkflowNode } from './workflow'
 
-export type RunMode = 'all' | 'selected' | 'fromSelected' | 'dryRun'
+export type RunMode = 'all' | 'selected' | 'fromSelected' | 'dryRun' | 'validate'
 
 export type ExecutionQueueItem = {
   nodeId: string
@@ -46,12 +46,12 @@ export function planWorkflowRun(
 
   return {
     mode,
-    validateOnly: mode === 'dryRun',
+    validateOnly: mode === 'dryRun' || mode === 'validate',
     nodes,
     queue: nodes.map((node) => ({
       nodeId: node.id,
       nodeTitle: node.title,
-      status: mode === 'dryRun' ? 'skipped' : 'queued',
+      status: mode === 'dryRun' || mode === 'validate' ? 'skipped' : 'queued',
     })),
     warnings,
   }

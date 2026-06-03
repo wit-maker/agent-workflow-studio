@@ -156,7 +156,12 @@ export type WorkflowConnectionConditionMode =
   | 'always'
   | 'on_success'
   | 'on_failure'
+  | 'on_failed'
   | 'on_review'
+  | 'on_review_required'
+  | 'on_high_cost'
+  | 'on_bottleneck'
+  | 'on_validation_warning'
   | 'expression'
 
 export type WorkflowConnectionCondition = {

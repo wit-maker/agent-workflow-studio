@@ -2795,6 +2795,39 @@ button:disabled {
   white-space: pre-wrap;
 }
 
+.briefing-timeline ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.briefing-timeline li {
+  display: grid;
+  grid-template-columns: minmax(32px, auto) minmax(80px, 1fr);
+  gap: 4px 10px;
+  align-items: baseline;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.briefing-timeline li span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.briefing-timeline li strong {
+  overflow-wrap: anywhere;
+}
+
+.briefing-timeline li p {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
 @keyframes briefing-spin {
   to {
     transform: rotate(360deg);

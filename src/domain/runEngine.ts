@@ -61,7 +61,9 @@ export function buildRunArtifact(options: {
   return {
     title:
       options.plan.validateOnly
-        ? 'Dry Run Validation Summary'
+        ? options.plan.mode === 'validate'
+          ? 'Validate Mode Summary'
+          : 'Dry Run Validation Summary'
         : options.outcome === 'FAIL'
           ? 'Local Run Failed Summary'
           : options.outcome === 'REVIEW'

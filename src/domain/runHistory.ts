@@ -97,9 +97,11 @@ export function isWorkflowRunStatus(value: unknown): value is WorkflowRunStatus 
  * 型シグネチャを RunMode に絞ることで exhaustive mapping を保証する。
  */
 export function mapRunPlannerMode(
-  mode: 'all' | 'selected' | 'fromSelected' | 'dryRun',
+  mode: 'all' | 'selected' | 'fromSelected' | 'dryRun' | 'validate',
 ): WorkflowRunMode {
   switch (mode) {
+    case 'validate':
+      return 'validate'
     case 'all':
       return 'full'
     case 'selected':

@@ -18,6 +18,19 @@ export type BriefingResult = {
   why: string
   how: string
   next: string
+  voiceScript: string
+  avatarScript: {
+    role: 'situation_officer'
+    emotion: 'calm' | 'concerned' | 'urgent'
+    gesture: 'standby' | 'point_to_focus' | 'raise_warning'
+    line: string
+  }
+  visualTimeline: Array<{
+    time: number
+    highlightNodeId: string | null
+    caption: string
+  }>
+  humanDecisionPrompt: string
   severity: BriefingSeverity
   isMock: boolean
   generatedAt: string

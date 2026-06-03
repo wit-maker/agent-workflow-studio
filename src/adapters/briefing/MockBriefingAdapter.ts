@@ -149,6 +149,90 @@ function normalizeSeverity(input: BriefingInput): BriefingSeverity {
   return input.severity
 }
 
+function buildVoiceScript(input: BriefingInput): string {
+  if (input.severity === 'error') {
+    return truncateSentence(
+      `失敗状態を検出しました。HUDの優先度は ${input.hud.priority} です。まず失敗 step と retry 候補を確認してください。`,
+      180,
+    )
+  }
+
+  if (input.severity === 'warn') {
+    return truncateSentence(
+      `確認が必要な状態です。レビュー待ち、停止、再試行候補を順に確認し、次の判断を選んでください。`,
+      180,
+    )
+  }
+
+  return truncateSentence(
+    `現在は大きな異常はありません。必要なら次の Run 条件とテンプレート候補を確認してください。`,
+    180,
+  )
+}
+
+function buildAvatarScript(input: BriefingInput): BriefingResult['avatarScript'] {
+  const emotion = input.severity === 'error'
+    ? 'urgent'
+    : input.severity === 'warn'
+      ? 'concerned'
+      : 'calm'
+  const gesture = input.severity === 'error'
+    ? 'raise_warning'
+    : input.severity === 'warn'
+      ? 'point_to_focus'
+      : 'standby'
+
+  return {
+    role: 'situation_officer',
+    emotion,
+    gesture,
+    line: truncateSentence(buildNext(input), 140),
+  }
+}
+
+function buildVisualTimeline(input: BriefingInput): BriefingResult['visualTimeline'] {
+  const primaryNodeId =
+    input.execution.failedSteps[0] ??
+    input.execution.reviewSteps[0] ??
+    input.execution.retryCandidates[0] ??
+    input.workflow.visibleNodes[0] ??
+    null
+
+  return [
+    {
+      time: 0,
+      highlightNodeId: input.workflow.visibleNodes[0] ?? primaryNodeId,
+      caption: truncateSentence(`Workflow status is ${input.workflow.overallStatus}.`, 120),
+    },
+    {
+      time: 3,
+      highlightNodeId: primaryNodeId,
+      caption: truncateSentence(input.hud.summary, 120),
+    },
+    {
+      time: 6,
+      highlightNodeId: primaryNodeId,
+      caption: truncateSentence(buildNext(input), 120),
+    },
+  ]
+}
+
+function buildHumanDecisionPrompt(input: BriefingInput): string {
+  if (input.execution.reviewSteps[0]) {
+    return truncateSentence(`${input.execution.reviewSteps[0]} を Approve / Reject / Retry のどれで扱うか判断してください。`, 160)
+  }
+
+  if (input.execution.failedSteps[0]) {
+    return truncateSentence(`${input.execution.failedSteps[0]} の失敗根拠を確認し、Retry か停止を選んでください。`, 160)
+  }
+
+  if (input.execution.retryCandidates[0]) {
+    return truncateSentence(`${input.execution.retryCandidates[0]} を再試行するか、原因確認を優先するか判断してください。`, 160)
+  }
+
+  return '次の Run を開始するか、成功パターンをテンプレート化するか選んでください。'
+}
+
 export class MockBriefingAdapter implements BriefingAdapter {
   readonly name = 'mock'
 
@@ -162,6 +246,10 @@ export class MockBriefingAdapter implements BriefingAdapter {
       why: buildWhy(request.input),
       how: buildHow(request.input),
       next: buildNext(request.input),
+      voiceScript: buildVoiceScript(request.input),
+      avatarScript: buildAvatarScript(request.input),
+      visualTimeline: buildVisualTimeline(request.input),
+      humanDecisionPrompt: buildHumanDecisionPrompt(request.input),
       severity: normalizeSeverity(request.input),
       isMock: true,
       generatedAt: new Date().toISOString(),

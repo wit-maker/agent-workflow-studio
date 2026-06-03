@@ -52,7 +52,7 @@ export function AssistantPanel({
         <span className="eyebrow">状況補佐官</span>
         <h3>状況説明レイヤー / 人間向け表現</h3>
         <p className="muted">
-          4D Text Briefing (What / Why / How / Next) は出力チャネルの 1 つです。音声 / アバター / 動画 / 次アクション は将来チャネルとして未実装。
+          4D Text Briefing は出力チャネルの 1 つです。音声台本 / アバター台本 / 動画ハイライト指示 / 次アクションは mock 出力として生成し、実レンダラーは将来チャネルとして扱います。
         </p>
       </header>
       <BriefingPanel
