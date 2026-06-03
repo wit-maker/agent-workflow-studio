@@ -6,6 +6,8 @@ Last updated: 2026-06-03
 
 `docs/project/concept-layer-correction.md` は、認知HUD / 状況説明生成レイヤー / 状況補佐官 / text briefing MVP に関する**補助 Source of Truth** である。Priority 1〜2（PROJECT_GOAL / AGENTS）の次、本体 source-specs（Priority 3〜9）と並ぶ位置で参照する。
 
+`docs/project/CONCEPT_CHECKLIST.md` は、この概念定義を実装・PR・QAで使うための軽量チェックリストである。新しい表示面や安全な投影を追加するときは、final layer / MVP surface / safe projection / detail-history / out of scope のどれかを明記する。
+
 正しい概念関係（短縮形）:
 
 ```text
@@ -43,8 +45,9 @@ When sources conflict, use this order:
 | 8 | `docs/source-specs/06_QA_セキュリティ_受け入れ基準_完全版.md` | QA, safety gates, acceptance criteria |
 | 9 | `docs/source-specs/07_実装ロードマップ_完全版.md` | phased implementation order |
 | 10 | `docs/project/ACTIVE_PLAN.md` | current plan selector and next-slice order |
-| 11 | `PROJECT_STATE.md` | current state, known limits, validation history |
-| 12 | Issue / PR / current prompt | current local task instructions |
+| 11 | `docs/project/CONCEPT_CHECKLIST.md` | concept classification checklist for implementation and review |
+| 12 | `PROJECT_STATE.md` | current state, known limits, validation history |
+| 13 | Issue / PR / current prompt | current local task instructions |
 
 ## Read-Only Reference Specs
 

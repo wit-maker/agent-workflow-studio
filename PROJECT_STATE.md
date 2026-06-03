@@ -4,6 +4,48 @@ Last updated: 2026-06-03
 
 ---
 
+## Phase Active Plan Execution: Concept Checklist
+
+- Branch: `codex/execute-active-plan-concept-checklist`
+- Date: 2026-06-03
+- Scope: `docs/project/ACTIVE_PLAN.md` の最初の実行スライスである Concept checklist を実装する。GitHub issue state、source-specs、実装コード、storage、backend/API、credential、依存関係は変更しない。
+
+### Implemented
+
+- `docs/project/CONCEPT_CHECKLIST.md` を追加し、future slice が final layer / MVP surface / safe projection / detail-history / out of scope のどれかを明示できるようにした。
+- Cognitive HUD、Situation Assistant、Situation Narration Layer、Upload Labs-style observability、n8n-style automation、Scratch-style operation に触れる変更で確認すべき guardrail questions を追加した。
+- PR / final report に貼れる短い checklist snippet と、過大表現を安全な表現へ直す common corrections を追加した。
+- `docs/project/ACTIVE_PLAN.md` を更新し、Concept checklist を completed slice として記録し、次の推奨順を Edge route metadata diff から開始する形にした。
+- `docs/project/PLAN_PROTOCOL.md` と `docs/project/SOURCE_OF_TRUTH.md` に checklist 参照と分類記録ルールを追加した。
+- `README.md` の参照ドキュメントに checklist を追加した。
+
+### Concept checklist classification
+
+- Classification: docs-only guardrail / review checklist.
+- Cognitive HUD claim: final layer 実装ではなく、将来の HUD 変更が注意配分レイヤーを過小定義しないための判定表。
+- Situation Assistant claim: assistant 実装ではなく、text briefing MVP を assistant 全体と混同しないための判定表。
+- Safety: raw config / prompt / payload / artifact body / credential / token / API key は表示・保存・copy 対象にしていない。
+- Persistence/API: 新 localStorage key、backend/API、credential storage、dependency は追加していない。
+
+### Validation
+
+- `npm.cmd run typecheck`: pass
+- `npm.cmd run lint`: pass
+- `npm.cmd run build`: pass
+- Vite chunk-size warning のみ発生。既存許容警告として扱う。
+
+### Browser QA
+
+- Docs-only checklist change のため実施していない。
+- UI、runtime、storage、import/export、localStorage key、backend/API、credential の挙動は変更していない。
+
+### Next recommended slice
+
+1. Edge route metadata diff: `RunDetailPanel` の focused edge comparison を runtime event counts から safe route-event metadata へ拡張する。
+2. One state-based Game HUD slice: validation warning または review required など、既存 safe metadata に基づく状態別 HUD 振る舞いを1つ追加する。
+
+---
+
 ## Phase Plan Document Consolidation
 
 - Branch: `codex/consolidate-project-plan-docs`

@@ -27,7 +27,7 @@ Use `docs/project/ACTIVE_PLAN.md` as the only active plan selector.
 For each task:
 
 1. Confirm the active model and record any mismatch when the task touches Goal, Plan, Source of Truth, safety, credentials, or architecture.
-2. Read `docs/project/ACTIVE_PLAN.md`, `PROJECT_STATE.md`, `AGENTS.md`, `docs/project/SOURCE_OF_TRUTH.md`, and the relevant source specs.
+2. Read `docs/project/ACTIVE_PLAN.md`, `PROJECT_STATE.md`, `AGENTS.md`, `docs/project/SOURCE_OF_TRUTH.md`, `docs/project/CONCEPT_CHECKLIST.md`, and the relevant source specs.
 3. Check `git status --short --branch`.
 4. Confirm the branch is not `main` or `develop`.
 5. Identify whether the task is docs-only, UI, domain model, execution, storage, connector, or safety work.
@@ -54,6 +54,7 @@ A decision-complete plan should state:
 - Preserve source specs as reference documents.
 - Keep docs, code, and `PROJECT_STATE.md` in sync.
 - Keep `docs/project/ACTIVE_PLAN.md` in sync when the next-slice order changes.
+- When a change touches Cognitive HUD, Situation Assistant, Situation Narration, Upload Labs-style observability, n8n-style automation, or Scratch-style operation, record the `CONCEPT_CHECKLIST.md` classification in the plan, PR body, or `PROJECT_STATE.md`.
 - Add abstractions only when they protect future phases or remove real duplication.
 - Keep mock connectors clearly marked as mock.
 - Treat localStorage as MVP persistence, not the final storage architecture.

@@ -26,6 +26,7 @@ UI変更時は Browser QA または headless QA も行います。
 
 - `AGENTS.md`: AI coding agent 向け作業ルール
 - `docs/project/ACTIVE_PLAN.md`: 現在の単一計画入口
+- `docs/project/CONCEPT_CHECKLIST.md`: 認知HUD / 状況補佐官などの概念をMVP面と最終レイヤーで混同しないためのチェックリスト
 - `docs/project/PROJECT_GOAL.md`: 長期Goalとプロダクト同一性
 - `docs/project/SOURCE_OF_TRUTH.md`: 仕様判断の優先順位
 - `docs/source-specs/`: 原文仕様
