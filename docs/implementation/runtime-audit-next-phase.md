@@ -2,6 +2,8 @@
 
 Last updated: 2026-06-03
 
+> Planning status: detail backlog. The single active planning entrypoint is `docs/project/ACTIVE_PLAN.md`. Use this file for Runtime Audit details only after the active plan selects that track.
+
 ## Current Integrated State
 
 The Runtime Audit worktree phase has landed the shared safe route-event path on `codex/runtime-audit-integration-base`.

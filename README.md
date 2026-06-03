@@ -25,10 +25,13 @@ UI変更時は Browser QA または headless QA も行います。
 ## 参照ドキュメント
 
 - `AGENTS.md`: AI coding agent 向け作業ルール
+- `docs/project/ACTIVE_PLAN.md`: 現在の単一計画入口
 - `docs/project/PROJECT_GOAL.md`: 長期Goalとプロダクト同一性
 - `docs/project/SOURCE_OF_TRUTH.md`: 仕様判断の優先順位
 - `docs/source-specs/`: 原文仕様
 - `docs/audit/`: 現在実装と仕様差分
+- `docs/implementation/`: 実装詳細・履歴。現行計画の入口ではない
+- `docs/tasks/`: Codex task 記録。現行計画の入口ではない
 
 ## 現在のMVP範囲
 

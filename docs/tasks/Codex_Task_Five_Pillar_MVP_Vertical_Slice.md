@@ -2,6 +2,8 @@
 
 Last updated: 2026-06-03
 
+> Planning status: slice record. The single active planning entrypoint is `docs/project/ACTIVE_PLAN.md`. This file records the current five-pillar vertical slice and should not be treated as the whole active plan.
+
 ## Purpose
 
 Record the current mock-only vertical slice for the five-pillar MVP plan.

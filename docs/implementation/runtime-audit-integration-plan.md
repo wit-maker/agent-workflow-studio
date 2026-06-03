@@ -1,5 +1,7 @@
 # Runtime Audit Worktree Integration Plan
 
+> Planning status: historical integration record. The landed Runtime Audit worktree phase is no longer the active project plan. Use `docs/project/ACTIVE_PLAN.md` for current next-slice selection.
+
 ## Purpose
 
 This document is the integration captain checklist for the Runtime Audit parallel worktree phase.

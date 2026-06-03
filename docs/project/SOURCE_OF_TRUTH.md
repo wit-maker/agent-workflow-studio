@@ -1,6 +1,6 @@
 # Source of Truth
 
-Last updated: 2026-05-26
+Last updated: 2026-06-03
 
 ## Concept Layer Correction (Issue #31)
 
@@ -42,8 +42,9 @@ When sources conflict, use this order:
 | 7 | `docs/source-specs/05_AIエージェント運用設計書_完全版.md` | AI roles, model gate, git authority |
 | 8 | `docs/source-specs/06_QA_セキュリティ_受け入れ基準_完全版.md` | QA, safety gates, acceptance criteria |
 | 9 | `docs/source-specs/07_実装ロードマップ_完全版.md` | phased implementation order |
-| 10 | `PROJECT_STATE.md` | current state, known limits, validation history |
-| 11 | Issue / PR / current prompt | current local task instructions |
+| 10 | `docs/project/ACTIVE_PLAN.md` | current plan selector and next-slice order |
+| 11 | `PROJECT_STATE.md` | current state, known limits, validation history |
+| 12 | Issue / PR / current prompt | current local task instructions |
 
 ## Read-Only Reference Specs
 
@@ -53,6 +54,16 @@ These original AI Workflow Lab documents are preserved as source references. Do 
 - `docs/source-specs/AI_Workflow_Lab_画面設計_詳細設計以降_v1.0.md`
 
 New interpretation, audit, or implementation mapping belongs under `docs/project/`, `docs/audit/`, `docs/architecture/`, or `docs/implementation/`.
+
+## Active Plan Boundary
+
+`docs/project/ACTIVE_PLAN.md` is the single current planning entrypoint.
+
+- Use it to choose the next implementation slice.
+- Treat `PROJECT_STATE.md` as chronological state and validation history, not as a competing plan list.
+- Treat `docs/tasks/**` as task records or handoff prompts unless `ACTIVE_PLAN.md` explicitly marks a task as active.
+- Treat `docs/implementation/*next*` files as detail backlogs subordinate to `ACTIVE_PLAN.md`.
+- Repository docs may reference GitHub issue numbers for context, but updating repository docs does not change GitHub issue state.
 
 ## Conflict Rules
 

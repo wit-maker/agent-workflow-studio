@@ -4,6 +4,46 @@ Last updated: 2026-06-03
 
 ---
 
+## Phase Plan Document Consolidation
+
+- Branch: `codex/consolidate-project-plan-docs`
+- Date: 2026-06-03
+- Scope: GitHub issue stateには触れず、repo 内の plan-like docs の入口を `docs/project/ACTIVE_PLAN.md` に集約する。source-specs、実装コード、storage、backend/API、credential、依存関係は変更しない。
+
+### Implemented
+
+- `docs/project/ACTIVE_PLAN.md` を追加し、現行の計画入口、次スライス順、各 plan document の役割、共通安全境界を一箇所にまとめた。
+- `README.md` の参照ドキュメントに active plan を追加した。
+- `docs/project/SOURCE_OF_TRUTH.md` に active plan の優先順位と境界を追加した。
+- `docs/project/PLAN_PROTOCOL.md` に single active plan rule を追加し、今後の計画乱立を防ぐ運用にした。
+- `runtime-audit-next-phase` / `runtime-audit-integration-plan` / `Five_Pillar_MVP_Vertical_Slice` は削除せず、detail backlog / historical record / slice record として位置づけを明記した。
+- `docs/implementation/README.md` と `docs/tasks/README.md` を追加し、各ディレクトリが現行計画入口ではなく詳細・履歴置き場であることを明記した。
+
+### Current planning entrypoint
+
+- Active plan: `docs/project/ACTIVE_PLAN.md`
+- Chronological state: `PROJECT_STATE.md`
+- Implementation/audit details: `docs/audit/**`, `docs/implementation/**`, `docs/tasks/**`
+
+### Remaining gaps
+
+- 古い task docs の本文には過去の「次の推奨」記述が残る。今後は active plan を優先し、必要なものだけ detail backlog として更新する。
+- GitHub issue 本文、ラベル、open/close 状態はこの docs 整理では変更していない。
+
+### Validation
+
+- `npm.cmd run typecheck`: pass
+- `npm.cmd run lint`: pass
+- `npm.cmd run build`: pass
+- Vite chunk-size warning のみ発生。既存許容警告として扱う。
+
+### Browser QA
+
+- Docs-only consolidation のため実施していない。
+- GitHub issue 本文、ラベル、open/close 状態は変更していない。
+
+---
+
 ## Phase Open Epic Recheck: Five Pillar MVP Slice
 
 - Branch: `codex/complete-open-issues-plan-audit`
