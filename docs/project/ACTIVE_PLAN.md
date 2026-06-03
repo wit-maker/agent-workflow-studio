@@ -24,27 +24,27 @@ The project currently has four open product-planning tracks inside the repo docs
 |---|---|---|
 | Concept guardrail | The repo now distinguishes Cognitive HUD, Situation Narration Layer, Situation Assistant, and text briefing MVP. `docs/project/CONCEPT_CHECKLIST.md` adds a lightweight classification gate for future UI/domain/QA changes. | Apply the checklist in future slices so MVP surfaces and safe projections are not described as the full layer. |
 | Canvas First / Game HUD | Canvas First shell, dark HUD surface, minimal HUD controls, MiniMap, zoom mode, selected node/edge HUD, inline previews, grouping, semantic focus, and on-demand console/drawers exist. | Add state-based HUD behavior one state at a time: validation warning, review required, high cost, delay, bottleneck, failure, or approval. |
-| Runtime Audit / Run Detail / Edge HUD | Safe runtime events, durable `traceAudit.runtimeEvents`, Run Detail comparison, focused node/edge scoped diff, selected-edge deep link, and safe connection policy summaries exist. | Extend focused edge comparison from event counts to safe route-event metadata. |
+| Runtime Audit / Run Detail / Edge HUD | Safe runtime events, durable `traceAudit.runtimeEvents`, Run Detail comparison, focused node/edge scoped diff, focused edge safe route-event metadata diff, selected-edge deep link, and safe connection policy summaries exist. | Keep the route metadata diff as a safe projection; future work is replay-ready ordering, not full animated replay yet. |
 | Five-pillar MVP | A thin mock-only path connects parts operation, mock connector/runtime, HUD attention, safe audit, Situation Assistant output, and template reuse. | Thicken one vertical path at a time without adding real APIs, credential storage, new localStorage keys, or raw data exposure. |
 
 ## Current Recommended Order
 
-1. **Edge route metadata diff**
-   - File area: `src/domain/runDetail.ts`, `src/components/RunDetailPanel.tsx`, and tests or direct validation only if needed.
-   - Goal: Run Detail should compare selected edge route metadata, not only runtime event counts.
-   - Constraints: safe metadata only, session state only, no new localStorage key, no raw config/prompt/payload/credential.
-   - Model guidance: `GPT-5.5 high`.
-
-2. **One state-based Game HUD slice**
+1. **One state-based Game HUD slice**
    - File area: `src/domain/cognitiveHud.ts`, workspace HUD components, CSS only as needed.
    - Goal: one runtime state changes the canvas/HUD behavior clearly without adding a permanent panel.
    - Candidate first state: validation warning or review required, because both are already visible in existing safe metadata.
    - Model guidance: `GPT-5.5 high`.
 
-3. **Five-pillar vertical thickening**
+2. **Five-pillar vertical thickening**
    - File area: choose a minimal path before implementation.
    - Goal: strengthen one connected user flow across parts, mock runtime, HUD attention, safe audit, assistant explanation, and template/history.
    - Constraints: mock-only; no backend/API/credential storage/dependency/new localStorage key.
+   - Model guidance: `GPT-5.5 high`.
+
+3. **Replay-ready audit view model**
+   - File area: `src/domain/runDetail.ts`, `src/domain/runtimeEventSummary.ts`, and tests or direct validation only if needed.
+   - Goal: order safe runtime route events into a replay-friendly timeline without adding animation UI yet.
+   - Constraints: safe metadata only, no raw config/prompt/payload/credential, no new localStorage key.
    - Model guidance: `GPT-5.5 high`.
 
 ## Completed Plan Slices
@@ -52,6 +52,7 @@ The project currently has four open product-planning tracks inside the repo docs
 | Slice | Result |
 |---|---|
 | Concept checklist | `docs/project/CONCEPT_CHECKLIST.md` now defines the final layer / MVP surface / safe projection / detail-history / out-of-scope classification gate. |
+| Edge route metadata diff | `RunDetailPanel` focused edge comparison now includes safe route-event metadata rows and recent safe route-event summaries. |
 
 ## Plan Document Roles
 

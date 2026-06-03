@@ -64,7 +64,7 @@ Priority scale:
 | SQLite / local database | Needed for durable run history, audit logs, templates, and search at product scale. |
 | Secure credential store | Required before real credential-bearing integrations. |
 | Recipes and knowledge assets | Templates need to evolve into reusable success patterns, failure patterns, and knowledge cards. |
-| Multi-run comparison and replay | Run Detail now has two-run safe audit metadata comparison plus runtime-event count diff, step-level safe evidence grouping, focused node/edge scoped diff, and safe connection policy summaries, but visual replay animation, edge-level durable route diff, and reproducible route replay are still needed for inspection, regression analysis, and reproducible workflows. |
+| Multi-run comparison and replay | Run Detail now has two-run safe audit metadata comparison plus runtime-event count diff, focused edge safe route-event metadata diff, step-level safe evidence grouping, focused node/edge scoped diff, and safe connection policy summaries, but visual replay animation, full route reconstruction, and reproducible route replay are still needed for inspection, regression analysis, and reproducible workflows. |
 | Publish and external write workflow | Real write-capable adapters require approval, audit, rollback, and human confirmation. |
 | Full HUD UI settings | Session-only density/danger/collapse projection exists, but users still need persisted control over danger visibility, focus, notifications, and collapse rules. |
 | Desktop QA matrix | Tauri, file persistence, and secure storage need OS-specific verification. |

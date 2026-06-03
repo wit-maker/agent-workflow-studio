@@ -4,6 +4,56 @@ Last updated: 2026-06-03
 
 ---
 
+## Phase Active Plan Execution: Edge Route Metadata Diff
+
+- Branch: `codex/edge-route-metadata-diff`
+- Date: 2026-06-03
+- Scope: `docs/project/ACTIVE_PLAN.md` の次スライスである Edge route metadata diff を、`RunDetailPanel` 内に限定して実装する。Canvas HUD / Game HUD 全体レイアウト、GitHub issue state、source-specs、storage key、backend/API、credential、依存関係は変更しない。
+
+### Implemented
+
+- `buildRunComparisonView(...)` の focused edge scope に、選択 edge に関係する `traceAudit.runtimeEvents` の safe route-event metadata diff を追加した。
+- 比較対象は allowlist 的な safe metadata に限定し、route kinds、event kinds、severity mix、status、route、condition mode、policy result、delay、retry、error-route、latest event を表示する。
+- `RunDetailPanel` の focused node / edge scoped diff 内に `Edge route metadata diff` 表示を追加した。新しい常駐パネルや Canvas HUD レイアウト変更はしていない。
+- route-event summary は表示直前にも `sanitizeRuntimeAuditText(...)` を通し、raw config / prompt / payload / artifact body / credential / token / API key を表示しない境界を維持した。
+- `ACTIVE_PLAN.md` と Runtime Audit / audit docs を更新し、Edge route metadata diff を完了済み safe projection として記録した。
+
+### Concept checklist classification
+
+- Classification: safe projection / detail-history surface.
+- Cognitive HUD claim: なし。Canvas HUD 変更ではなく Run Detail 内の read-only focused diff。
+- Situation Assistant claim: なし。assistant output ではない。
+- Safety: raw config / prompt / payload / artifact body / credential / token / API key は表示・保存・copy 対象にしていない。
+- Persistence/API: 新 localStorage key、backend/API、credential storage、dependency は追加していない。
+
+### Validation
+
+- `npm.cmd run typecheck`: pass
+- `npm.cmd run lint`: pass
+- `npm.cmd run build`: pass
+- Vite chunk-size warning のみ発生。既存許容警告として扱う。
+
+### Browser QA / direct validation
+
+- Preview: `http://127.0.0.1:4178/`
+- Initial render: title `agent-workflow-studio`、console error 0。
+- Run Detail: selected node HUD の `Open trace` から `実行詳細` tab / `Replay source` / `Compare audits` / `Runtime events` が表示されることを確認。
+- In-app Browser では `Compare audits` checkbox の状態変更が安定せず、focused edge comparison の完全なクリック操作は direct code-path validation で補完した。
+- Direct validation: `buildRunComparisonView(...)` に2件の safe audit snapshot と focused edge を渡し、`routeMetadataRows` が生成され、route kind / severity / status diff が出ること、credential-like metadata が出力に混入しないことを確認。
+
+### Remaining gaps
+
+- これは safe route-event metadata の比較であり、animated replay、timeline scrubber、full edge route reconstruction、runtime policy enforcement ではない。
+- Browser の checkbox 操作制約により、比較UIの全クリック経路は direct validation で補完している。
+
+### Next recommended slice
+
+1. One state-based Game HUD slice: validation warning または review required を、Canvas HUD 上の状態別振る舞いとして1つ追加する。
+2. Five-pillar vertical thickening: mock-only の1本のユーザーフローを選び、parts / mock runtime / HUD attention / safe audit / assistant explanation / template-history の接続を太くする。
+3. Replay-ready audit view model: safe runtime route events を timeline 化し、将来の replay UI へ渡せる pure view model を作る。
+
+---
+
 ## Phase Active Plan Execution: Concept Checklist
 
 - Branch: `codex/execute-active-plan-concept-checklist`

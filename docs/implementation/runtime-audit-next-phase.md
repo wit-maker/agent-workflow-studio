@@ -13,7 +13,7 @@ The Runtime Audit worktree phase has landed the shared safe route-event path on 
 | #38 | Shared Contract | `runtimeAuditContract.ts` defines the safe metadata event shape and normalization boundary. |
 | #40 | Runtime Events | Mock runs can derive safe `RunTrace.runtimeEvents`. |
 | #41 | Durable Audit | Existing run history records can persist safe `traceAudit.runtimeEvents`; old records normalize to `[]`. |
-| #42 | Run Detail Replay / Diff | `RunDetailPanel` compares two safe audit snapshots and includes runtime-event count metadata. |
+| #42 | Run Detail Replay / Diff | `RunDetailPanel` compares two safe audit snapshots, includes runtime-event count metadata, and can show focused edge safe route-event metadata diff. |
 | #43 | Edge HUD / Deep Link | Selected Edge HUD can open Run Detail while preserving focused edge context in session state. |
 
 PR #39 remains the Integration Captain documentation lane and defines the merge / validation / stop conditions for this phase.
@@ -41,21 +41,16 @@ This phase is not a full replay system or full policy runtime.
 
 ## Next Recommended Slices
 
-1. **Edge route event diff**
-   - Extend Run Detail focused edge comparison from event counts to safe event type / source / target / route metadata.
-   - Keep UI inside `RunDetailPanel`.
-   - Keep state session-only and storage under existing run history records.
-
-2. **Runtime policy route enforcement**
+1. **Runtime policy route enforcement**
    - Extend the mock-only fixed-preset evaluator into explicit pass / non-pass route behavior.
    - Keep `expression` as safe display metadata only unless a bounded expression subset is designed.
    - Continue storing only safe policy outcomes in runtime audit metadata.
 
-3. **Replay-ready audit view model**
+2. **Replay-ready audit view model**
    - Build pure domain helpers that order safe runtime events into a replay-friendly timeline.
    - Do not add animation UI until the data contract is stable.
 
-4. **Final integration QA pass**
+3. **Final integration QA pass**
    - Validate `codex/runtime-audit-integration-base` after all runtime audit PRs are merged.
    - Use Browser QA where available.
    - If the in-app Browser cannot use file picker/download or edge-click automation, supplement with direct code-path validation and report the limitation explicitly.
