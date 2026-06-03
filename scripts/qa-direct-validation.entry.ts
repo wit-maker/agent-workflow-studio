@@ -8,6 +8,7 @@ import {
   buildRunDetailReplayView,
   buildRunDetailRuntimeTimelineView,
 } from '../src/domain/runDetail'
+import { buildReviewDecisionAuditBoundaryView } from '../src/domain/reviewDecisionAudit'
 import { createWorkflowRunRecord, normalizeRunHistory } from '../src/domain/runHistory'
 import { buildRunTrace } from '../src/domain/runTrace'
 import { STORAGE_KEYS } from '../src/storage/storageKeys'
@@ -343,6 +344,26 @@ export async function runDirectQaValidation(): Promise<DirectQaValidationResult>
   assert(edgeHud.connectionId === 'edge-input-normalize', 'selected edge HUD should target selected edge')
   assertNoForbiddenSentinels(edgeHud, 'selected edge HUD view')
   checked.push('Edge HUD safe copy/focus summary')
+
+  const reviewBoundary = buildReviewDecisionAuditBoundaryView({
+    humanReview: {
+      decision: 'approved',
+      reviewer: 'CREDENTIAL_SENTINEL reviewer',
+      note: 'RAW_PROMPT_SENTINEL PASSWORD_SENTINEL',
+      decidedAt: '2026-06-03T00:03:00.000Z',
+    },
+    runId: 'run-left',
+  })
+  assert(
+    reviewBoundary.persistenceMode === 'session_only',
+    'review decision boundary should remain session-only in this slice',
+  )
+  assert(
+    reviewBoundary.noteIncludedInSafeSummary === false,
+    'sensitive review note should be excluded from safe summary',
+  )
+  assertNoForbiddenSentinels(reviewBoundary, 'review decision audit boundary')
+  checked.push('review decision session-only safe boundary')
 
   const normalizedOldHistory = normalizeRunHistory({
     records: [

@@ -32,19 +32,14 @@ Runtime Audit remains a detail backlog in `docs/implementation/runtime-audit-nex
 
 ## Current Recommended Order
 
-The previously selected Browser QA direct validation harness is complete. The next implementation should be a small vertical slice that supports the open issue roadmap above.
+The previously selected Review decision persistence boundary is complete. The next implementation should be a small vertical slice that supports the open issue roadmap above.
 
-1. **Review decision persistence boundary**
-   - Issue alignment: #31, #34, #46.
-   - Goal: clarify whether human review decisions stay session-only or become durable safe audit metadata inside an existing record.
-   - Constraint: do not add a new localStorage key unless a future active plan explicitly approves it.
-
-2. **Runtime policy route enforcement design spike**
+1. **Runtime policy route enforcement design spike**
    - Issue alignment: #37, #46.
    - Goal: document and prototype only fixed preset pass / non-pass route behavior for mock execution.
    - Constraint: no arbitrary expression evaluator and no raw expression execution.
 
-3. **Animated replay UI candidate**
+2. **Animated replay UI candidate**
    - Issue alignment: #37, #46.
    - Goal: use the replay-ready safe runtime timeline as a read-only metadata-only replay surface.
    - Constraint: no raw config, prompt, payload, artifact body, credential-derived values, or visual route reconstruction beyond safe metadata.
@@ -60,6 +55,7 @@ The previously selected Browser QA direct validation harness is complete. The ne
 | Replay-ready audit view model | `RunDetailPanel` now shows a safe runtime metadata timeline derived from `RunTrace.runtimeEvents` or revived audit snapshots. |
 | Five-pillar vertical thickening | The safe runtime timeline now feeds Situation Assistant input and mock briefing output through a visible Replay cue. |
 | Browser QA direct validation harness | `npm.cmd run qa:direct` now reproduces import/export validation, two-run safe audit comparison, selected edge focus, Edge HUD safe copy, legacy audit normalization, and storage-key checks without Browser file picker/download support. |
+| Review decision persistence boundary | Human Review now shows the persistence boundary: current decisions are session-only; any future durable form must be safe metadata inside an existing run history record, with sensitive notes excluded from safe summaries. |
 
 ## Plan Document Roles
 
