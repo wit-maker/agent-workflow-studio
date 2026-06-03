@@ -107,6 +107,7 @@ export function BriefingPanel({
             <BriefingSection title="Why" body={result.why} />
             <BriefingSection title="How" body={result.how} />
             <BriefingSection title="Next" body={result.next} />
+            <BriefingSection title="Replay" body={result.replayCue} />
             <BriefingSection title="Voice" body={result.voiceScript} />
             <BriefingSection title="Avatar" body={`${result.avatarScript.emotion} / ${result.avatarScript.gesture}: ${result.avatarScript.line}`} />
             <BriefingSection title="Decision" body={result.humanDecisionPrompt} />

@@ -12,7 +12,7 @@ import type {
 import { BRIEFING_SENSITIVE_KEYWORDS } from './briefing'
 import type { ConnectorJob } from './connectorQueue'
 import type { ExecutionGraph } from './executionGraph'
-import { summarizeRunDetail } from './runDetail'
+import { buildRunDetailRuntimeTimelineView, summarizeRunDetail } from './runDetail'
 import type { WorkflowRunRecord } from './runHistory'
 import { buildRunTrace } from './runTrace'
 import type { Workflow, WorkflowRunLog, WorkflowStatus } from './workflow'
@@ -484,6 +484,7 @@ export function collectBriefingInput(args: CollectBriefingInputArgs): BriefingIn
     runHistoryRecords: args.runHistoryRecords,
   })
   const runDetail = summarizeRunDetail(runTrace, args.mode)
+  const runtimeTimeline = buildRunDetailRuntimeTimelineView({ trace: runTrace, limit: 6 })
   const severity = determineSeverity(
     args.workflow.status,
     workflowSummary,
@@ -552,6 +553,16 @@ export function collectBriefingInput(args: CollectBriefingInputArgs): BriefingIn
       ...runDetail,
       safetyWarnings: trimmedSafetyWarnings.entries,
       selectedEvidence: trimmedEvidence.entries,
+    },
+    runtimeReplay: {
+      eventCount: runtimeTimeline.eventCount,
+      routeEventCount: runtimeTimeline.routeEventCount,
+      edgeEventCount: runtimeTimeline.edgeEventCount,
+      reviewEventCount: runtimeTimeline.reviewEventCount,
+      warningEventCount: runtimeTimeline.warningEventCount,
+      errorEventCount: runtimeTimeline.errorEventCount,
+      latestSummary: sanitizeBriefingText(runtimeTimeline.latestSummary),
+      replayHint: sanitizeBriefingText(runtimeTimeline.replayHint) ?? 'runtime replay cue なし',
     },
     logEntries: trimmedLogs.entries,
     errorEntries: trimmedErrors.entries,

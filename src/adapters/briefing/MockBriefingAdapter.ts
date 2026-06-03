@@ -88,6 +88,12 @@ function buildWhy(input: BriefingInput): string {
     )
   }
 
+  if (input.runtimeReplay.latestSummary) {
+    return truncateSentence(
+      `runtime audit の最新イベントは「${input.runtimeReplay.latestSummary}」で、Run Detail の replay-ready timeline から確認できます。`,
+    )
+  }
+
   return truncateSentence(input.hud.summary)
 }
 
@@ -143,6 +149,32 @@ function buildNext(input: BriefingInput): string {
   }
 
   return '次の Run を開始するか、成功パターンをテンプレート化して再利用準備を進めてください。'
+}
+
+function buildReplayCue(input: BriefingInput): string {
+  const replay = input.runtimeReplay
+  if (replay.eventCount === 0) {
+    return 'runtime event はまだありません。Run 実行後に Run Detail の replay-ready timeline を確認してください。'
+  }
+
+  if (replay.reviewEventCount > 0) {
+    return truncateSentence(
+      `review route を含む runtime event が ${replay.reviewEventCount} 件あります。Human Review と Run Detail timeline を並べて確認してください。`,
+      180,
+    )
+  }
+
+  if (replay.errorEventCount > 0 || replay.warningEventCount > 0) {
+    return truncateSentence(
+      `runtime event は ${replay.eventCount} 件、warn ${replay.warningEventCount} / error ${replay.errorEventCount} です。edge と route の safe metadata を先に見てください。`,
+      180,
+    )
+  }
+
+  return truncateSentence(
+    `runtime event は ${replay.eventCount} 件です。最新イベント: ${replay.latestSummary ?? replay.replayHint}`,
+    180,
+  )
 }
 
 function normalizeSeverity(input: BriefingInput): BriefingSeverity {
@@ -246,6 +278,7 @@ export class MockBriefingAdapter implements BriefingAdapter {
       why: buildWhy(request.input),
       how: buildHow(request.input),
       next: buildNext(request.input),
+      replayCue: buildReplayCue(request.input),
       voiceScript: buildVoiceScript(request.input),
       avatarScript: buildAvatarScript(request.input),
       visualTimeline: buildVisualTimeline(request.input),

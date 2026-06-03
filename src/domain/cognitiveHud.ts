@@ -292,7 +292,7 @@ export type CentralHudVariant =
   | 'danger'
 
 export type CentralHudStateCue = {
-  state: 'validation_warning'
+  state: 'validation_warning' | 'review_required'
   label: string
   commandHint: string
   guardrail: string
@@ -1428,16 +1428,25 @@ function buildCentralHudStateCue(
   variant: CentralHudVariant,
   semanticFocusPath: SemanticFocusPathView | null,
 ): CentralHudStateCue | null {
-  if (variant !== 'validation' || semanticFocusPath?.source !== 'validation') {
-    return null
+  if (variant === 'validation' && semanticFocusPath?.source === 'validation') {
+    return {
+      state: 'validation_warning',
+      label: 'Validation warning',
+      commandHint: 'Val first',
+      guardrail: 'Inspect the highlighted edge before running the workflow.',
+    }
   }
 
-  return {
-    state: 'validation_warning',
-    label: 'Validation warning',
-    commandHint: 'Val first',
-    guardrail: 'Inspect the highlighted edge before running the workflow.',
+  if (variant === 'approval' && semanticFocusPath?.source === 'approval') {
+    return {
+      state: 'review_required',
+      label: 'Review required',
+      commandHint: 'Open review',
+      guardrail: 'Use the review controls before continuing the run.',
+    }
   }
+
+  return null
 }
 
 function findExecutionGraphStep(

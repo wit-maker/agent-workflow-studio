@@ -15,6 +15,7 @@ The Runtime Audit worktree phase has landed the shared safe route-event path on 
 | #41 | Durable Audit | Existing run history records can persist safe `traceAudit.runtimeEvents`; old records normalize to `[]`. |
 | #42 | Run Detail Replay / Diff | `RunDetailPanel` compares two safe audit snapshots, includes runtime-event count metadata, and can show focused edge safe route-event metadata diff. |
 | #43 | Edge HUD / Deep Link | Selected Edge HUD can open Run Detail while preserving focused edge context in session state. |
+| post-#52 | Replay-ready audit view model | `RunDetailPanel` orders safe runtime events into a replay-ready timeline for the selected current trace or revived audit snapshot, and Situation Assistant receives a safe replay cue. |
 
 PR #39 remains the Integration Captain documentation lane and defines the merge / validation / stop conditions for this phase.
 
@@ -34,6 +35,7 @@ This phase is not a full replay system or full policy runtime.
 - No animated run replay.
 - No timeline scrubber.
 - No URL-level deep link router.
+- Replay-ready ordering exists, but it is a read-only metadata timeline, not animation.
 - Runtime policy has a mock-only fixed-preset evaluator for safe metadata, but no full branch graph enforcement.
 - No expression evaluator for edge conditions.
 - No durable approval/safety decision audit log.
@@ -46,9 +48,10 @@ This phase is not a full replay system or full policy runtime.
    - Keep `expression` as safe display metadata only unless a bounded expression subset is designed.
    - Continue storing only safe policy outcomes in runtime audit metadata.
 
-2. **Replay-ready audit view model**
-   - Build pure domain helpers that order safe runtime events into a replay-friendly timeline.
-   - Do not add animation UI until the data contract is stable.
+2. **Animated replay UI candidate**
+   - Use the landed replay-ready timeline as input.
+   - Keep the first UI slice read-only and metadata-only.
+   - Do not animate raw config, prompt, payload, artifact body, or credential-derived values.
 
 3. **Final integration QA pass**
    - Validate `codex/runtime-audit-integration-base` after all runtime audit PRs are merged.

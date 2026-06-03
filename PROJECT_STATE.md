@@ -4,6 +4,66 @@ Last updated: 2026-06-03
 
 ---
 
+## Phase Active Plan Completion: Runtime Replay / Review HUD / Five-Pillar Thickening
+
+- Branch: `codex/complete-active-plan-slices`
+- Date: 2026-06-03
+- Model gate: `ALLOW_XHIGH` はないため、Codex Desktop 運用ラベルとして `GPT-5.5 high` のまま実施した。API model id として記録する場合は `gpt-5.5` とする。
+- Scope: `docs/project/ACTIVE_PLAN.md` に残っていた 3 つの推奨スライスを完了する。対象は Five-pillar vertical thickening、review required の state-based Game HUD behavior、Replay-ready audit view model。GitHub issue state、source-specs、storage key、backend/API、credential、依存関係は変更しない。
+
+### Implemented
+
+- `RunDetailPanel` に `Replay-ready timeline` を追加し、選択中の current trace または durable audit snapshot の `runtimeEvents` を safe metadata の時系列として表示できるようにした。
+- `src/domain/runDetail.ts` に `buildRunDetailRuntimeTimelineView(...)` を追加した。pure helper として event count、focused event count、route/edge/review/warn/error counts、safe latest summary、safe copy summary、timeline items を返す。
+- `BriefingInput` に safe runtime replay metadata を追加し、Mock Situation Assistant が `Replay` cue を生成するようにした。`BriefingPanel` には replay cue の小セクションを追加した。
+- `CentralHudStateCue` に `review_required` を追加し、approval semantic focus 時に central HUD が `Review required / Open review` を出せるようにした。
+- `CanvasCommandHud` は review-required state のときだけ `D`（Detail）と `T`（Run Detail）を attention 表示にする。
+- `ACTIVE_PLAN.md` を更新し、今回のActive Plan上の残りスライスを完了済みにした。次は新しい小さなvertical sliceを選ぶ状態。
+- `docs/audit/current-implementation-map.md`、`docs/audit/spec-coverage-matrix.md`、`docs/implementation/runtime-audit-next-phase.md` を更新し、replay-ready timeline / review-required HUD / briefing replay cue を現在実装として記録した。
+
+### Concept checklist classification
+
+- Classification: MVP surface / safe projection / detail-history surface.
+- Cognitive HUD claim: review-required の attention allocation を小さく改善する state cue と HUD entrypoint highlight。Cognitive HUD 全体完成ではない。
+- Situation Assistant claim: safe runtime replay metadata を mock briefing の入力と replay cue へ渡す最小出力チャネル。Situation Assistant 全体完成ではない。
+- Runtime Audit claim: replay-ready ordering の view model と表示。animated replay、timeline scrubber、full route reconstruction ではない。
+- Safety: raw config / prompt / payload / artifact body / credential / token / API key は表示・保存・copy summary 対象にしていない。
+- Persistence/API: 新 localStorage key、backend/API、credential storage、dependency は追加していない。
+
+### Validation
+
+- `npm.cmd run typecheck`: pass
+- `npm.cmd run lint`: pass
+- `npm.cmd run build`: pass
+- Vite chunk-size warning は既存許容警告として扱う。
+
+### Browser QA / direct validation
+
+- Direct validation: `buildRunDetailRuntimeTimelineView(...)` に safe runtime events を渡し、時系列順、focused edge filtering、route/review counts、credential/token/payload-like metadata 非表示を確認した。
+- Direct validation: `buildCentralHudView(...)` に approval semantic focus を渡し、`stateCue.state=review_required` と `commandHint=Open review` が生成されることを確認した。
+- Direct validation: `MockBriefingAdapter` に safe runtime replay metadata を渡し、`replayCue` が生成され、credential-like keyword が出力に混入しないことを確認した。Node direct validation では browser-only `window.setTimeout` のため最小 polyfill を使用した。
+- Preview: `http://127.0.0.1:4178/`
+- Initial render: title `agent-workflow-studio`、console error 0。
+- Browser QA: `Run` 実行後に `Run Detail` を開き、`Replay-ready timeline`、event/focused counts、route/edge/review/warn/error stats、safe runtime metadata items が表示されることを確認した。
+- Browser QA: `Reset` 操作後も実行状態が準備完了へ戻り、console error 0 を維持した。
+- Browser QA: `performance` resource entries で localhost 以外の script/link/image request がないことを確認した。
+- Browser QA: 画面内の credential-like keyword は検出されなかった。`token` の文字列は `120 tokens / 420 ms` の見積もりメトリクス表示のみで、raw token/credential ではないことを確認した。
+- Browser limitation: in-app Browser の screenshot 取得は `Page.captureScreenshot` timeout のため保存できなかった。DOM/console/resource/direct validation で補完した。
+
+### Remaining gaps
+
+- Replay-ready timeline は安全な metadata ordering であり、animated replay、timeline scrubber、visual route reconstruction ではない。
+- review-required cue は HUD attention の小スライスであり、durable approval decision log や persisted notification state ではない。
+- runtimePolicy は固定プリセットの safe summary / safe metadata までで、任意式評価や本格 enforcement はまだ実装していない。
+
+### Next recommended slice
+
+1. Review decision persistence boundary: human review decisions を session-only のままにするか、既存 run history 内の safe audit metadata として扱うかを決める。
+2. Runtime policy enforcement design spike: 固定プリセットだけを mock execution に反映する範囲を設計し、expression 実行はまだ避ける。
+3. Browser QA direct validation harness: file picker / download / compare checkbox / edge操作を補完する direct code-path validation を整える。
+
+---
+
 ## Phase Active Plan Execution: Validation Warning HUD Behavior
 
 - Branch: `codex/state-based-hud-validation-warning`

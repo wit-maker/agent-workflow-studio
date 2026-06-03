@@ -93,6 +93,7 @@ export function CanvasCommandHud({
   onResetPositions,
 }: CanvasCommandHudProps) {
   const validationAttention = centralHudView?.stateCue?.state === 'validation_warning'
+  const reviewAttention = centralHudView?.stateCue?.state === 'review_required'
 
   return (
     <section className="canvas-command-hud" aria-label="最小常時HUD">
@@ -204,10 +205,10 @@ export function CanvasCommandHud({
         </button>
         <button
           type="button"
-          className={`hud-icon-button ${detailOpen ? 'active' : ''}`}
+          className={`hud-icon-button ${detailOpen ? 'active' : ''} ${reviewAttention ? 'attention' : ''}`}
           onClick={onToggleDetail}
           aria-pressed={detailOpen}
-          title="詳細表示切替"
+          title={reviewAttention ? 'Review required: open Detail / Human Review' : '詳細表示切替'}
         >
           D
         </button>
@@ -240,9 +241,9 @@ export function CanvasCommandHud({
         </button>
         <button
           type="button"
-          className="hud-icon-button"
+          className={`hud-icon-button ${reviewAttention ? 'attention' : ''}`}
           onClick={onOpenRunDetail}
-          title="Run Detail / audit replay を開く"
+          title={reviewAttention ? 'Review required: open Run Detail / audit replay' : 'Run Detail / audit replay を開く'}
         >
           T
         </button>
