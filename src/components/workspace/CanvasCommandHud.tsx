@@ -92,6 +92,8 @@ export function CanvasCommandHud({
   onChangeCanvasMode,
   onResetPositions,
 }: CanvasCommandHudProps) {
+  const validationAttention = centralHudView?.stateCue?.state === 'validation_warning'
+
   return (
     <section className="canvas-command-hud" aria-label="最小常時HUD">
       <div className="canvas-command-hud-status" aria-label="現在状態">
@@ -142,7 +144,13 @@ export function CanvasCommandHud({
         <button type="button" className="hud-icon-button" onClick={onDryRun} disabled={isRunning} title="ドライラン">
           Dry
         </button>
-        <button type="button" className="hud-icon-button" onClick={onValidate} disabled={isRunning} title="Validate mode">
+        <button
+          type="button"
+          className={`hud-icon-button ${validationAttention ? 'attention' : ''}`}
+          onClick={onValidate}
+          disabled={isRunning}
+          title={validationAttention ? 'Validation warning active: run Validate mode before Run' : 'Validate mode'}
+        >
           Val
         </button>
         <button type="button" className="hud-icon-button danger" onClick={onStop} disabled={!isRunning} title="停止">

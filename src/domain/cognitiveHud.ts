@@ -291,6 +291,13 @@ export type CentralHudVariant =
   | 'failure'
   | 'danger'
 
+export type CentralHudStateCue = {
+  state: 'validation_warning'
+  label: string
+  commandHint: string
+  guardrail: string
+}
+
 export type CentralHudView = {
   variant: CentralHudVariant
   priority: HudPriority
@@ -301,6 +308,7 @@ export type CentralHudView = {
   focusLabel: string | null
   sourceLabel: string
   signalCount: number
+  stateCue: CentralHudStateCue | null
 }
 
 export type HudDensityMode = 'quiet' | 'balanced' | 'deep'
@@ -1233,6 +1241,7 @@ export function buildCentralHudView(options: {
     focusLabel: semanticFocusLabel ?? hudSnapshot.focusTargetLabel,
     sourceLabel,
     signalCount: semanticFocusPath?.evidenceCount ?? hudSnapshot.signals.length,
+    stateCue: buildCentralHudStateCue(variant, semanticFocusPath),
   }
 }
 
@@ -1413,6 +1422,22 @@ function resolveCentralHudVariant(
   if (hudSnapshot.signals[0]?.kind === 'review_required') return 'approval'
   if (hudSnapshot.priority === 'critical') return 'danger'
   return 'watch'
+}
+
+function buildCentralHudStateCue(
+  variant: CentralHudVariant,
+  semanticFocusPath: SemanticFocusPathView | null,
+): CentralHudStateCue | null {
+  if (variant !== 'validation' || semanticFocusPath?.source !== 'validation') {
+    return null
+  }
+
+  return {
+    state: 'validation_warning',
+    label: 'Validation warning',
+    commandHint: 'Val first',
+    guardrail: 'Inspect the highlighted edge before running the workflow.',
+  }
 }
 
 function findExecutionGraphStep(

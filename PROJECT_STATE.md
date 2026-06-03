@@ -4,6 +4,55 @@ Last updated: 2026-06-03
 
 ---
 
+## Phase Active Plan Execution: Validation Warning HUD Behavior
+
+- Branch: `codex/state-based-hud-validation-warning`
+- Date: 2026-06-03
+- Scope: `docs/project/ACTIVE_PLAN.md` の state-based Game HUD slice として、validation warning 状態の HUD 振る舞いを1つ追加する。Canvas HUD 全体レイアウト、Run Detail、storage key、backend/API、credential、依存関係は変更しない。
+
+### Implemented
+
+- `CentralHudView` に validation warning 用の `stateCue` を追加し、validation focus 時に `Validation warning / Val first / highlighted edge を確認` の小さな状態指示を出せるようにした。
+- `CognitiveHudOverlay` に `stateCue` 表示を追加した。常時大型パネルではなく、既存 central HUD 内の小さな cue として扱う。
+- `CanvasCommandHud` は validation warning state のときだけ `Val` action を attention 表示にする。Run / Reset / import-export など既存導線は維持。
+- CSS は `cognitive-hud-state-cue` と `hud-icon-button.attention` のみ追加し、Game HUD 全体レイアウトは変更していない。
+- `ACTIVE_PLAN.md` と audit docs を更新し、validation-warning HUD behavior を完了済み state-based MVP behavior として記録した。
+
+### Concept checklist classification
+
+- Classification: MVP surface / state-based HUD behavior.
+- Cognitive HUD claim: final layer 全体ではなく、validation warning の attention allocation を小さく改善する Canvas HUD 表示。
+- Situation Assistant claim: なし。assistant output ではない。
+- Safety: raw config / prompt / payload / artifact body / credential / token / API key は表示・保存・copy 対象にしていない。
+- Persistence/API: 新 localStorage key、backend/API、credential storage、dependency は追加していない。
+
+### Validation
+
+- `npm.cmd run typecheck`: pass
+- `npm.cmd run lint`: pass
+- `npm.cmd run build`: pass
+- Vite chunk-size warning のみ発生。既存許容警告として扱う。
+
+### Browser QA / direct validation
+
+- Preview: `http://127.0.0.1:4178/`
+- Initial render: title `agent-workflow-studio`、console error 0。
+- Existing HUD: Cognitive HUD overlay、Run、Val、GPT-5.5 high、safe/mock/history chip、trace chip、Console HUD が表示されることを確認。
+- Direct validation: `buildCentralHudView(...)` に validation semantic focus を渡し、`variant=validation` と `stateCue.state=validation_warning` が生成されることを確認。
+
+### Remaining gaps
+
+- review required / high cost / delay / failure / approval などの状態別 HUD 振る舞いはまだ個別スライスとして残る。
+- validation warning の Browser QA は初期表示と direct domain validation の組み合わせで確認した。実画面上で invalid connection を作る完全操作は未実施。
+
+### Next recommended slice
+
+1. Five-pillar vertical thickening: mock-only の1本のユーザーフローを選び、parts / mock runtime / HUD attention / safe audit / assistant explanation / template-history の接続を太くする。
+2. Next state-based Game HUD slice: review required を、Human Review と central HUD / command HUD の状態別挙動へ接続する。
+3. Replay-ready audit view model: safe runtime route events を timeline 化し、将来の replay UI へ渡せる pure view model を作る。
+
+---
+
 ## Phase Active Plan Execution: Edge Route Metadata Diff
 
 - Branch: `codex/edge-route-metadata-diff`
