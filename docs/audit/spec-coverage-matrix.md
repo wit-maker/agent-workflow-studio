@@ -12,6 +12,17 @@ Status values:
 
 > **Concept layer note (Issue #31)**: For the cognitive HUD and the Situation Narration Layer, the current MVP exposes summary surfaces (`認知HUD` tab, `ブリーフィング` tab, `実行詳細` tab). These surfaces are **provisional MVP display panels**, not the full layers. The "Spec area" rows below are intentionally evaluated against the full source-spec layer, not against the MVP surface. See `docs/project/concept-layer-correction.md` and `current-implementation-map.md` for the concept-layer split.
 
+## Issue Priority Lens
+
+Use this lens when selecting the next slice from `docs/project/ACTIVE_PLAN.md`.
+
+| Issue priority | Coverage meaning |
+|---|---|
+| P0 #31 Concept Guardrail | Every Partial / Missing / Risk item touching Cognitive HUD, Situation Narration, Situation Assistant, or MVP naming must preserve the final-layer vs MVP-surface distinction. |
+| P1 #34 UI System Redesign | UI coverage gaps should improve Canvas First / Game HUD attention behavior instead of adding permanent panels. |
+| P1-child #37 Game HUD Canvas First Completion | Canvas, HUD, Run Detail, edge focus, MiniMap, zoom, replay, and visual attention gaps are implementation-track items under #34. |
+| P1 #46 Five-pillar MVP | Functional gaps should be prioritized when they thicken the connected path across parts operation, mock connector/runtime, HUD attention, safe audit, Situation Assistant, and template/history. |
+
 ## UI Coverage
 
 | Spec area | Status | Current coverage | Gap / risk |

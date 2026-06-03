@@ -2,7 +2,7 @@
 
 Last updated: 2026-06-03
 
-> Planning status: detail backlog. The single active planning entrypoint is `docs/project/ACTIVE_PLAN.md`. Use this file for Runtime Audit details only after the active plan selects that track.
+> Planning status: detail backlog. The single active planning entrypoint is `docs/project/ACTIVE_PLAN.md`. Use this file for Runtime Audit details only after the active plan selects a #37 Game HUD or #46 Five-pillar MVP slice that needs Runtime Audit work.
 
 ## Current Integrated State
 
@@ -44,16 +44,19 @@ This phase is not a full replay system or full policy runtime.
 ## Next Recommended Slices
 
 1. **Runtime policy route enforcement**
+   - Issue alignment: #37 / #46.
    - Extend the mock-only fixed-preset evaluator into explicit pass / non-pass route behavior.
    - Keep `expression` as safe display metadata only unless a bounded expression subset is designed.
    - Continue storing only safe policy outcomes in runtime audit metadata.
 
 2. **Animated replay UI candidate**
+   - Issue alignment: #37 / #46.
    - Use the landed replay-ready timeline as input.
    - Keep the first UI slice read-only and metadata-only.
    - Do not animate raw config, prompt, payload, artifact body, or credential-derived values.
 
 3. **Final integration QA pass**
+   - Issue alignment: #31 / #34 / #37 / #46.
    - Validate `codex/runtime-audit-integration-base` after all runtime audit PRs are merged.
    - Use Browser QA where available.
    - If the in-app Browser cannot use file picker/download or edge-click automation, supplement with direct code-path validation and report the limitation explicitly.

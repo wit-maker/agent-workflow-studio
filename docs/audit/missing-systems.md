@@ -10,6 +10,19 @@ Priority scale:
 
 > **Concept layer note (Issue #31)**: The cognitive HUD and Situation Narration Layer currently only have *summary surfaces* in the MVP. As of Issue #34 UI shell migration, those surfaces are now placed in three locations: `CognitiveHudOverlay` (canvas overlay), right panel `Situation` mode, and the demoted BottomMonitor `認知HUD` tab inside `DetailDrawerDock`. The items listed below for those layers are the elements of the **full layer**, not enhancements to the summary tabs. See `docs/project/concept-layer-correction.md`.
 
+## Open Issue Priority Map
+
+The missing systems below should be selected through `docs/project/ACTIVE_PLAN.md`, using this issue map:
+
+| Issue | Priority use | Missing-system focus |
+|---|---|---|
+| #31 Concept Guardrail | P0 guardrail | Source of Truth references, concept classification, and naming debt must be checked before UI/domain/QA work. |
+| #34 UI System Redesign | P1 parent | Cognitive HUD state model, cross-surface HUD orchestration, persisted HUD preferences, and state-based Game HUD behavior. |
+| #37 Game HUD Canvas First Completion | P1 child | Canvas/edge/HUD interaction hardening, replay-backed focus, MiniMap/zoom/selection QA, and visual route replay candidates. |
+| #46 Five-pillar MVP | P1 delivery spine | Mock connector/runtime, safe audit, Situation Assistant output, template/history, and review/runtime policy slices that keep the five pillars connected. |
+
+The next recommended slice is **Browser QA direct validation harness** because it improves evidence for all four issues without changing product runtime behavior.
+
 ## UI Shell Foundation (Issue #34) — landed, now Canvas First foundation
 
 - `GameHudShell` now makes React Flow canvas the primary surface and turns palette/detail/BottomMonitor into on-demand HUD drawer/console surfaces.

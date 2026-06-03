@@ -10,40 +10,50 @@ Use this file to decide the next implementation slice. Other plan-like files are
 
 ## Current Planning Rule
 
-- Keep GitHub issue state separate from repository planning documents. Updating this file does not open, close, label, or comment on GitHub issues.
+- Keep GitHub issue state separate from repository planning documents. Updating this file does not open, close, or label GitHub issues.
+- GitHub issue comments may be used only when the user explicitly allows them; comments should point back to this repo plan and must not claim broad epics are closed by thin slices.
 - Keep `docs/source-specs/**` read-only as source material.
 - Keep `PROJECT_STATE.md` as chronological implementation history, not the primary plan selector.
 - Keep old task prompts under `docs/tasks/**` as historical task records unless this file explicitly marks one as the active task.
 - Use small, user-visible vertical slices. Do not close broad design epics with a thin slice.
 
-## Active Scope
+## Open Issue Priority Roadmap
 
-The project currently has four open product-planning tracks inside the repo docs:
+GitHub currently has four open broad product epics. They are source inputs for planning, not branch-sized tasks.
 
-| Track | Current state | Active next direction |
-|---|---|---|
-| Concept guardrail | The repo now distinguishes Cognitive HUD, Situation Narration Layer, Situation Assistant, and text briefing MVP. `docs/project/CONCEPT_CHECKLIST.md` adds a lightweight classification gate for future UI/domain/QA changes. | Apply the checklist in future slices so MVP surfaces and safe projections are not described as the full layer. |
-| Canvas First / Game HUD | Canvas First shell, dark HUD surface, minimal HUD controls, MiniMap, zoom mode, selected node/edge HUD, inline previews, grouping, semantic focus, validation-warning state cue, review-required state cue, and on-demand console/drawers exist. | The active state-based HUD slice is complete. Choose a new state slice only after a new plan is selected. |
-| Runtime Audit / Run Detail / Edge HUD | Safe runtime events, durable `traceAudit.runtimeEvents`, Run Detail comparison, focused node/edge scoped diff, focused edge safe route-event metadata diff, selected-edge deep link, replay-ready safe runtime timeline view model, and safe connection policy summaries exist. | The active replay-ready audit view-model slice is complete. Animated replay remains a future epic, not part of this active plan. |
-| Five-pillar MVP | A mock-only path connects parts operation, mock connector/runtime, HUD attention, safe audit, Run Detail timeline, Situation Assistant replay cue, and template/history guidance without raw data exposure. | The active vertical thickening slice is complete. Choose the next vertical path explicitly before implementation. |
+| Priority | Issue | Role in planning | Current state | Active next direction |
+|---|---|---|---|---|
+| P0 | #31 Concept Guardrail | Always-on guardrail for every plan, implementation, and QA pass. | The repo distinguishes Cognitive HUD, Situation Narration Layer, Situation Assistant, and text briefing MVP. `CONCEPT_CHECKLIST.md` adds a lightweight classification gate. | Apply the checklist to every UI/domain/QA slice so MVP surfaces and safe projections are not described as the full layer. |
+| P1 | #34 UI System Redesign | Parent product surface direction. | Canvas First shell, dark HUD surface, minimal HUD controls, on-demand drawers, semantic focus, notification/density overlay, and central HUD state cues exist. | Continue state-based Canvas First / Game HUD behavior, interaction hardening, and visual attention work without returning to panel-first growth. |
+| P1-child | #37 Game HUD Canvas First Completion | Implementation track under #34. | Major foundation is landed: selected node/edge HUD, MiniMap, zoom mode, workflow grouping, inline preview, dark HUD theme, safe Run Detail / Edge HUD links. | Treat remaining work as state-based HUD QA, visual attention behavior, and interaction hardening slices, not as a second competing plan. |
+| P1 delivery spine | #46 Five-pillar MVP | Vertical delivery strategy. | A mock-only path connects parts operation, mock connector/runtime, HUD attention, safe audit, Run Detail timeline, Situation Assistant replay cue, and template/history guidance. | Choose slices that thicken the connected path across Scratch-like operation, mock connector/runtime, HUD attention, safe audit, Situation Assistant, and template/history. |
+
+Runtime Audit remains a detail backlog in `docs/implementation/runtime-audit-next-phase.md`. It becomes active only when this file selects a slice that advances #37 or #46 through Runtime Audit work.
 
 ## Current Recommended Order
 
-The previously selected active implementation plan is complete.
+The previously selected active implementation plan is complete. The next implementation should be a small vertical slice that supports the open issue roadmap above.
 
-Before starting more implementation, select a new small vertical slice from the broad product tracks. Good next candidates are:
+1. **Browser QA direct validation harness**
+   - Issue alignment: #31, #34, #37, #46.
+   - Goal: make file picker/download, Run Detail comparison, selected edge focus, and safe leak checks reproducible when Browser automation cannot complete them.
+   - Why first: it stabilizes regression evidence for all four broad epics and makes later UI/runtime changes easier to judge.
+   - Constraint: validation helper only; no product runtime behavior change, no new localStorage key, no dependency addition.
 
-1. **Review decision persistence boundary**
-   - Goal: clarify whether human review decisions stay session-only or become durable safe audit metadata.
-   - Constraint: do not add a new localStorage key unless the active plan explicitly approves it.
+2. **Review decision persistence boundary**
+   - Issue alignment: #31, #34, #46.
+   - Goal: clarify whether human review decisions stay session-only or become durable safe audit metadata inside an existing record.
+   - Constraint: do not add a new localStorage key unless a future active plan explicitly approves it.
 
-2. **Runtime policy enforcement design spike**
-   - Goal: document and prototype only fixed preset enforcement behavior for mock execution.
+3. **Runtime policy route enforcement design spike**
+   - Issue alignment: #37, #46.
+   - Goal: document and prototype only fixed preset pass / non-pass route behavior for mock execution.
    - Constraint: no arbitrary expression evaluator and no raw expression execution.
 
-3. **Browser QA direct validation harness**
-   - Goal: make file picker/download and run-detail comparison checks reproducible when Browser automation cannot complete them.
-   - Constraint: validation helper only; no product runtime behavior change.
+4. **Animated replay UI candidate**
+   - Issue alignment: #37, #46.
+   - Goal: use the replay-ready safe runtime timeline as a read-only metadata-only replay surface.
+   - Constraint: no raw config, prompt, payload, artifact body, credential-derived values, or visual route reconstruction beyond safe metadata.
 
 ## Completed Plan Slices
 
@@ -70,7 +80,7 @@ Before starting more implementation, select a new small vertical slice from the 
 | `docs/audit/spec-coverage-matrix.md` | Done/Partial/Missing coverage against the specs. |
 | `docs/audit/missing-systems.md` | Missing full-product systems and why they matter. |
 | `docs/audit/technical-debt.md` | Known implementation and naming debt. |
-| `docs/implementation/runtime-audit-next-phase.md` | Runtime Audit detail backlog; subordinate to this file. |
+| `docs/implementation/runtime-audit-next-phase.md` | Runtime Audit detail backlog; subordinate to this file and only active when #37 or #46 selects a runtime-audit slice. |
 | `docs/implementation/runtime-audit-integration-plan.md` | Historical worktree integration plan for the landed Runtime Audit phase. |
 | `docs/tasks/**` | Historical task prompts and completed or partial slice records. |
 

@@ -4,6 +4,57 @@ Last updated: 2026-06-03
 
 ---
 
+## Phase Plan Unification: GitHub Issue Priority Roadmap
+
+- Branch: `codex/github-issues-plan-unification`
+- Date: 2026-06-03
+- Model gate: `ALLOW_XHIGH` はないため、Codex Desktop 運用ラベルとして `GPT-5.5 high` のまま計画整理を実施した。API model id として記録する場合は `gpt-5.5` とする。
+- Scope: GitHub open issues #31 / #34 / #37 / #46 を確認し、repo docs 内の active planning を issue-based priority roadmap へ一本化する。GitHub issue 本文、ラベル、open/close 状態は変更しない。ユーザー訂正により、issue コメントは可能な範囲として扱う。
+
+### GitHub issue status
+
+- #31 `docs: 認知HUD / 状況補佐官の概念レイヤーを仕様書に基づいて修正する`: open broad epic。P0 concept guardrail として扱う。
+- #34 `UI System Redesign: 認知HUD前提で画面全体を再設計する`: open broad epic。P1 UI/product surface parent として扱う。
+- #37 `Game HUD Canvas First Completion Plan`: open broad epic。#34 配下の P1-child implementation track として扱う。
+- #46 `Plan: 5本柱同格MVP垂直スライス実装`: open broad epic。P1 delivery spine として扱う。
+
+### Implemented docs updates
+
+- `docs/project/ACTIVE_PLAN.md` を更新し、4つの open issue を優先順位付き roadmap として単一入口に整理した。
+- `docs/project/PLAN_PROTOCOL.md` に、GitHub issue は source input、repo docs は execution plan であること、broad epic を小PRで close しないこと、issue コメントの扱いを追加した。
+- `docs/implementation/runtime-audit-next-phase.md` を更新し、Runtime Audit detail backlog は #37 / #46 の selected slice に従属することを明記した。
+- `docs/audit/current-implementation-map.md`、`docs/audit/spec-coverage-matrix.md`、`docs/audit/missing-systems.md`、`docs/audit/technical-debt.md` を issue優先順位に合わせて更新した。
+
+### Concept checklist classification
+
+- Classification: planning guardrail / implementation backlog / QA foundation.
+- Cognitive HUD claim: #34 / #37 の現状は Canvas First / Game HUD foundation であり、Cognitive HUD 全体完成ではない。
+- Situation Assistant claim: #46 の現状は mock-only output channels を含む thin vertical slice であり、Situation Assistant 全体完成ではない。
+- Runtime Audit claim: Runtime Audit は #37 / #46 を支える detail backlog であり、単独の active plan ではない。
+
+### Validation
+
+- `npm.cmd run typecheck`: pass
+- `npm.cmd run lint`: pass
+- `npm.cmd run build`: pass
+- Vite chunk-size warning は既存許容警告として扱う。
+- Docs consistency: `rg -n "active plan|Active Plan|次スライス|Next recommended|#31|#34|#37|#46|GitHub issue|Runtime Audit detail backlog" docs PROJECT_STATE.md` で active plan / issue priority / subordinate backlog の記述を確認した。
+- Browser QA: docs-only 変更のため interactive Browser QA は対象外。docs consistency と static validation で補完した。
+
+### Remaining gaps
+
+- GitHub issue comments are allowed, but issue body / label / open-close state remain unchanged by this docs unification.
+- The next implementation slice is not yet implemented; this phase selects the roadmap and next recommended slice only.
+- Browser QA direct validation harness remains the next recommended implementation slice.
+
+### Next recommended slice
+
+1. Browser QA direct validation harness: #31 / #34 / #37 / #46 を横断する file picker / download / Run Detail comparison / edge focus / raw leak checks を direct code-path validation で再現可能にする。
+2. Review decision persistence boundary: human review decisions を session-only のままにするか、既存 run history 内の safe audit metadata として扱うかを決める。
+3. Runtime policy route enforcement design spike: fixed preset だけを mock execution の pass / non-pass route behavior へ反映する範囲を設計する。
+
+---
+
 ## Phase Active Plan Completion: Runtime Replay / Review HUD / Five-Pillar Thickening
 
 - Branch: `codex/complete-active-plan-slices`
