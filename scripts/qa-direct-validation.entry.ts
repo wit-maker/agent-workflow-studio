@@ -8,6 +8,7 @@ import { validateImportBundle } from '../src/domain/importValidation'
 import { createRunTraceAuditSummary } from '../src/domain/runAudit'
 import {
   buildRunComparisonView,
+  buildRunDetailReplayCandidateView,
   buildRunDetailReplayView,
   buildRunDetailRuntimeTimelineView,
 } from '../src/domain/runDetail'
@@ -337,6 +338,25 @@ export async function runDirectQaValidation(): Promise<DirectQaValidationResult>
   assert(timelineView.eventCount > 0, 'runtime timeline should include safe events')
   assertNoForbiddenSentinels(timelineView, 'runtime timeline view')
   checked.push('Run Detail replay/timeline focus')
+
+  const replayCandidate = buildRunDetailReplayCandidateView({
+    timeline: timelineView,
+    selectedIndex: 1,
+  })
+  assert(replayCandidate.available, 'replay candidate should be available for safe runtime events')
+  assert(replayCandidate.currentFrame !== null, 'replay candidate should expose a selected safe frame')
+  assert(
+    replayCandidate.currentFrame.position >= 1 &&
+      replayCandidate.currentFrame.position <= replayCandidate.currentFrame.count,
+    'replay candidate selected frame should stay within bounds',
+  )
+  assert(
+    replayCandidate.playbackHint.includes('safe metadata') ||
+      replayCandidate.playbackHint.includes('安全な runtime metadata'),
+    'replay candidate should describe metadata-only behavior',
+  )
+  assertNoForbiddenSentinels(replayCandidate, 'Run Detail metadata-only replay candidate')
+  checked.push('Run Detail metadata-only replay candidate')
 
   const edgeHud = buildSelectedEdgeHudView({
     workflow,

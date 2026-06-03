@@ -3107,6 +3107,7 @@ button:disabled {
 .run-detail-step-diff,
 .run-detail-scoped-diff,
 .run-detail-route-metadata-diff,
+.run-detail-replay-candidate,
 .run-detail-runtime-timeline {
   display: grid;
   gap: 9px;
@@ -3119,6 +3120,7 @@ button:disabled {
 .game-hud-workspace .run-detail-step-diff,
 .game-hud-workspace .run-detail-scoped-diff,
 .game-hud-workspace .run-detail-route-metadata-diff,
+.game-hud-workspace .run-detail-replay-candidate,
 .game-hud-workspace .run-detail-runtime-timeline {
   border-color: rgba(34, 211, 238, 0.18);
   background: rgba(2, 6, 23, 0.44);
@@ -3277,10 +3279,113 @@ button:disabled {
   margin: 0;
 }
 
+.run-detail-replay-candidate > p,
 .run-detail-runtime-timeline > p {
   margin: 0;
   color: var(--text-muted);
   font-size: 0.78rem;
+}
+
+.run-detail-replay-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.run-detail-replay-controls button,
+.run-detail-replay-marker {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.74rem;
+  line-height: 1;
+  padding: 6px 9px;
+}
+
+.run-detail-replay-controls button:hover,
+.run-detail-replay-marker:hover {
+  border-color: rgba(34, 211, 238, 0.68);
+}
+
+.run-detail-replay-controls span {
+  color: var(--text-muted);
+  font-family: monospace;
+  font-size: 0.73rem;
+}
+
+.run-detail-replay-progress {
+  height: 5px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+}
+
+.run-detail-replay-progress span {
+  display: block;
+  height: 100%;
+  min-width: 4px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.86), rgba(74, 222, 128, 0.76));
+  transition: width 180ms ease;
+}
+
+.run-detail-replay-frame {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
+  padding: 8px 9px;
+}
+
+.game-hud-workspace .run-detail-replay-frame {
+  background: rgba(15, 23, 42, 0.74);
+}
+
+.run-detail-replay-frame p {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.79rem;
+  overflow-wrap: anywhere;
+}
+
+.run-detail-replay-frame > small {
+  color: var(--text-muted);
+  font-family: monospace;
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}
+
+.run-detail-replay-markers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.run-detail-replay-marker {
+  min-width: 28px;
+  padding-inline: 8px;
+}
+
+.run-detail-replay-marker-active {
+  border-color: rgba(34, 211, 238, 0.86);
+  background: rgba(34, 211, 238, 0.16);
+}
+
+.run-detail-replay-marker-focused {
+  box-shadow: inset 0 -2px 0 rgba(34, 211, 238, 0.56);
+}
+
+.run-detail-replay-marker-warn {
+  border-color: color-mix(in srgb, var(--color-warn, #e6a817) 54%, var(--border));
+}
+
+.run-detail-replay-marker-error {
+  border-color: color-mix(in srgb, var(--color-error, #d9534f) 60%, var(--border));
 }
 
 .run-detail-runtime-stats {

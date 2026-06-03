@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type {
   RunDetailComparisonView,
   RunDetailDiffRow,
   RunDetailFocusTarget,
   RunDetailMode,
+  RunDetailReplayCandidateView,
   RunDetailRuntimeTimelineView,
   RunDetailScopedDiffView,
   RunDetailStepEvidenceDiffGroup,
@@ -12,6 +13,7 @@ import type {
 } from '../domain/runDetail'
 import {
   buildRunComparisonView,
+  buildRunDetailReplayCandidateView,
   buildRunDetailReplayView,
   buildRunDetailRuntimeTimelineView,
   summarizeRunDetail,
@@ -60,6 +62,8 @@ export function RunDetailPanel({
   const [compareEnabled, setCompareEnabled] = useState(false)
   const [compareLeftRunId, setCompareLeftRunId] = useState<string | null>(null)
   const [compareRightRunId, setCompareRightRunId] = useState<string | null>(null)
+  const [replayFrameIndex, setReplayFrameIndex] = useState(0)
+  const [replayPlaying, setReplayPlaying] = useState(false)
   const replay = useMemo(
     () =>
       buildRunDetailReplayView({
@@ -106,6 +110,21 @@ export function RunDetailPanel({
       }),
     [focusedConnectionId, focusedNodeId, replay.selectedTrace],
   )
+  const replayCandidate = useMemo(
+    () =>
+      buildRunDetailReplayCandidateView({
+        timeline: runtimeTimeline,
+        selectedIndex: replayFrameIndex,
+      }),
+    [replayFrameIndex, runtimeTimeline],
+  )
+  useEffect(() => {
+    if (!replayPlaying || runtimeTimeline.items.length <= 1) return undefined
+    const timer = window.setInterval(() => {
+      setReplayFrameIndex((current) => (current + 1) % runtimeTimeline.items.length)
+    }, 1500)
+    return () => window.clearInterval(timer)
+  }, [replayPlaying, runtimeTimeline.items.length])
   const sourceLabel =
     !replay.selectedTrace
       ? 'traceなし'
@@ -165,6 +184,24 @@ export function RunDetailPanel({
       />
 
       <RuntimeTimelinePanel timeline={runtimeTimeline} />
+      <ReplayCandidatePanel
+        replay={replayCandidate}
+        playing={replayPlaying}
+        onTogglePlaying={() => setReplayPlaying((current) => !current)}
+        onPrevious={() =>
+          setReplayFrameIndex((current) =>
+            runtimeTimeline.items.length > 0
+              ? (current - 1 + runtimeTimeline.items.length) % runtimeTimeline.items.length
+              : 0,
+          )
+        }
+        onNext={() =>
+          setReplayFrameIndex((current) =>
+            runtimeTimeline.items.length > 0 ? (current + 1) % runtimeTimeline.items.length : 0,
+          )
+        }
+        onSelectFrame={setReplayFrameIndex}
+      />
 
       <RunComparisonPanel
         enabled={compareEnabled}
@@ -203,6 +240,99 @@ export function RunDetailPanel({
               onSelectConnection={onSelectConnection}
             />
           ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+type ReplayCandidatePanelProps = {
+  replay: RunDetailReplayCandidateView
+  playing: boolean
+  onTogglePlaying: () => void
+  onPrevious: () => void
+  onNext: () => void
+  onSelectFrame: (index: number) => void
+}
+
+function ReplayCandidatePanel({
+  replay,
+  playing,
+  onTogglePlaying,
+  onPrevious,
+  onNext,
+  onSelectFrame,
+}: ReplayCandidatePanelProps) {
+  const frame = replay.currentFrame
+  return (
+    <section className="run-detail-replay-candidate" aria-label="Metadata-only replay candidate">
+      <div className="run-detail-step-diff-heading">
+        <div>
+          <span className="run-detail-comparison-kicker">metadata-only replay</span>
+          <strong>{replay.playbackLabel}</strong>
+        </div>
+        <span>
+          {replay.eventCount} events / {replay.focusedEventCount} focused
+        </span>
+      </div>
+      <p>{replay.playbackHint}</p>
+      {frame ? (
+        <>
+          <div className="run-detail-replay-controls" role="group" aria-label="Replay candidate controls">
+            <button type="button" onClick={onPrevious}>
+              Prev
+            </button>
+            <button type="button" onClick={onTogglePlaying}>
+              {playing ? 'Pause' : 'Play'}
+            </button>
+            <button type="button" onClick={onNext}>
+              Next
+            </button>
+            <span>{frame.label}</span>
+          </div>
+          <div
+            className="run-detail-replay-progress"
+            aria-label={`Replay progress ${frame.progressPercent}%`}
+          >
+            <span style={{ width: `${frame.progressPercent}%` }} />
+          </div>
+          <div className={`run-detail-replay-frame run-detail-runtime-${frame.severity}`}>
+            <div className="run-detail-runtime-item-head">
+              <span>{frame.label}</span>
+              <strong>{frame.title}</strong>
+              <small>{frame.createdAtLabel}</small>
+            </div>
+            <p>{frame.summary}</p>
+            <div className="run-detail-runtime-meta">
+              <span>{frame.eventKind}</span>
+              <span>{frame.routeKind}</span>
+              <span>{frame.severity}</span>
+              {frame.connectionId ? <span>edge {frame.connectionId}</span> : null}
+              {frame.sourceNodeId ? <span>from {frame.sourceNodeId}</span> : null}
+              {frame.targetNodeId ? <span>to {frame.targetNodeId}</span> : null}
+              {frame.focusMatched ? <span>focused</span> : null}
+            </div>
+            <small>{frame.metadataSummary}</small>
+          </div>
+          <div className="run-detail-replay-markers" aria-label="Replay candidate frames">
+            {replay.markers.map((marker, index) => (
+              <button
+                key={marker.id}
+                type="button"
+                className={`run-detail-replay-marker run-detail-replay-marker-${marker.severity} ${
+                  replay.selectedIndex === index ? 'run-detail-replay-marker-active' : ''
+                } ${marker.focusMatched ? 'run-detail-replay-marker-focused' : ''}`}
+                aria-label={`Replay frame ${marker.label}`}
+                onClick={() => onSelectFrame(index)}
+              >
+                {marker.label}
+              </button>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="run-detail-step-diff-empty">
+          safe metadata replay 候補はまだありません。
         </div>
       )}
     </section>
