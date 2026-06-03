@@ -4,6 +4,63 @@ Last updated: 2026-06-03
 
 ---
 
+## Phase Review Decision Persistence Boundary
+
+- Branch: `codex/review-decision-persistence-boundary`
+- Date: 2026-06-03
+- Model gate: `ALLOW_XHIGH` はないため、Codex Desktop 運用ラベルとして `GPT-5.5 high` のまま実施した。API model id として記録する場合は `gpt-5.5` とする。
+- Scope: `docs/project/ACTIVE_PLAN.md` の次スライスである Review decision persistence boundary を実装する。新 localStorage key は追加せず、Human Review decision は現時点で session-only と明示する。将来 durable にする場合は既存 run history record 内の safe metadata だけに限定する。
+
+### Implemented
+
+- `src/domain/reviewDecisionAudit.ts` を追加し、`HumanReviewState` から safe session-only review decision summary を導出する pure helper を実装した。
+- `HumanReviewPanel` に保存境界表示を追加した。
+  - 現在は `セッション内のみ`。
+  - durable 化する場合は `既存 run history record 内の safe metadata に限定`。
+  - sensitive note は safe summary へ含めず `safe summary には含めません` と表示する。
+- `npm.cmd run qa:direct` に review decision boundary validation を追加し、credential-like sentinel を含む reviewer/note が safe boundary output に漏れないことを確認する。
+- `ACTIVE_PLAN.md` を更新し、Review decision persistence boundary を完了済みに移し、次推奨スライスを Runtime policy route enforcement design spike に進めた。
+- `docs/audit/current-implementation-map.md`、`docs/audit/technical-debt.md`、`docs/audit/spec-coverage-matrix.md` を更新し、session-only boundary と durable approval record 未実装を区別した。
+
+### Concept checklist classification
+
+- Classification: MVP surface / safe projection / detail-history boundary.
+- Cognitive HUD claim: なし。HUD attention ではなく Human Review decision の保存境界表示。
+- Situation Assistant claim: なし。Situation Assistant 本体や出力チャネルは実装していない。
+- Safety: raw config / prompt / payload / artifact body / credential / token / API key は safe boundary / copy summary に表示・保存・copy しない。sentinel で検証した。
+- Persistence/API: 新 localStorage key、backend/API、credential storage、dependency は追加していない。レビュー決定は引き続き session state。
+
+### Validation
+
+- `npm.cmd run qa:direct`: pass
+- `npm.cmd run typecheck`: pass
+- `npm.cmd run lint`: pass
+- `npm.cmd run build`: pass
+- Vite chunk-size warning は既存許容警告として扱う。
+
+### Browser QA
+
+- Preview: `http://127.0.0.1:4178/`
+- Initial render: title `agent-workflow-studio`、console error 0、localhost 以外の external resource 0。
+- Detail HUD: `D` toggle で detail drawer を開き、drawer open 時に right panel tab buttons が `pointer-events: auto` になることを確認した。
+- Human Review tab: `レビュー` タブを開き、`保存境界`、`現在はセッション内のみ`、`既存 run history record 内の safe metadata に限定`、safe summary 表示が出ることを確認した。
+- Raw sentinel check: Browser 表示上に `RAW_PROMPT_SENTINEL` / `RAW_PAYLOAD_SENTINEL` / `CREDENTIAL_SENTINEL` / `PASSWORD_SENTINEL` / `sk-live-direct-qa-secret` が出ないことを確認した。
+- Console error: 0。
+- External script/link/image request: localhost 以外 0。
+- Note: Browser QA 中に Detail HUD 内の tab buttons が `pointer-events: none` になり操作できない問題を検出したため、open drawer 内の button/input/select/textarea/label に `pointer-events: auto` を明示した。
+
+### Remaining gaps
+
+- Human Review decision はまだ durable approval record ではない。
+- 既存 run history record 内へ safe approval metadata を保存するかどうかは、将来の active plan で明示してから実装する。
+
+### Next recommended slice
+
+1. Runtime policy route enforcement design spike: fixed preset だけを mock execution の pass / non-pass route behavior へ反映する範囲を設計する。
+2. Animated replay UI candidate: safe runtime timeline を read-only metadata replay surface として拡張する。
+
+---
+
 ## Phase Browser QA Direct Validation Harness
 
 - Branch: `codex/browser-qa-direct-validation-harness`

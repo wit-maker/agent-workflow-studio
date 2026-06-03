@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { reviewDecisionLabels } from '../domain/displayLabels'
 import type { EvaluationResult, HumanReviewState, ReviewDecision } from '../domain/evaluation'
+import { buildReviewDecisionAuditBoundaryView } from '../domain/reviewDecisionAudit'
 
 type HumanReviewPanelProps = {
   evaluation: EvaluationResult | undefined
@@ -21,6 +22,10 @@ export function HumanReviewPanel({
   const [showRebuildForm, setShowRebuildForm] = useState(false)
 
   const hasPendingDecision = !humanReview || humanReview.decision === 'pending'
+  const auditBoundary = useMemo(
+    () => buildReviewDecisionAuditBoundaryView({ humanReview, runId: evaluation?.runId }),
+    [evaluation?.runId, humanReview],
+  )
 
   function handleDecide(decision: ReviewDecision) {
     onDecide(decision, note)
@@ -40,6 +45,26 @@ export function HumanReviewPanel({
   return (
     <div className="human-review-panel">
       <h3>ヒューマンレビュー</h3>
+
+      <div className="hr-audit-boundary" aria-label="レビュー決定の保存境界">
+        <span className="eyebrow">保存境界</span>
+        <strong>{auditBoundary.persistenceLabel}</strong>
+        <p>{auditBoundary.durableBoundaryLabel}</p>
+        <dl>
+          <div>
+            <dt>Safe summary</dt>
+            <dd>{auditBoundary.safeAuditSummary}</dd>
+          </div>
+          <div>
+            <dt>Note</dt>
+            <dd>
+              {auditBoundary.noteIncludedInSafeSummary
+                ? auditBoundary.noteSummary
+                : 'safe summary には含めません'}
+            </dd>
+          </div>
+        </dl>
+      </div>
 
       {!evaluation ? (
         <p className="muted">評価を実行してからレビューしてください。</p>

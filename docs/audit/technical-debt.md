@@ -54,7 +54,7 @@ These items do not block SA-1, but they should be tracked so that SA-5 onward do
 - Run modes cover `all`, `selected`, `fromSelected`, `dryRun`, and mock-only `validate`, but not full Stop, Retry, Error Route, Resume, or Replay behavior.
 - Execution is local and mock-oriented; it is not a worker-backed or cancellable runtime.
 - Connector jobs live in React state and are lost on reload.
-- Retry/review flows are useful for MVP QA but are not durable approval records.
+- Retry/review flows are useful for MVP QA. The UI now states that Human Review decisions are session-only and exposes a safe audit summary projection, but they are still not durable approval records.
 - `AppShell.tsx` owns a large amount of orchestration and may become a bottleneck for runtime/storage separation.
 
 ## Observability Debt
@@ -62,7 +62,7 @@ These items do not block SA-1, but they should be tracked so that SA-5 onward do
 - Logs, metrics, queue, and execution graph are visible; completed runs now store a credential-safe `traceAudit` snapshot plus normalized safe `runtimeEvents` inside the existing run history record.
 - `RunTrace` exists as a read-only derived view and can be revived from `traceAudit` when current runtime logs are not present. Run Detail can now select current trace or a safe audit snapshot, deep-link node/edge focus, and compare two safe audit snapshots with metadata rows, runtime-event count diff, step-level safe evidence grouping, and focused node/edge scoped diff. This is durable evidence recall and scoped diff, not a full animated replayable audit model.
 - Direct QA found that `reviveRunTraceFromAuditSummary(...)` does not currently copy `traceAudit.runtimeEvents` back into the revived `RunTrace`. Focused comparison can still read audit runtime events directly from records, and current-trace timelines work, but revived audit snapshot timelines should be tightened in a later runtime-audit slice.
-- There is no durable audit log for safety decisions, approvals, external calls, command risk checks, publish gates, replay, visual multi-run replay animation, or edge-level route event replay. Connection runtime policy summaries and runtime events are safe metadata only, not enforced route behavior.
+- There is no durable audit log for safety decisions, approvals, external calls, command risk checks, publish gates, replay, visual multi-run replay animation, or edge-level route event replay. Human Review has a safe session-only boundary view, but durable approval records remain missing. Connection runtime policy summaries and runtime events are safe metadata only, not enforced route behavior.
 - Metrics do not yet cover error rate, parallelism, resource load, or policy-backed multi-run regression analysis.
 
 ## Storage Debt

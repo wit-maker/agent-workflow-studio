@@ -1923,6 +1923,50 @@ button:disabled {
   color: var(--muted);
 }
 
+.hr-audit-boundary {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+}
+
+.hr-audit-boundary strong {
+  font-size: 12px;
+}
+
+.hr-audit-boundary p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.hr-audit-boundary dl {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+}
+
+.hr-audit-boundary dl > div {
+  display: grid;
+  gap: 2px;
+}
+
+.hr-audit-boundary dt {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.hr-audit-boundary dd {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
 .hr-actions {
   display: grid;
   gap: 8px;
@@ -4814,6 +4858,14 @@ body:has(.game-hud-workspace) #root {
 .game-hud-drawer.open {
   opacity: 1;
   transform: translateX(0);
+  pointer-events: auto;
+}
+
+.game-hud-drawer.open button,
+.game-hud-drawer.open input,
+.game-hud-drawer.open select,
+.game-hud-drawer.open textarea,
+.game-hud-drawer.open label {
   pointer-events: auto;
 }
 
