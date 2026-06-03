@@ -4,6 +4,63 @@ Last updated: 2026-06-03
 
 ---
 
+## Phase Runtime Policy Fixed Preset Route Enforcement
+
+- Branch: `codex/runtime-policy-fixed-preset-enforcement`
+- Date: 2026-06-03
+- Model gate: `ALLOW_XHIGH` はないため、Codex Desktop 運用ラベルとして `GPT-5.5 high` のまま実施した。API model id として記録する場合は `gpt-5.5` とする。
+- Scope: `docs/project/ACTIVE_PLAN.md` の次スライスである Runtime policy route enforcement design spike を実装する。fixed preset の pass / non-pass だけを mock execution route behavior へ反映し、`expression` は metadata-only のまま評価しない。
+
+### Implemented
+
+- `edgeRuntimePolicy.ts` に `resolveConnectionRuntimePolicyRoute(...)` を追加した。
+  - fixed preset が pass の場合: `main` route。
+  - fixed preset が non-pass の場合: `skip` route。
+  - `expression` の場合: `metadata_only` として扱い、実行・評価しない。
+- `AppShell` の mock run loop に connection runtime policy route gate を接続した。
+  - 計画ノード間の connection を見つけ、前段 node status / workflow status / metrics / validation warning count から fixed preset を評価する。
+  - non-pass の場合、対象ノードは `skipped` として扱い、execution graph に `skip` route を記録する。
+- `npm.cmd run qa:direct` に fixed-preset runtime policy route decision validation を追加した。
+- `ACTIVE_PLAN.md` を更新し、Runtime policy route enforcement design spike を完了済みに移し、次推奨スライスを Animated replay UI candidate に進めた。
+- audit docs を更新し、fixed preset mock route gating と full policy enforcement / expression evaluation の残ギャップを分けて記録した。
+
+### Concept checklist classification
+
+- Classification: MVP surface / safe projection / mock-only execution behavior.
+- Cognitive HUD claim: Edge HUD / Run Detail が読む route metadata の意味を少し強める mock-only route behavior。Cognitive HUD 全体完成ではない。
+- Situation Assistant claim: なし。Situation Assistant 本体や出力チャネルは実装していない。
+- Safety: expression は評価しない。raw config / prompt / payload / artifact body / credential / token / API key は route reason / audit / copy summary に表示・保存・copy しない。
+- Persistence/API: 新 localStorage key、backend/API、credential storage、dependency は追加していない。
+
+### Validation
+
+- `npm.cmd run qa:direct`: pass
+- `npm.cmd run typecheck`: pass
+- `npm.cmd run lint`: pass
+- `npm.cmd run build`: pass
+- Vite chunk-size warning は既存許容警告として扱う。
+
+### Browser QA
+
+- Preview: `http://127.0.0.1:4178/`
+- Run: `Run` を実行し、mock workflow が進み、policy / expression metadata と blocked path 表示が出ることを確認した。
+- Runtime policy: fixed preset route gate の direct validation に加え、Browser 上で `Runtime policy` と expression metadata 表示が残ることを確認した。expression は評価していない。
+- Run Detail: `T` から Run Detail / audit replay 導線を開き、timeline / route metadata が表示されることを確認した。
+- Raw sentinel check: Browser 表示上に `RAW_PROMPT_SENTINEL` / `RAW_PAYLOAD_SENTINEL` / `CREDENTIAL_SENTINEL` / `PASSWORD_SENTINEL` / `sk-live-direct-qa-secret` が出ないことを確認した。
+- Console error: 0。
+- External script/link/image request: localhost 以外 0。
+
+### Remaining gaps
+
+- Full branch graph enforcement、expression evaluation、durable edge-level audit records、animated replay はまだ未実装。
+- fixed preset gating は mock run の隣接 planned connection に限定する。
+
+### Next recommended slice
+
+1. Animated replay UI candidate: safe runtime timeline を read-only metadata replay surface として拡張する。
+
+---
+
 ## Phase Review Decision Persistence Boundary
 
 - Branch: `codex/review-decision-persistence-boundary`
