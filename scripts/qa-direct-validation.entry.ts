@@ -1,5 +1,8 @@
 import { buildSelectedEdgeHudView } from '../src/domain/cognitiveHud'
-import { normalizeConnectionRuntimePolicy } from '../src/domain/edgeRuntimePolicy'
+import {
+  normalizeConnectionRuntimePolicy,
+  resolveConnectionRuntimePolicyRoute,
+} from '../src/domain/edgeRuntimePolicy'
 import { createFullBundle } from '../src/domain/exportBundle'
 import { validateImportBundle } from '../src/domain/importValidation'
 import { createRunTraceAuditSummary } from '../src/domain/runAudit'
@@ -344,6 +347,37 @@ export async function runDirectQaValidation(): Promise<DirectQaValidationResult>
   assert(edgeHud.connectionId === 'edge-input-normalize', 'selected edge HUD should target selected edge')
   assertNoForbiddenSentinels(edgeHud, 'selected edge HUD view')
   checked.push('Edge HUD safe copy/focus summary')
+
+  const skippedPolicyRoute = resolveConnectionRuntimePolicyRoute({
+    connection: {
+      sourceNodeId: 'source',
+      targetNodeId: 'target',
+      runtimePolicy: normalizeConnectionRuntimePolicy({
+        condition: { mode: 'on_success', label: 'safe success gate' },
+      }),
+    },
+    context: { sourceStatus: 'failed' },
+  })
+  assert(
+    skippedPolicyRoute.action === 'skip' && skippedPolicyRoute.routeKind === 'skip',
+    'fixed preset route policy should skip when on_success is not satisfied',
+  )
+  const expressionPolicyRoute = resolveConnectionRuntimePolicyRoute({
+    connection: {
+      sourceNodeId: 'source',
+      targetNodeId: 'target',
+      runtimePolicy: normalizeConnectionRuntimePolicy({
+        condition: { mode: 'expression', expression: 'SAFE_METADATA_ONLY' },
+      }),
+    },
+    context: { sourceStatus: 'success' },
+  })
+  assert(
+    expressionPolicyRoute.action === 'metadata_only' && expressionPolicyRoute.enforced === false,
+    'expression policy should remain metadata-only and not enforced',
+  )
+  assertNoForbiddenSentinels([skippedPolicyRoute, expressionPolicyRoute], 'runtime policy route decisions')
+  checked.push('fixed-preset runtime policy route decisions')
 
   const reviewBoundary = buildReviewDecisionAuditBoundaryView({
     humanReview: {

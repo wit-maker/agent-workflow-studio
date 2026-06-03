@@ -1,4 +1,5 @@
 import { containsConnectorSensitiveKeyword } from './connectorSafety'
+import type { ExecutionRouteKind } from './executionGraph'
 import type {
   WorkflowConnection,
   WorkflowConnectionConditionMode,
@@ -56,6 +57,16 @@ export type RuntimePolicyEvaluationContext = {
 export type RuntimePolicyEvaluation = {
   mode: WorkflowConnectionConditionMode
   passed: boolean | null
+  reason: string
+}
+
+export type RuntimePolicyRouteAction = 'allow' | 'skip' | 'metadata_only'
+
+export type RuntimePolicyRouteDecision = {
+  action: RuntimePolicyRouteAction
+  routeKind: ExecutionRouteKind
+  enforced: boolean
+  evaluation: RuntimePolicyEvaluation
   reason: string
 }
 
@@ -263,5 +274,40 @@ export function evaluateConnectionRuntimePolicy(
         passed: null,
         reason: 'expression metadata is displayed but not evaluated',
       }
+  }
+}
+
+export function resolveConnectionRuntimePolicyRoute(options: {
+  connection: Pick<WorkflowConnection, 'runtimePolicy' | 'sourceNodeId' | 'targetNodeId'>
+  context?: RuntimePolicyEvaluationContext
+}): RuntimePolicyRouteDecision {
+  const evaluation = evaluateConnectionRuntimePolicy(options.connection, options.context)
+
+  if (evaluation.passed === null) {
+    return {
+      action: 'metadata_only',
+      routeKind: 'main',
+      enforced: false,
+      evaluation,
+      reason: evaluation.reason,
+    }
+  }
+
+  if (evaluation.passed) {
+    return {
+      action: 'allow',
+      routeKind: 'main',
+      enforced: evaluation.mode !== 'always',
+      evaluation,
+      reason: evaluation.reason,
+    }
+  }
+
+  return {
+    action: 'skip',
+    routeKind: 'skip',
+    enforced: true,
+    evaluation,
+    reason: evaluation.reason,
   }
 }

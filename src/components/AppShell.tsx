@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { calculateBottleneck } from '../domain/connectionRules'
+import { resolveConnectionRuntimePolicyRoute } from '../domain/edgeRuntimePolicy'
 import { findPort, getOutputPorts } from '../domain/portRules'
 import type { ArtifactVersion, ReviewDecision } from '../domain/evaluation'
 import { runLocalEvaluation } from '../domain/evaluationRules'
@@ -27,6 +28,7 @@ import type {
   ConnectionKind,
   Workflow,
   WorkflowArtifact,
+  WorkflowConnection,
   WorkflowConnectionRuntimePolicy,
   WorkflowNode,
   WorkflowRunLog,
@@ -169,6 +171,17 @@ function createRoute(
     reason,
     createdAt: new Date().toISOString(),
   }
+}
+
+function findPlannedConnection(
+  workflow: Workflow,
+  sourceNodeId: string,
+  targetNodeId: string,
+): WorkflowConnection | undefined {
+  return workflow.connections.find(
+    (connection) =>
+      connection.sourceNodeId === sourceNodeId && connection.targetNodeId === targetNodeId,
+  )
 }
 
 function buildArtifactContent(options: {
@@ -683,7 +696,7 @@ export function AppShell() {
       }
 
       const node = plan.nodes[index]
-      const decision = executeMockNode(node, outcome, mode)
+      let decision = executeMockNode(node, outcome, mode)
       decisions.push(decision)
 
       // M13: mark connector job as running
@@ -700,9 +713,48 @@ export function AppShell() {
 
       if (index > 0) {
         const previousNode = plan.nodes[index - 1]
+        const previousDecision = decisions[index - 1]
+        const plannedConnection = findPlannedConnection(workflow, previousNode.id, node.id)
+        const policyRoute = plannedConnection
+          ? resolveConnectionRuntimePolicyRoute({
+              connection: plannedConnection,
+              context: {
+                sourceStatus: previousDecision?.status ?? previousNode.status,
+                targetStatus: node.status,
+                workflowStatus: workflow.status,
+                metrics: workflow.metrics,
+                sourceNodeId: previousNode.id,
+                targetNodeId: node.id,
+                validationWarningCount: connectionValidation.some(
+                  (item) => item.connectionId === plannedConnection.id && !item.valid,
+                )
+                  ? 1
+                  : 0,
+              },
+            })
+          : null
+
+        if (policyRoute?.action === 'skip') {
+          decision = {
+            route: 'skip',
+            result: 'skipped',
+            status: 'skipped',
+            retryCandidate: false,
+            message: `Runtime policy skipped this route: ${policyRoute.reason}.`,
+          }
+          decisions[index] = decision
+        }
+
         dispatch({
           type: 'addExecutionRoute',
-          route: createRoute('main', previousNode.id, node.id, '通常実行フロー'),
+          route: createRoute(
+            policyRoute?.routeKind ?? 'main',
+            previousNode.id,
+            policyRoute?.action === 'skip' ? undefined : node.id,
+            policyRoute
+              ? `Runtime policy ${policyRoute.action}: ${policyRoute.reason}`
+              : '通常実行フロー',
+          ),
         })
       }
 
