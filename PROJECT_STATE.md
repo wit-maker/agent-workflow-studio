@@ -4,12 +4,18 @@ Last updated: 2026-06-03
 
 ---
 
-## Phase Issue Completion Pass: Five Pillar MVP Closure
+## Phase Open Epic Recheck: Five Pillar MVP Slice
 
 - Branch: `codex/complete-open-issues-plan-audit`
 - Date: 2026-06-03
 - Model gate: `ALLOW_XHIGH` はないため、Codex Desktop 運用ラベルとして `GPT-5.5 high` のまま実施した。API model id として記録する場合は `gpt-5.5` とする。
-- Scope: GitHub open issues #31 / #34 / #37 / #46 と未完了計画を現在実装に照合し、#46 の残条件だった Validate mode、runtimePolicy preset evaluator、補佐官の音声/アバター/動画ハイライト出力を最小垂直スライスとして追加する。新 localStorage key、backend/API、credential 保存、実 AI API、外部 asset、依存追加は行わない。
+- Scope: GitHub issues #31 / #34 / #37 / #46 は抽象度の高い全体設計エピックとして open のまま扱う。PR #47 は、それらを閉じる変更ではなく、#46 の一部条件だった Validate mode、runtimePolicy preset evaluator、補佐官の音声/アバター/動画ハイライト出力を mock-only の最小垂直スライスとして追加した確認用スライスである。新 localStorage key、backend/API、credential 保存、実 AI API、外部 asset、依存追加は行わない。
+
+### Open issue status correction
+
+- #31 / #34 / #37 / #46 は 2026-06-03 時点で再 open 済み。これらは単発 PR で close する粒度ではなく、Source of Truth、UI shell、Canvas First HUD、5本柱MVP全体を継続的に追う設計エピックとして扱う。
+- 以前の「Issue Completion Pass」「MVP Closure」「complete」という記録は、PR #47 の薄い vertical slice に対して過大だったため、今後は「implemented slice / partial alignment / remaining epic scope」として読む。
+- 今後、これら issue を close するには、各 issue 本文の acceptance criteria を個別に再監査し、UI 実装、docs、Browser QA、ギャップ整理、ユーザー確認を揃える必要がある。
 
 ### Implemented
 
@@ -19,20 +25,29 @@ Last updated: 2026-06-03
 - `expression` は raw 式評価を行わず、safe metadata として表示のみ行う。runtime audit event には `policyPassed` / `policyReason` の安全な派生 metadata だけを追加した。
 - `BriefingResult` に `voiceScript`, `avatarScript`, `visualTimeline`, `humanDecisionPrompt` を追加し、Mock Situation Assistant が HUD / Run Detail / execution summary から安全な補佐官出力を生成するようにした。
 - `BriefingPanel` に Voice / Avatar / Decision / Visual Timeline を表示し、テキストブリーフィングだけでなく音声台本・アバター台本・動画ハイライト指示まで通るようにした。
-- `docs/tasks/Codex_Task_Five_Pillar_MVP_Vertical_Slice.md` を追加し、5本柱MVPの到達点、柔軟性境界、残ギャップ、QA手順を記録した。
+- `docs/tasks/Codex_Task_Five_Pillar_MVP_Vertical_Slice.md` を追加し、5本柱MVPの薄い到達点、柔軟性境界、残ギャップ、QA手順を記録した。
 
 ### Issue alignment
 
-- #31: concept layer correction docs、SOURCE_OF_TRUTH、source-specs、audit docs、PROJECT_STATE 更新済み。現在の UI surfaces は最終本体ではなく MVP 表示面として整理済み。
-- #34: Game HUD / Canvas First shell、minimal always-on HUD、on-demand drawer、node/edge overlay、semantic focus、dark HUD theme が実装済み。
-- #37: Game HUD Canvas First completion plan の主要 acceptance は実装済み。MiniMap toggle、zoom mode、selected node/edge HUD、workflow group layer、inline preview、dark canvas、Browser QA 記録あり。
-- #46: 5本柱MVPは mock-only 垂直スライスとして、部品操作、mock connector、mock workflow run、HUD attention、Situation Assistant multi-channel output、safe audit、template save/load まで接続済み。
+- #31: concept layer correction docs、SOURCE_OF_TRUTH、source-specs、audit docs、PROJECT_STATE は一部整備済み。ただし、認知HUD / 状況説明生成レイヤー / 状況補佐官を repo 全体の Source of Truth と実装判断へ完全に浸透させる作業は継続。
+- #34: Game HUD / Canvas First shell、minimal always-on HUD、on-demand drawer、node/edge overlay、semantic focus、dark HUD theme は基礎実装済み。ただし、issue 本文の「画面全体を AI ワークフロー作業 OS として再設計する」範囲は継続エピック。
+- #37: Game HUD Canvas First completion plan の一部 acceptance は実装済み。MiniMap toggle、zoom mode、selected node/edge HUD、workflow group layer、inline preview、dark canvas、Browser QA 記録あり。ただし、pixel ではなく設計原則としての完成度、詳細 UX、反復 QA は継続。
+- #46: 5本柱MVPは mock-only の薄い垂直スライスとして、部品操作、mock connector、mock workflow run、HUD attention、Situation Assistant multi-channel output、safe audit、template save/load まで接続済み。ただし、5本柱を同格コアとして固める issue 全体は open のまま継続。
 
 ### Remaining gaps
 
-- #46 の完全構想に含まれる実外部 connector、実AI、実 credential store、動画生成、音声生成、アバター描画、URL deep link、animated replay は非ゴールとして未実装。
+- #31 は docs だけでなく、今後の UI / domain / QA 変更が概念を縮小していないかを継続監査する必要がある。
+- #34 / #37 は Canvas First foundation から、状態別 HUD 振る舞い、Critical 介入、audio cue placeholder、視線誘導、正常系の沈黙、不要経路の減光をさらに詰める必要がある。
+- #46 の完全構想に含まれる実外部 connector、実AI、実 credential store、動画生成、音声生成、アバター描画、URL deep link、animated replay は未実装。現時点では非ゴールとして守ったが、issue 自体の将来範囲から削除したわけではない。
 - runtimePolicy は固定プリセットの mock evaluator と safe audit metadata まで。任意式評価や本格 branch graph enforcement は実装しない。
 - Browser の file picker/download が使えない環境では、JSON import/export は direct code-path validation で補完する。
+
+### Rechecked next plan
+
+1. #31: Source of Truth 監査を継続し、MVP 表示面と最終レイヤーの混同を検出する checklist を docs / PR template 相当に整理する。
+2. #34 / #37: Canvas First / Game HUD を状態別 QA で評価し、失敗、承認待ち、遅延、コスト増、検証警告の HUD 振る舞いを小スライスで追加する。
+3. #46: 5本柱を閉じるのではなく、Mock connector、safe runtime audit、HUD attention、Situation Assistant 出力、template 化の接続を vertical slice ごとに太くする。
+4. 各スライスは `GPT-5.5 high` を通常モデルとし、`ALLOW_XHIGH` なしで xhigh は使わない。単純な文言修正・小さい CSS 調整のみなら `GPT-5.4-mini medium` 相当でよい。
 
 ### Validation
 
