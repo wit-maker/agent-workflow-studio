@@ -12,8 +12,8 @@ These are not bugs — the code works — but the **naming and structure** make 
 
 - `CognitiveHudPanel` (component name) reads as "the cognitive HUD." It is actually a summary panel of derived HUD signals. The cognitive HUD as an attention-allocation layer (badges on nodes/edges, central card, focus overlay, dim, intervention) is not implemented. Renaming candidates: `HudSummaryPanel`, `HudSignalList`.
 - The BottomMonitor `認知HUD` tab implies HUD lives in a tab. The HUD layer is supposed to span Canvas / Inspector / notifications / modals. Misleading framing should be corrected in docs first, then in UI labels.
-- `BriefingPanel` (component) + the `ブリーフィング` tab read as "the Situation Assistant." They are actually the **minimum output channel** (4D mock text) of the Situation Narration Layer. Voice / avatar / video / dynamic highlight / timeline narration / incident replay are missing channels, not optional polish.
-- `BriefingAdapter` interface currently produces only `BriefingResult` (text). When voice / avatar / video adapters land, a shared `BriefingScript` intermediate will be needed so output channels stay coherent. Without it, each channel will reinvent the script and drift apart.
+- `BriefingPanel` (component) + the `ブリーフィング` tab read as "the Situation Assistant." They are actually the **minimum output channel** of the Situation Narration Layer. Mock voice script, avatar script, visual timeline, and human decision prompt now exist, but real audio/avatar/video rendering, timeline narration, and incident replay are still missing channels.
+- `BriefingAdapter` interface currently produces a single `BriefingResult` with text plus mock channel scripts. When real voice / avatar / video adapters land, a shared `BriefingScript` intermediate will be needed so output channels stay coherent. Without it, each channel will reinvent the script and drift apart.
 - `BriefingInput` does not yet expose past / present / future axes explicitly. The current 4D template covers it implicitly, but Timeline Narration / Future Risk Predictor will need first-class fields.
 - `docs/source-specs/03_UI_UX_認知HUD設計書_完全版.md` was originally terse and risked being read as "HUD = the things in a HUD tab." It has been reframed (Issue #31 alignment), but the underlying naming debt in code remains.
 - Audio cue belongs to the cognitive HUD as an expression channel (`Critical 短音通知`); audio briefing belongs to the Situation Narration Layer as an output channel. They are different, and conflating them will damage the HUD design.
@@ -29,7 +29,7 @@ These items do not block SA-1, but they should be tracked so that SA-5 onward do
 - `CanvasCommandHud` shows model as static `GPT-5.5 high`. It must read from settings once the model selection lives in product state.
 - `CognitiveHudOverlay` now renders central HUD variants driven by semantic focus (`failure`, `approval`, `validation`, `running`, `bottleneck`), `HudNotificationBundle` renders on-demand notification/history/density controls with Replay links, and selected node/edge HUDs use measured viewport-anchored placement with DOM collision rects. Selected node history and Run Detail can read/select durable audit evidence summaries, and node/edge deep links return focus to the canvas. Remaining debt is persisted HUD preferences, durable notification read/ack/pin state, richer very-small-viewport reflow, and policy-backed depth/collapse behavior.
 - `node-hud-badge` covers four statuses (failed / review_required / blocked / retry_ready). The full HUD badge spec includes severity, priority, human-gate, and failure-cause variants on top of status.
-- `SelectedEdgeHud` and React Flow edges now derive delay / retry / error-route / health from current `ExecutionGraph`, `RunTrace`, `WorkflowConnection`, validation results, and optional connection `runtimePolicy` metadata. Edge selection is lifted to `AppShell` for Run Detail deep links. Remaining debt is turning that safe metadata/read-only projection into an enforced runtime contract with expression evaluation, durable route replay, and edge-level audit records.
+- `SelectedEdgeHud` and React Flow edges now derive delay / retry / error-route / health from current `ExecutionGraph`, `RunTrace`, `WorkflowConnection`, validation results, optional connection `runtimePolicy` metadata, and a mock-only fixed-preset policy evaluator. Edge selection is lifted to `AppShell` for Run Detail deep links. Remaining debt is turning that safe metadata/read-only projection into full branch graph enforcement, durable route replay, and edge-level audit records. Arbitrary expression evaluation remains intentionally absent.
 
 
 
@@ -38,12 +38,12 @@ These items do not block SA-1, but they should be tracked so that SA-5 onward do
 - `Workflow` is still closer to a browser MVP state object than the full `WorkflowDocument` described in source specs.
 - Node category labels differ from the complete source-spec category set.
 - `WorkflowNode` lacks first-class risk, HUD, owner, node log, connector binding, and approval metadata.
-- Connection kinds are typed, and optional connection `runtimePolicy` metadata can describe condition / delay / retry / error-route summaries. Safe runtime/audit route events now exist as metadata in `RunTrace.runtimeEvents` and `traceAudit.runtimeEvents`, and edge runtime semantics are projected into HUD/React Flow/Run Detail from execution trace state, runtime events, and safe policy metadata. They are still not enforced by the runtime or replayed as a full edge-level audit timeline.
+- Connection kinds are typed, and optional connection `runtimePolicy` metadata can describe condition / delay / retry / error-route summaries. Safe runtime/audit route events now exist as metadata in `RunTrace.runtimeEvents` and `traceAudit.runtimeEvents`, and edge runtime semantics are projected into HUD/React Flow/Run Detail from execution trace state, runtime events, safe policy metadata, and fixed-preset policy evaluation. They are still not enforced as a full branch graph or replayed as a full edge-level audit timeline.
 - schemaVersion exists, but migration policy and compatibility tests are not yet implemented.
 
 ## Execution Debt
 
-- Run modes cover `all`, `selected`, `fromSelected`, and `dryRun`, but not full Validate, Stop, Retry, Error Route, Resume, or Replay behavior.
+- Run modes cover `all`, `selected`, `fromSelected`, `dryRun`, and mock-only `validate`, but not full Stop, Retry, Error Route, Resume, or Replay behavior.
 - Execution is local and mock-oriented; it is not a worker-backed or cancellable runtime.
 - Connector jobs live in React state and are lost on reload.
 - Retry/review flows are useful for MVP QA but are not durable approval records.

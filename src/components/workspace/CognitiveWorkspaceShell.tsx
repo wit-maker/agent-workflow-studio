@@ -70,6 +70,7 @@ type CognitiveWorkspaceShellProps = {
   onRunSelected: () => void
   onRunFromSelected: () => void
   onDryRun: () => void
+  onValidate: () => void
   onStop: () => void
   onReset: () => void
   onUndo: () => void

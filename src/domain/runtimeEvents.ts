@@ -1,4 +1,5 @@
 import type { ExecutionGraph, ExecutionRoute, ExecutionRouteKind, ExecutionStep } from './executionGraph'
+import { evaluateConnectionRuntimePolicy } from './edgeRuntimePolicy'
 import {
   makeRuntimeAuditContractEvent,
   type RuntimeAuditContractEvent,
@@ -150,6 +151,7 @@ function buildEdgePolicyEvent(options: {
 }
 
 function buildEdgePolicyEvents(
+  workflow: Workflow,
   runId: string,
   route: ExecutionRoute,
   connection: WorkflowConnection | undefined,
@@ -160,6 +162,17 @@ function buildEdgePolicyEvents(
 
   const events: Array<RuntimeAuditContractEvent | null> = []
   const policy = connection.runtimePolicy
+  const sourceNode = workflow.nodes.find((node) => node.id === connection.sourceNodeId)
+  const targetNode = workflow.nodes.find((node) => node.id === connection.targetNodeId)
+  const policyEvaluation = evaluateConnectionRuntimePolicy(connection, {
+    sourceStatus: sourceNode?.status,
+    targetStatus: targetNode?.status,
+    workflowStatus: workflow.status,
+    metrics: workflow.metrics,
+    sourceNodeId: connection.sourceNodeId,
+    targetNodeId: connection.targetNodeId,
+    validationWarningCount: connection.status === 'invalid' ? 1 : 0,
+  })
 
   if (hasBranchCondition(connection)) {
     events.push(
@@ -174,6 +187,8 @@ function buildEdgePolicyEvents(
         metadata: {
           conditionMode: policy?.condition?.mode ?? 'implicit',
           hasExpression: Boolean(policy?.condition?.expression),
+          policyPassed: policyEvaluation.passed,
+          policyReason: policyEvaluation.reason,
         },
       }),
     )
@@ -268,7 +283,7 @@ export function buildRuntimeAuditEvents(
   for (const route of graph.routes) {
     const connection = findRouteConnection(route, input.workflow.connections)
     events.push(buildRouteEvent(input.runId, route, connection))
-    events.push(...buildEdgePolicyEvents(input.runId, route, connection))
+    events.push(...buildEdgePolicyEvents(input.workflow, input.runId, route, connection))
   }
 
   return sortRuntimeEvents(events.filter((event): event is RuntimeAuditContractEvent => event !== null))

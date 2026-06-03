@@ -68,6 +68,7 @@ export type GameHudShellProps = {
   onRunSelected: () => void
   onRunFromSelected: () => void
   onDryRun: () => void
+  onValidate: () => void
   onStop: () => void
   onReset: () => void
   onUndo: () => void
@@ -286,6 +287,7 @@ export function GameHudShell(props: GameHudShellProps) {
           onRunSelected={props.onRunSelected}
           onRunFromSelected={props.onRunFromSelected}
           onDryRun={props.onDryRun}
+          onValidate={props.onValidate}
           onStop={props.onStop}
           onReset={props.onReset}
           onUndo={props.onUndo}

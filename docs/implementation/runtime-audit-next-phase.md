@@ -27,12 +27,12 @@ The landed runtime audit path is safe metadata only.
 
 ## What This Is Not Yet
 
-This phase is not a full replay system.
+This phase is not a full replay system or full policy runtime.
 
 - No animated run replay.
 - No timeline scrubber.
 - No URL-level deep link router.
-- No runtime policy enforcement.
+- Runtime policy has a mock-only fixed-preset evaluator for safe metadata, but no full branch graph enforcement.
 - No expression evaluator for edge conditions.
 - No durable approval/safety decision audit log.
 - No edge-level visual route reconstruction across historical runs.
@@ -44,10 +44,10 @@ This phase is not a full replay system.
    - Keep UI inside `RunDetailPanel`.
    - Keep state session-only and storage under existing run history records.
 
-2. **Runtime policy evaluator contract**
-   - Define a mock-only evaluator contract for condition / retry / error-route behavior.
-   - Start with type and pure validation helpers before changing the run engine.
-   - Do not evaluate arbitrary user expressions.
+2. **Runtime policy route enforcement**
+   - Extend the mock-only fixed-preset evaluator into explicit pass / non-pass route behavior.
+   - Keep `expression` as safe display metadata only unless a bounded expression subset is designed.
+   - Continue storing only safe policy outcomes in runtime audit metadata.
 
 3. **Replay-ready audit view model**
    - Build pure domain helpers that order safe runtime events into a replay-friendly timeline.

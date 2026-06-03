@@ -107,7 +107,23 @@ export function BriefingPanel({
             <BriefingSection title="Why" body={result.why} />
             <BriefingSection title="How" body={result.how} />
             <BriefingSection title="Next" body={result.next} />
+            <BriefingSection title="Voice" body={result.voiceScript} />
+            <BriefingSection title="Avatar" body={`${result.avatarScript.emotion} / ${result.avatarScript.gesture}: ${result.avatarScript.line}`} />
+            <BriefingSection title="Decision" body={result.humanDecisionPrompt} />
           </div>
+
+          <section className="briefing-section briefing-timeline">
+            <h4>Visual Timeline</h4>
+            <ol>
+              {result.visualTimeline.map((item) => (
+                <li key={`${item.time}-${item.highlightNodeId ?? 'none'}`}>
+                  <span>{item.time}s</span>
+                  <strong>{item.highlightNodeId ?? 'workflow'}</strong>
+                  <p>{item.caption}</p>
+                </li>
+              ))}
+            </ol>
+          </section>
         </article>
       ) : null}
     </section>

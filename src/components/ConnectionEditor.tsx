@@ -260,7 +260,12 @@ const conditionModeOptions: Array<{ value: WorkflowConnectionConditionMode; labe
   { value: 'always', label: '常に通す' },
   { value: 'on_success', label: '成功時' },
   { value: 'on_failure', label: '失敗時' },
+  { value: 'on_failed', label: '失敗時(alias)' },
   { value: 'on_review', label: 'レビュー時' },
+  { value: 'on_review_required', label: '承認待ち時' },
+  { value: 'on_high_cost', label: '高コスト時' },
+  { value: 'on_bottleneck', label: '詰まり時' },
+  { value: 'on_validation_warning', label: '検証警告時' },
   { value: 'expression', label: '安全な式' },
 ]
 

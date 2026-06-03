@@ -41,6 +41,7 @@ type CanvasCommandHudProps = {
   onRunSelected: () => void
   onRunFromSelected: () => void
   onDryRun: () => void
+  onValidate: () => void
   onStop: () => void
   onReset: () => void
   onUndo: () => void
@@ -81,6 +82,7 @@ export function CanvasCommandHud({
   onRunSelected,
   onRunFromSelected,
   onDryRun,
+  onValidate,
   onStop,
   onReset,
   onUndo,
@@ -139,6 +141,9 @@ export function CanvasCommandHud({
         </button>
         <button type="button" className="hud-icon-button" onClick={onDryRun} disabled={isRunning} title="ドライラン">
           Dry
+        </button>
+        <button type="button" className="hud-icon-button" onClick={onValidate} disabled={isRunning} title="Validate mode">
+          Val
         </button>
         <button type="button" className="hud-icon-button danger" onClick={onStop} disabled={!isRunning} title="停止">
           Stop

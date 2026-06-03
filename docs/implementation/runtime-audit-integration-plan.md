@@ -6,6 +6,37 @@ This document is the integration captain checklist for the Runtime Audit paralle
 
 The phase uses one Codex thread per worktree, branch, and PR. The local checkout is only for integration and final QA. Do not let multiple threads edit the same checkout or the same files.
 
+## Flexibility Strategy
+
+This phase should make future runtime changes easier by stabilizing boundaries, not by freezing the implementation.
+
+Stable boundaries:
+
+- Runtime Audit records safe metadata contracts, not raw execution data.
+- Run Detail consumes normalized view models and safe summaries, not storage records directly.
+- Edge HUD displays projected connection metadata and navigates by stable node/edge identifiers.
+- QA defines repeatable acceptance checks that survive UI or browser-environment changes.
+
+Flexible internals:
+
+- Runtime event producers may evolve as long as they emit the shared safe contract.
+- Audit persistence may add optional metadata under existing run history records without adding a new localStorage key.
+- Run Detail UI may reorganize its display as long as it consumes safe derived data and keeps comparison state session-only.
+- Edge HUD actions may expand from selection/focus into replay or policy inspection without exposing raw config, prompt, payload, or credential data.
+
+Do not treat current labels, grouping, UI wording, or mock implementation details as permanent API. Treat the safe contract, storage boundary, and raw-data exclusion rules as the durable API.
+
+## Extension Principles
+
+Use these rules when adding future slices:
+
+- Add optional fields before replacing existing fields.
+- Normalize missing fields to safe defaults so old run history records keep loading.
+- Keep user-facing summaries derived and bounded.
+- Put reusable transformation logic in pure domain helpers before wiring it into UI or storage.
+- Prefer session state for exploratory UI state such as comparison selection, focused edge, filters, and preview modes.
+- Expand QA with direct code-path validation when Browser automation cannot cover file picker, download, or native dialog behavior.
+
 ## Base Branch
 
 Integration base:
@@ -116,6 +147,8 @@ Every lane PR must be draft by default and include:
 - Browser QA result, or a clear note that Browser QA is not applicable.
 - Raw data safety statement confirming no raw config, prompt, payload, artifact body, credential, token, or API key is stored, displayed, or copied.
 - Storage statement confirming no new localStorage key.
+- Flexibility statement confirming whether the PR changes a stable contract, adds optional metadata, or only changes an internal projection.
+- Backward-compatibility statement for any run history, audit, or view-model shape touched by the PR.
 
 Vite chunk-size warnings are acceptable only if there are no TypeScript, lint, build, or runtime errors.
 
@@ -183,6 +216,8 @@ Stop integration and report if any of these occur:
 - A worktree starts dirty.
 - A PR edits files outside its lane without prior approval.
 - A PR adds a new localStorage key.
+- A PR replaces a stable runtime audit field without a compatibility path.
+- A PR makes Run Detail, Edge HUD, or QA depend on raw storage records instead of safe derived data.
 - A PR stores or displays raw config, prompt, payload, artifact body, credential, token, or API key.
 - A PR adds backend/API/credential behavior or dependencies.
 - Validation fails after merge.

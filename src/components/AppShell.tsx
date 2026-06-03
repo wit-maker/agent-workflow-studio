@@ -650,7 +650,10 @@ export function AppShell() {
       plannedConnectionCount: countPlannedConnections(workflow, plan.nodes),
     }
     const plannedHasCheck = plan.nodes.some((node) => node.type === 'check')
-    const outcome = mode === 'dryRun' || !plannedHasCheck ? 'PASS' : calculateOutcomeByRunCount()
+    const outcome =
+      mode === 'dryRun' || mode === 'validate' || !plannedHasCheck
+        ? 'PASS'
+        : calculateOutcomeByRunCount()
     const executedNodes: WorkflowNode[] = []
     const decisions: ReturnType<typeof executeMockNode>[] = []
 
@@ -1777,6 +1780,7 @@ export function AppShell() {
       onRunSelected={() => runMockWorkflow('selected')}
       onRunFromSelected={() => runMockWorkflow('fromSelected')}
       onDryRun={() => runMockWorkflow('dryRun')}
+      onValidate={() => runMockWorkflow('validate')}
       onStop={stopRun}
       onReset={handleReset}
       onUndo={() => dispatch({ type: 'undo' })}
