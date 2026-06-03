@@ -24,7 +24,7 @@ type UseBriefingGeneratorArgs = {
 }
 
 function validateBriefingResult(result: BriefingResult): void {
-  const sections = [result.what, result.why, result.how, result.next]
+  const sections = [result.what, result.why, result.how, result.next, result.replayCue]
   if (sections.some((section) => typeof section !== 'string' || section.trim().length === 0)) {
     throw new Error('ブリーフィング結果が不正です。')
   }

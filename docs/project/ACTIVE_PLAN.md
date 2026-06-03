@@ -23,29 +23,27 @@ The project currently has four open product-planning tracks inside the repo docs
 | Track | Current state | Active next direction |
 |---|---|---|
 | Concept guardrail | The repo now distinguishes Cognitive HUD, Situation Narration Layer, Situation Assistant, and text briefing MVP. `docs/project/CONCEPT_CHECKLIST.md` adds a lightweight classification gate for future UI/domain/QA changes. | Apply the checklist in future slices so MVP surfaces and safe projections are not described as the full layer. |
-| Canvas First / Game HUD | Canvas First shell, dark HUD surface, minimal HUD controls, MiniMap, zoom mode, selected node/edge HUD, inline previews, grouping, semantic focus, validation-warning state cue, and on-demand console/drawers exist. | Continue state-based HUD behavior one state at a time: review required, high cost, delay, bottleneck, failure, or approval. |
-| Runtime Audit / Run Detail / Edge HUD | Safe runtime events, durable `traceAudit.runtimeEvents`, Run Detail comparison, focused node/edge scoped diff, focused edge safe route-event metadata diff, selected-edge deep link, and safe connection policy summaries exist. | Keep the route metadata diff as a safe projection; future work is replay-ready ordering, not full animated replay yet. |
-| Five-pillar MVP | A thin mock-only path connects parts operation, mock connector/runtime, HUD attention, safe audit, Situation Assistant output, and template reuse. | Thicken one vertical path at a time without adding real APIs, credential storage, new localStorage keys, or raw data exposure. |
+| Canvas First / Game HUD | Canvas First shell, dark HUD surface, minimal HUD controls, MiniMap, zoom mode, selected node/edge HUD, inline previews, grouping, semantic focus, validation-warning state cue, review-required state cue, and on-demand console/drawers exist. | The active state-based HUD slice is complete. Choose a new state slice only after a new plan is selected. |
+| Runtime Audit / Run Detail / Edge HUD | Safe runtime events, durable `traceAudit.runtimeEvents`, Run Detail comparison, focused node/edge scoped diff, focused edge safe route-event metadata diff, selected-edge deep link, replay-ready safe runtime timeline view model, and safe connection policy summaries exist. | The active replay-ready audit view-model slice is complete. Animated replay remains a future epic, not part of this active plan. |
+| Five-pillar MVP | A mock-only path connects parts operation, mock connector/runtime, HUD attention, safe audit, Run Detail timeline, Situation Assistant replay cue, and template/history guidance without raw data exposure. | The active vertical thickening slice is complete. Choose the next vertical path explicitly before implementation. |
 
 ## Current Recommended Order
 
-1. **Five-pillar vertical thickening**
-   - File area: choose a minimal path before implementation.
-   - Goal: strengthen one connected user flow across parts, mock runtime, HUD attention, safe audit, assistant explanation, and template/history.
-   - Constraints: mock-only; no backend/API/credential storage/dependency/new localStorage key.
-   - Model guidance: `GPT-5.5 high`.
+The previously selected active implementation plan is complete.
 
-2. **Next state-based Game HUD slice**
-   - File area: `src/domain/cognitiveHud.ts`, workspace HUD components, CSS only as needed.
-   - Goal: one runtime state changes the canvas/HUD behavior clearly without adding a permanent panel.
-   - Candidate next state: review required, because it already exists in safe runtime state and Human Review UI.
-   - Model guidance: `GPT-5.5 high`.
+Before starting more implementation, select a new small vertical slice from the broad product tracks. Good next candidates are:
 
-3. **Replay-ready audit view model**
-   - File area: `src/domain/runDetail.ts`, `src/domain/runtimeEventSummary.ts`, and tests or direct validation only if needed.
-   - Goal: order safe runtime route events into a replay-friendly timeline without adding animation UI yet.
-   - Constraints: safe metadata only, no raw config/prompt/payload/credential, no new localStorage key.
-   - Model guidance: `GPT-5.5 high`.
+1. **Review decision persistence boundary**
+   - Goal: clarify whether human review decisions stay session-only or become durable safe audit metadata.
+   - Constraint: do not add a new localStorage key unless the active plan explicitly approves it.
+
+2. **Runtime policy enforcement design spike**
+   - Goal: document and prototype only fixed preset enforcement behavior for mock execution.
+   - Constraint: no arbitrary expression evaluator and no raw expression execution.
+
+3. **Browser QA direct validation harness**
+   - Goal: make file picker/download and run-detail comparison checks reproducible when Browser automation cannot complete them.
+   - Constraint: validation helper only; no product runtime behavior change.
 
 ## Completed Plan Slices
 
@@ -54,6 +52,9 @@ The project currently has four open product-planning tracks inside the repo docs
 | Concept checklist | `docs/project/CONCEPT_CHECKLIST.md` now defines the final layer / MVP surface / safe projection / detail-history / out-of-scope classification gate. |
 | Edge route metadata diff | `RunDetailPanel` focused edge comparison now includes safe route-event metadata rows and recent safe route-event summaries. |
 | Validation-warning HUD behavior | Validation focus now creates a compact state cue in the central HUD and highlights the `Val` command in the always-on HUD. |
+| Review-required HUD behavior | Approval semantic focus now creates a compact review-required state cue and highlights Detail / Run Detail entry points from the always-on HUD. |
+| Replay-ready audit view model | `RunDetailPanel` now shows a safe runtime metadata timeline derived from `RunTrace.runtimeEvents` or revived audit snapshots. |
+| Five-pillar vertical thickening | The safe runtime timeline now feeds Situation Assistant input and mock briefing output through a visible Replay cue. |
 
 ## Plan Document Roles
 

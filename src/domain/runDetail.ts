@@ -5,7 +5,7 @@ import type {
   RuntimeAuditContractEvent,
   RuntimeAuditSafeMetadataValue,
 } from './runtimeAuditContract'
-import { sanitizeRuntimeAuditText } from './runtimeAuditContract'
+import { formatRuntimeAuditContractSummary, sanitizeRuntimeAuditText } from './runtimeAuditContract'
 import type { WorkflowRunRecord } from './runHistory'
 import type { RunStep, RunTrace } from './runTrace'
 import {
@@ -69,6 +69,38 @@ export type RunDetailReplayView = {
   options: RunDetailReplayOption[]
   focusTarget: RunDetailFocusTarget
   replaySummary: string
+}
+
+export type RunDetailRuntimeTimelineItem = {
+  id: string
+  order: number
+  runId: string
+  eventKind: RuntimeAuditContractEvent['kind']
+  routeKind: RuntimeAuditContractEvent['routeKind']
+  severity: RuntimeAuditContractEvent['severity']
+  title: string
+  summary: string
+  createdAtLabel: string
+  stepId: string | null
+  sourceNodeId: string | null
+  targetNodeId: string | null
+  connectionId: string | null
+  metadataSummary: string
+  focusMatched: boolean
+}
+
+export type RunDetailRuntimeTimelineView = {
+  eventCount: number
+  focusedEventCount: number
+  routeEventCount: number
+  edgeEventCount: number
+  reviewEventCount: number
+  warningEventCount: number
+  errorEventCount: number
+  items: RunDetailRuntimeTimelineItem[]
+  latestSummary: string | null
+  replayHint: string
+  safeCopySummary: string
 }
 
 export type RunDetailComparisonOption = {
@@ -1081,6 +1113,157 @@ export function buildRunDetailReplayView(options: {
     options: replayOptions,
     focusTarget,
     replaySummary: `${sourceLabel} / evidence ${evidenceCount} / runtime ${runtimeEventCount} / focus ${focusTarget.label}`,
+  }
+}
+
+const RUNTIME_TIMELINE_METADATA_KEYS = [
+  'status',
+  'route',
+  'conditionMode',
+  'policyPassed',
+  'policyReason',
+  'delayMs',
+  'retryEnabled',
+  'maxAttempts',
+  'errorRouteEnabled',
+  'errorRouteTargetNodeId',
+  'connectionKind',
+  'connectionStatus',
+] as const
+
+function timestampRank(event: RuntimeAuditContractEvent, index: number): number {
+  const timestamp = event.createdAt ? Date.parse(event.createdAt) : Number.NaN
+  return Number.isFinite(timestamp) ? timestamp : index
+}
+
+function formatRuntimeTimelineCreatedAt(event: RuntimeAuditContractEvent): string {
+  if (!event.createdAt) return 'time n/a'
+  const timestamp = Date.parse(event.createdAt)
+  if (!Number.isFinite(timestamp)) return 'time n/a'
+  return new Date(timestamp).toLocaleString('ja-JP')
+}
+
+function eventMatchesTimelineFocus(options: {
+  event: RuntimeAuditContractEvent
+  focusNodeId?: string | null
+  focusConnectionId?: string | null
+}): boolean {
+  const { event, focusNodeId = null, focusConnectionId = null } = options
+  if (focusConnectionId && event.connectionId === focusConnectionId) return true
+  if (!focusNodeId) return false
+  return event.sourceNodeId === focusNodeId || event.targetNodeId === focusNodeId
+}
+
+function formatRuntimeTimelineMetadata(event: RuntimeAuditContractEvent): string {
+  const metadata = event.safeMetadata
+  if (!metadata) return 'metadata none'
+
+  const entries = RUNTIME_TIMELINE_METADATA_KEYS
+    .map((key) => {
+      const value = formatMetadataValue(metadata[key])
+      return value ? `${key}:${value}` : null
+    })
+    .filter((entry): entry is string => entry !== null)
+
+  return entries.length > 0 ? entries.join(' / ') : 'metadata none'
+}
+
+function buildRuntimeTimelineItem(
+  event: RuntimeAuditContractEvent,
+  order: number,
+  focusMatched: boolean,
+): RunDetailRuntimeTimelineItem {
+  return {
+    id: event.id,
+    order,
+    runId: event.runId,
+    eventKind: event.kind,
+    routeKind: event.routeKind,
+    severity: event.severity,
+    title: sanitizeRuntimeAuditText(event.title, 96) ?? event.kind,
+    summary: sanitizeRuntimeAuditText(event.summary, 180) ?? 'summary excluded',
+    createdAtLabel: formatRuntimeTimelineCreatedAt(event),
+    stepId: event.stepId ?? null,
+    sourceNodeId: event.sourceNodeId ?? null,
+    targetNodeId: event.targetNodeId ?? null,
+    connectionId: event.connectionId ?? null,
+    metadataSummary: formatRuntimeTimelineMetadata(event),
+    focusMatched,
+  }
+}
+
+export function buildRunDetailRuntimeTimelineView(options: {
+  trace: RunTrace | null
+  focusNodeId?: string | null
+  focusConnectionId?: string | null
+  limit?: number
+}): RunDetailRuntimeTimelineView {
+  const events = options.trace?.runtimeEvents ?? []
+  const ordered = events
+    .map((event, index) => ({ event, index, rank: timestampRank(event, index) }))
+    .sort((left, right) => {
+      if (left.rank !== right.rank) return left.rank - right.rank
+      return left.event.id.localeCompare(right.event.id)
+    })
+
+  const focusMatchedEvents = ordered.filter(({ event }) =>
+    eventMatchesTimelineFocus({
+      event,
+      focusNodeId: options.focusNodeId,
+      focusConnectionId: options.focusConnectionId,
+    }),
+  )
+  const visibleSource = focusMatchedEvents.length > 0 ? focusMatchedEvents : ordered
+  const limit = options.limit ?? 10
+  const items = visibleSource
+    .slice(-limit)
+    .map(({ event }, index) =>
+      buildRuntimeTimelineItem(
+        event,
+        Math.max(0, visibleSource.length - limit) + index + 1,
+        eventMatchesTimelineFocus({
+          event,
+          focusNodeId: options.focusNodeId,
+          focusConnectionId: options.focusConnectionId,
+        }),
+      ),
+    )
+
+  const latestEvent = ordered[ordered.length - 1]?.event ?? null
+  const routeEventCount = events.filter((event) => event.kind === 'route_observed').length
+  const edgeEventCount = events.filter((event) => event.connectionId).length
+  const reviewEventCount = events.filter((event) => event.routeKind === 'review').length
+  const warningEventCount = events.filter((event) => event.severity === 'warn').length
+  const errorEventCount = events.filter((event) => event.severity === 'error').length
+  const focusedEventCount = focusMatchedEvents.length
+  const focusLabel = options.focusConnectionId
+    ? `edge ${options.focusConnectionId}`
+    : options.focusNodeId
+      ? `node ${options.focusNodeId}`
+      : 'focusなし'
+
+  return {
+    eventCount: events.length,
+    focusedEventCount,
+    routeEventCount,
+    edgeEventCount,
+    reviewEventCount,
+    warningEventCount,
+    errorEventCount,
+    items,
+    latestSummary: latestEvent ? formatRuntimeAuditContractSummary(latestEvent) : null,
+    replayHint:
+      events.length === 0
+        ? 'Runtime timeline は Run 実行後または audit snapshot 選択後に表示されます。'
+        : focusedEventCount > 0
+          ? `${focusLabel} の safe runtime events を時系列で表示しています。`
+          : 'Safe runtime events を時系列で表示しています。',
+    safeCopySummary: [
+      `runtime timeline: events ${events.length}`,
+      `route ${routeEventCount} / edge ${edgeEventCount} / review ${reviewEventCount}`,
+      `warn ${warningEventCount} / error ${errorEventCount}`,
+      latestEvent ? `latest: ${formatRuntimeAuditContractSummary(latestEvent)}` : 'latest: none',
+    ].join('\n'),
   }
 }
 

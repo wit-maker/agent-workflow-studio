@@ -18,6 +18,7 @@ export type BriefingResult = {
   why: string
   how: string
   next: string
+  replayCue: string
   voiceScript: string
   avatarScript: {
     role: 'situation_officer'
@@ -103,6 +104,17 @@ export type BriefingRunHistorySummary = {
   selectedRecords: string[]
 }
 
+export type BriefingRuntimeReplaySummary = {
+  eventCount: number
+  routeEventCount: number
+  edgeEventCount: number
+  reviewEventCount: number
+  warningEventCount: number
+  errorEventCount: number
+  latestSummary: string | null
+  replayHint: string
+}
+
 export type BriefingInput = {
   mode: BriefingInputMode
   severity: BriefingSeverity
@@ -113,6 +125,7 @@ export type BriefingInput = {
   hud: BriefingHudSummary
   runHistory: BriefingRunHistorySummary
   runDetail: RunDetailSummary
+  runtimeReplay: BriefingRuntimeReplaySummary
   logEntries: string[]
   errorEntries: string[]
   truncated: boolean

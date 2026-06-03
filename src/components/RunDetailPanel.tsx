@@ -4,12 +4,18 @@ import type {
   RunDetailDiffRow,
   RunDetailFocusTarget,
   RunDetailMode,
+  RunDetailRuntimeTimelineView,
   RunDetailScopedDiffView,
   RunDetailStepEvidenceDiffGroup,
   RunDetailSummary,
   StepEvidenceSummary,
 } from '../domain/runDetail'
-import { buildRunComparisonView, buildRunDetailReplayView, summarizeRunDetail } from '../domain/runDetail'
+import {
+  buildRunComparisonView,
+  buildRunDetailReplayView,
+  buildRunDetailRuntimeTimelineView,
+  summarizeRunDetail,
+} from '../domain/runDetail'
 import type { WorkflowRunRecord } from '../domain/runHistory'
 import type { EvidenceSeverity } from '../domain/runStepEvidence'
 import type { RunTrace } from '../domain/runTrace'
@@ -91,6 +97,15 @@ export function RunDetailPanel({
     () => summarizeRunDetail(replay.selectedTrace, mode),
     [mode, replay.selectedTrace],
   )
+  const runtimeTimeline = useMemo(
+    () =>
+      buildRunDetailRuntimeTimelineView({
+        trace: replay.selectedTrace,
+        focusNodeId: focusedNodeId,
+        focusConnectionId: focusedConnectionId,
+      }),
+    [focusedConnectionId, focusedNodeId, replay.selectedTrace],
+  )
   const sourceLabel =
     !replay.selectedTrace
       ? 'traceなし'
@@ -149,6 +164,8 @@ export function RunDetailPanel({
         onSelectConnection={onSelectConnection}
       />
 
+      <RuntimeTimelinePanel timeline={runtimeTimeline} />
+
       <RunComparisonPanel
         enabled={compareEnabled}
         comparison={comparison}
@@ -186,6 +203,64 @@ export function RunDetailPanel({
               onSelectConnection={onSelectConnection}
             />
           ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+type RuntimeTimelinePanelProps = {
+  timeline: RunDetailRuntimeTimelineView
+}
+
+function RuntimeTimelinePanel({ timeline }: RuntimeTimelinePanelProps) {
+  return (
+    <section className="run-detail-runtime-timeline" aria-label="Replay-ready runtime event timeline">
+      <div className="run-detail-step-diff-heading">
+        <div>
+          <span className="run-detail-comparison-kicker">safe runtime metadata</span>
+          <strong>Replay-ready timeline</strong>
+        </div>
+        <span>
+          {timeline.eventCount} events / {timeline.focusedEventCount} focused
+        </span>
+      </div>
+      <p>{timeline.replayHint}</p>
+      <div className="run-detail-runtime-stats">
+        <span>route {timeline.routeEventCount}</span>
+        <span>edge {timeline.edgeEventCount}</span>
+        <span>review {timeline.reviewEventCount}</span>
+        <span>warn {timeline.warningEventCount}</span>
+        <span>error {timeline.errorEventCount}</span>
+      </div>
+      {timeline.items.length > 0 ? (
+        <ol className="run-detail-runtime-list">
+          {timeline.items.map((item) => (
+            <li
+              key={item.id}
+              className={`run-detail-runtime-item run-detail-runtime-${item.severity} ${item.focusMatched ? 'run-detail-runtime-focused' : ''}`}
+            >
+              <div className="run-detail-runtime-item-head">
+                <span>#{item.order}</span>
+                <strong>{item.title}</strong>
+                <small>{item.createdAtLabel}</small>
+              </div>
+              <p>{item.summary}</p>
+              <div className="run-detail-runtime-meta">
+                <span>{item.eventKind}</span>
+                <span>{item.routeKind}</span>
+                <span>{item.severity}</span>
+                {item.connectionId ? <span>edge {item.connectionId}</span> : null}
+                {item.sourceNodeId ? <span>from {item.sourceNodeId}</span> : null}
+                {item.targetNodeId ? <span>to {item.targetNodeId}</span> : null}
+              </div>
+              <small>{item.metadataSummary}</small>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <div className="run-detail-step-diff-empty">
+          safe runtime event はまだありません。
         </div>
       )}
     </section>
