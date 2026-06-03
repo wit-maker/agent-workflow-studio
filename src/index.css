@@ -3803,6 +3803,29 @@ button:disabled {
   font-weight: 800;
 }
 
+.cognitive-hud-state-cue {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 3px 6px;
+  align-items: center;
+  border: 1px solid rgba(251, 191, 36, 0.34);
+  border-radius: 8px;
+  background: rgba(120, 53, 15, 0.28);
+  color: #fef3c7;
+  padding: 6px 7px;
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.cognitive-hud-state-cue > strong {
+  font-size: 11px;
+}
+
+.cognitive-hud-state-cue > span:last-child {
+  grid-column: 1 / -1;
+  color: rgba(254, 243, 199, 0.76);
+}
+
 /* Selection overlay — object-local HUD shown only while a node is selected */
 
 .selected-object-hud {
@@ -4388,6 +4411,13 @@ body:has(.game-hud-workspace) #root {
 .hud-icon-button.danger {
   border-color: rgba(251, 113, 133, 0.44);
   color: #ffe4e6;
+}
+
+.hud-icon-button.attention {
+  border-color: rgba(251, 191, 36, 0.64);
+  color: #fef3c7;
+  background: rgba(120, 53, 15, 0.82);
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
 }
 
 .hud-file-action input {

@@ -48,6 +48,13 @@ export function CognitiveHudOverlay({
             Attention path: {pathText} / evidence {centralHudView.signalCount}
           </span>
         ) : null}
+        {centralHudView.stateCue ? (
+          <span className={`cognitive-hud-state-cue cognitive-hud-state-cue-${centralHudView.stateCue.state}`}>
+            <strong>{centralHudView.stateCue.label}</strong>
+            <span>{centralHudView.stateCue.commandHint}</span>
+            <span>{centralHudView.stateCue.guardrail}</span>
+          </span>
+        ) : null}
         <span className="cognitive-hud-overlay-action muted">
           Next: {centralHudView.nextAction}
         </span>
