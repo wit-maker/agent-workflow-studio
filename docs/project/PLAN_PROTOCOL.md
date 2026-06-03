@@ -22,6 +22,17 @@ Use `docs/project/ACTIVE_PLAN.md` as the only active plan selector.
 - If an old task prompt or next-phase document is no longer the active plan, mark it as historical/detail rather than deleting source context.
 - Keep GitHub issue operations separate from repository document cleanup unless the user explicitly asks to touch GitHub issues.
 
+## GitHub Issue Linked Planning
+
+GitHub issues are source inputs. Repository documents are the execution plan.
+
+- Treat #31, #34, #37, and #46 as broad open epics until the user explicitly approves closing criteria for each issue.
+- Do not close or label broad epics from a thin vertical slice.
+- When a task is selected from issue scope, `ACTIVE_PLAN.md` must state which issue acceptance area it advances and which issue scope remains out of scope.
+- Issue comments may summarize the selected repo plan only when the user explicitly allows comments; comments must not replace `ACTIVE_PLAN.md`.
+- Runtime Audit detail plans remain subordinate unless `ACTIVE_PLAN.md` selects a #37 or #46 slice that uses them.
+- UI, domain, or QA changes that touch Cognitive HUD, Situation Narration, Situation Assistant, Upload Labs-style observability, n8n-style automation, or Scratch-style operation must include a `CONCEPT_CHECKLIST.md` classification in the plan, PR body, or `PROJECT_STATE.md`.
+
 ## Before Implementation
 
 For each task:

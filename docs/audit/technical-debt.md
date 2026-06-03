@@ -4,6 +4,14 @@ Last updated: 2026-06-03
 
 This file lists current limits that may block later work if ignored.
 
+## Planning Debt — issue-based roadmap
+
+- GitHub issues #31 / #34 / #37 / #46 are broad open epics. They should drive planning priority, but they are not branch-sized tasks and should not be closed by a thin vertical slice.
+- `docs/project/ACTIVE_PLAN.md` is the single active selector. Runtime Audit, task docs, and older implementation plans are subordinate detail or history unless linked from that file.
+- Previous "completion" notes for #31 / #34 / #37 / #46 should be read as landed foundation or partial alignment, not as epic closure.
+- Browser QA has repeatedly needed direct code-path supplementation for file picker, download, edge focus, and comparison paths. This is now the highest-value next planning slice because it protects #34 / #37 UI work and #46 vertical-slice behavior from weak regression evidence.
+- Issue comments may summarize the repo plan when explicitly allowed, but comments must not become the canonical plan or imply issue closure.
+
 ## Concept Layer Debt (Issue #31)
 
 > See `docs/project/concept-layer-correction.md` for the authoritative concept definitions.

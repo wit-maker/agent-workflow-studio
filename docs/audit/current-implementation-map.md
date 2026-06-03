@@ -4,6 +4,17 @@ Last updated: 2026-06-03
 
 This map records what the current MVP actually contains. It does not redefine the full product goal.
 
+## Open Issue Roadmap Alignment
+
+The current implementation should be read against four open broad epics:
+
+| Issue | Current implementation stance | Still-open epic gap |
+|---|---|---|
+| #31 Concept Guardrail | `concept-layer-correction.md`, `SOURCE_OF_TRUTH.md`, `CONCEPT_CHECKLIST.md`, and this audit map separate final layers from MVP surfaces. | Future plans still need to apply the checklist so Cognitive HUD / Situation Narration / Situation Assistant are not shrunk to panels. |
+| #34 UI System Redesign | `GameHudShell` and canvas overlays moved the product away from panel-first UI. | The full AI workflow operating workspace still needs more state-based HUD behavior, visual attention policy, and cross-surface orchestration. |
+| #37 Game HUD Canvas First Completion | Major Canvas First acceptance items are implemented: minimal HUD, selected node/edge HUD, MiniMap, zoom mode, grouping, inline preview, dark canvas, and safe Run Detail links. | Remaining work is interaction hardening, state-based QA, visual attention behavior, and replay-backed HUD behavior. |
+| #46 Five-pillar MVP | A mock-only vertical path connects parts operation, mock connector/runtime, HUD attention, safe audit, Situation Assistant output, and template/history guidance. | The five pillars still need to be thickened through small vertical slices; real connectors, real AI, credential store, generated media, and animated replay remain out of current MVP scope. |
+
 ## UI Shell Migration (Issue #34)
 
 The UI shell migrated from **panel-first** (TopBar + .workspace-grid: Palette / Canvas+StagePreview / Inspector + BottomMonitor) to **cognitive workspace shell**, then to a Canvas First Game HUD shell:
