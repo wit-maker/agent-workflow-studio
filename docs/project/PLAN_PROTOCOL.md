@@ -1,6 +1,6 @@
 # Plan Protocol
 
-Last updated: 2026-05-25
+Last updated: 2026-06-03
 
 ## Purpose
 
@@ -13,12 +13,21 @@ Every non-trivial task should separate:
 - Task: the specific branch-sized unit of work
 - Prompt: the current instruction passed to an AI coding agent
 
+## Single Active Plan Rule
+
+Use `docs/project/ACTIVE_PLAN.md` as the only active plan selector.
+
+- Do not create a second current-plan document when updating direction.
+- If a detailed lane plan is needed, create or update the detail document, then link it from `ACTIVE_PLAN.md`.
+- If an old task prompt or next-phase document is no longer the active plan, mark it as historical/detail rather than deleting source context.
+- Keep GitHub issue operations separate from repository document cleanup unless the user explicitly asks to touch GitHub issues.
+
 ## Before Implementation
 
 For each task:
 
 1. Confirm the active model and record any mismatch when the task touches Goal, Plan, Source of Truth, safety, credentials, or architecture.
-2. Read `PROJECT_STATE.md`, `AGENTS.md`, `docs/project/SOURCE_OF_TRUTH.md`, and the relevant source specs.
+2. Read `docs/project/ACTIVE_PLAN.md`, `PROJECT_STATE.md`, `AGENTS.md`, `docs/project/SOURCE_OF_TRUTH.md`, and the relevant source specs.
 3. Check `git status --short --branch`.
 4. Confirm the branch is not `main` or `develop`.
 5. Identify whether the task is docs-only, UI, domain model, execution, storage, connector, or safety work.
@@ -44,6 +53,7 @@ A decision-complete plan should state:
 - Prefer small, reviewable phases.
 - Preserve source specs as reference documents.
 - Keep docs, code, and `PROJECT_STATE.md` in sync.
+- Keep `docs/project/ACTIVE_PLAN.md` in sync when the next-slice order changes.
 - Add abstractions only when they protect future phases or remove real duplication.
 - Keep mock connectors clearly marked as mock.
 - Treat localStorage as MVP persistence, not the final storage architecture.
