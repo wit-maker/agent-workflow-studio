@@ -75,7 +75,7 @@ These items do not block SA-1, but they should be tracked so that SA-5 onward do
 
 - React Flow and standard canvas coexist; full migration/retirement strategy is not settled.
 - Node add/delete, complex edge editing, auto layout, and DnD interactions remain incomplete or partially browser-QA-limited. MiniMap exists as a HUD, but overview behavior is still basic.
-- UI-11 now has session-only notification/history/density controls, but persisted HUD settings and durable notification state are missing. UI-12 now has durable safe trace snapshots, normalized runtime events, run selection, node/edge deep links, safe metadata diff, runtime-event count diff, step-level safe evidence grouping, focused scoped diff, and safe connection policy summaries, but animated replay, edge-level durable route diff, and audit policy controls are incomplete.
+- UI-11 now has session-only notification/history/density controls, but persisted HUD settings and durable notification state are missing. UI-12 now has durable safe trace snapshots, normalized runtime events, run selection, node/edge deep links, safe metadata diff, runtime-event count diff, focused edge safe route-event metadata diff, step-level safe evidence grouping, focused scoped diff, and safe connection policy summaries, but animated replay, full route reconstruction, and audit policy controls are incomplete.
 - Inspector lacks first-class prompt, tools, security, test run, last-run details, and settings history panels.
 
 ## Template / Reuse Debt

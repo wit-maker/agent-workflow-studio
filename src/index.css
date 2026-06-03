@@ -3061,7 +3061,8 @@ button:disabled {
 }
 
 .run-detail-step-diff,
-.run-detail-scoped-diff {
+.run-detail-scoped-diff,
+.run-detail-route-metadata-diff {
   display: grid;
   gap: 9px;
   border: 1px solid var(--border);
@@ -3071,7 +3072,8 @@ button:disabled {
 }
 
 .game-hud-workspace .run-detail-step-diff,
-.game-hud-workspace .run-detail-scoped-diff {
+.game-hud-workspace .run-detail-scoped-diff,
+.game-hud-workspace .run-detail-route-metadata-diff {
   border-color: rgba(34, 211, 238, 0.18);
   background: rgba(2, 6, 23, 0.44);
 }
@@ -3203,6 +3205,23 @@ button:disabled {
   color: var(--text-muted);
   font-family: monospace;
   font-size: 0.73rem;
+  overflow-wrap: anywhere;
+  padding-left: 7px;
+}
+
+.run-detail-route-event-summary {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.run-detail-route-event-summary li {
+  border-left: 2px solid rgba(34, 211, 238, 0.34);
+  color: var(--text-muted);
+  font-family: monospace;
+  font-size: 0.72rem;
   overflow-wrap: anywhere;
   padding-left: 7px;
 }

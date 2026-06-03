@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import type {
   RunDetailComparisonView,
+  RunDetailDiffRow,
   RunDetailFocusTarget,
   RunDetailMode,
   RunDetailScopedDiffView,
@@ -347,12 +348,63 @@ function ScopedEvidenceDiffPanel({ scope }: ScopedEvidenceDiffPanelProps) {
         <span>{scope.groups.length} group</span>
       </div>
       <p>{scope.summary}</p>
+      <RouteMetadataDiffPanel rows={scope.routeMetadataRows} summaries={scope.routeEventSummaries} />
       {scope.groups.length > 0 ? (
         <div className="run-detail-step-diff-list">
           {scope.groups.map((group) => (
             <StepEvidenceDiffCard key={`scope-${group.id}`} group={group} compact />
           ))}
         </div>
+      ) : null}
+    </section>
+  )
+}
+
+type RouteMetadataDiffPanelProps = {
+  rows: RunDetailDiffRow[]
+  summaries: string[]
+}
+
+function RouteMetadataDiffPanel({ rows, summaries }: RouteMetadataDiffPanelProps) {
+  if (rows.length === 0 && summaries.length === 0) return null
+
+  return (
+    <section className="run-detail-route-metadata-diff" aria-label="Focused edge route metadata diff">
+      <div className="run-detail-step-diff-heading">
+        <div>
+          <span className="run-detail-comparison-kicker">safe route-event metadata</span>
+          <strong>Edge route metadata diff</strong>
+        </div>
+        <span>{rows.filter((row) => row.severity !== 'same').length} changed</span>
+      </div>
+      {rows.length > 0 ? (
+        <div className="run-detail-diff-table" role="table" aria-label="Focused edge route metadata diff table">
+          <div className="run-detail-diff-row run-detail-diff-heading" role="row">
+            <span role="columnheader">Metadata</span>
+            <span role="columnheader">Base</span>
+            <span role="columnheader">Compare</span>
+            <span role="columnheader">Delta</span>
+          </div>
+          {rows.map((row) => (
+            <div
+              key={row.id}
+              className={`run-detail-diff-row run-detail-diff-${row.severity}`}
+              role="row"
+            >
+              <span role="cell">{row.label}</span>
+              <span role="cell">{row.leftValue}</span>
+              <span role="cell">{row.rightValue}</span>
+              <strong role="cell">{row.deltaLabel}</strong>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {summaries.length > 0 ? (
+        <ul className="run-detail-route-event-summary">
+          {summaries.map((summary, index) => (
+            <li key={`route-summary-${index}`}>{summary}</li>
+          ))}
+        </ul>
       ) : null}
     </section>
   )

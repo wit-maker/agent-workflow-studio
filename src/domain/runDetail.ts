@@ -1,6 +1,11 @@
 import { reviveRunTraceFromAuditSummary } from './runAudit'
 import type { RunAuditEvidence } from './runAudit'
 import { summarizeConnectionRuntimePolicy } from './edgeRuntimePolicy'
+import type {
+  RuntimeAuditContractEvent,
+  RuntimeAuditSafeMetadataValue,
+} from './runtimeAuditContract'
+import { sanitizeRuntimeAuditText } from './runtimeAuditContract'
 import type { WorkflowRunRecord } from './runHistory'
 import type { RunStep, RunTrace } from './runTrace'
 import {
@@ -132,6 +137,8 @@ export type RunDetailScopedDiffView = {
   targetLabel: string
   summary: string
   groups: RunDetailStepEvidenceDiffGroup[]
+  routeMetadataRows: RunDetailDiffRow[]
+  routeEventSummaries: string[]
 }
 
 export type RunDetailComparisonView = {
@@ -591,6 +598,208 @@ function buildStepEvidenceDiffGroups(
     .slice(0, 8)
 }
 
+type EdgeRouteMetadataAggregate = {
+  eventCount: number
+  routeKinds: string[]
+  eventKinds: string[]
+  severityMix: string
+  statusValues: string[]
+  routeValues: string[]
+  conditionModes: string[]
+  policyResults: string[]
+  delayValues: string[]
+  retryValues: string[]
+  errorRouteValues: string[]
+  latestSummary: string
+  summaries: string[]
+}
+
+const emptyEdgeRouteMetadataAggregate: EdgeRouteMetadataAggregate = {
+  eventCount: 0,
+  routeKinds: [],
+  eventKinds: [],
+  severityMix: 'info 0 / warn 0 / error 0',
+  statusValues: [],
+  routeValues: [],
+  conditionModes: [],
+  policyResults: [],
+  delayValues: [],
+  retryValues: [],
+  errorRouteValues: [],
+  latestSummary: 'none',
+  summaries: [],
+}
+
+function formatMetadataValue(value: RuntimeAuditSafeMetadataValue | undefined): string | null {
+  if (value === undefined || value === null) return null
+  if (typeof value === 'boolean') return value ? 'true' : 'false'
+  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : null
+  return sanitizeRuntimeAuditText(value, 80)
+}
+
+function formatMetadataSet(
+  events: readonly RuntimeAuditContractEvent[],
+  key: string,
+): string[] {
+  return uniqueStrings(
+    events
+      .map((event) => formatMetadataValue(event.safeMetadata?.[key]))
+      .filter((value): value is string => value !== null),
+  )
+}
+
+function formatMetadataPairSet(
+  events: readonly RuntimeAuditContractEvent[],
+  leftKey: string,
+  rightKey: string,
+  fallback: string,
+): string[] {
+  return uniqueStrings(
+    events
+      .map((event) => {
+        const left = formatMetadataValue(event.safeMetadata?.[leftKey])
+        const right = formatMetadataValue(event.safeMetadata?.[rightKey])
+        if (!left && !right) return null
+        return `${left ?? fallback}:${right ?? fallback}`
+      })
+      .filter((value): value is string => value !== null),
+  )
+}
+
+function routeEventMatchesConnection(
+  event: RuntimeAuditContractEvent,
+  connection: WorkflowConnection,
+): boolean {
+  if (event.connectionId === connection.id) return true
+  if (event.sourceNodeId === connection.sourceNodeId && event.targetNodeId === connection.targetNodeId) {
+    return true
+  }
+  if (event.sourceNodeId === connection.sourceNodeId && !event.targetNodeId) {
+    return true
+  }
+  return event.kind === 'node_runtime' && event.sourceNodeId === connection.targetNodeId
+}
+
+function formatSeverityMix(events: readonly RuntimeAuditContractEvent[]): string {
+  const info = events.filter((event) => event.severity === 'info').length
+  const warn = events.filter((event) => event.severity === 'warn').length
+  const error = events.filter((event) => event.severity === 'error').length
+  return `info ${info} / warn ${warn} / error ${error}`
+}
+
+function formatRouteEventSummary(event: RuntimeAuditContractEvent): string {
+  const title = sanitizeRuntimeAuditText(event.title, 72) ?? event.kind
+  const summary = sanitizeRuntimeAuditText(event.summary, 140) ?? 'summary excluded'
+  return [
+    event.kind,
+    event.routeKind,
+    event.severity,
+    event.connectionId ? `edge ${event.connectionId}` : null,
+    event.sourceNodeId ? `from ${event.sourceNodeId}` : null,
+    event.targetNodeId ? `to ${event.targetNodeId}` : null,
+    `${title}: ${summary}`,
+  ]
+    .filter((entry): entry is string => Boolean(entry))
+    .join(' / ')
+}
+
+function aggregateEdgeRouteMetadata(
+  record: WorkflowRunRecord | undefined,
+  connection: WorkflowConnection,
+): EdgeRouteMetadataAggregate {
+  const events =
+    record?.traceAudit?.runtimeEvents.filter((event) =>
+      routeEventMatchesConnection(event, connection),
+    ) ?? []
+  if (events.length === 0) {
+    return emptyEdgeRouteMetadataAggregate
+  }
+
+  const policyPassedValues = formatMetadataSet(events, 'policyPassed')
+  const policyReasons = formatMetadataSet(events, 'policyReason')
+  const delayValues = formatMetadataSet(events, 'delayMs')
+  const retryValues = formatMetadataPairSet(events, 'retryEnabled', 'maxAttempts', 'n/a')
+  const errorRouteValues = formatMetadataPairSet(
+    events,
+    'errorRouteEnabled',
+    'errorRouteTargetNodeId',
+    'n/a',
+  )
+
+  return {
+    eventCount: events.length,
+    routeKinds: uniqueStrings(events.map((event) => event.routeKind)),
+    eventKinds: uniqueStrings(events.map((event) => event.kind)),
+    severityMix: formatSeverityMix(events),
+    statusValues: formatMetadataSet(events, 'status'),
+    routeValues: formatMetadataSet(events, 'route'),
+    conditionModes: formatMetadataSet(events, 'conditionMode'),
+    policyResults: uniqueStrings([...policyPassedValues, ...policyReasons]),
+    delayValues,
+    retryValues,
+    errorRouteValues,
+    latestSummary: formatRouteEventSummary(events[events.length - 1]),
+    summaries: events.slice(-4).map(formatRouteEventSummary),
+  }
+}
+
+function compareRouteMetadataTextRow(
+  id: string,
+  label: string,
+  leftValues: readonly string[],
+  rightValues: readonly string[],
+): RunDetailDiffRow {
+  return compareTextRow(
+    id,
+    label,
+    leftValues.join(', ') || 'none',
+    rightValues.join(', ') || 'none',
+  )
+}
+
+function buildEdgeRouteMetadataRows(
+  leftRecord: WorkflowRunRecord | undefined,
+  rightRecord: WorkflowRunRecord | undefined,
+  connection: WorkflowConnection,
+): {
+  rows: RunDetailDiffRow[]
+  summaries: string[]
+} {
+  const left = aggregateEdgeRouteMetadata(leftRecord, connection)
+  const right = aggregateEdgeRouteMetadata(rightRecord, connection)
+
+  const rows: RunDetailDiffRow[] = [
+    compareNumberRow({
+      id: 'focused-edge-route-event-count',
+      label: 'Focused edge route events',
+      leftValue: left.eventCount,
+      rightValue: right.eventCount,
+      neutral: true,
+    }),
+    compareRouteMetadataTextRow('focused-edge-route-kinds', 'Route kinds', left.routeKinds, right.routeKinds),
+    compareRouteMetadataTextRow('focused-edge-event-kinds', 'Event kinds', left.eventKinds, right.eventKinds),
+    compareTextRow('focused-edge-severity-mix', 'Severity mix', left.severityMix, right.severityMix),
+    compareRouteMetadataTextRow('focused-edge-status', 'Status metadata', left.statusValues, right.statusValues),
+    compareRouteMetadataTextRow('focused-edge-route-values', 'Route metadata', left.routeValues, right.routeValues),
+    compareRouteMetadataTextRow('focused-edge-condition', 'Condition mode', left.conditionModes, right.conditionModes),
+    compareRouteMetadataTextRow('focused-edge-policy-result', 'Policy result', left.policyResults, right.policyResults),
+    compareRouteMetadataTextRow('focused-edge-delay', 'Delay metadata', left.delayValues, right.delayValues),
+    compareRouteMetadataTextRow('focused-edge-retry', 'Retry metadata', left.retryValues, right.retryValues),
+    compareRouteMetadataTextRow('focused-edge-error-route', 'Error-route metadata', left.errorRouteValues, right.errorRouteValues),
+    compareTextRow('focused-edge-latest-event', 'Latest route event', left.latestSummary, right.latestSummary),
+  ]
+
+  const summaries = uniqueStrings([
+    ...left.summaries.map((summary) => `Base: ${summary}`),
+    ...right.summaries.map((summary) => `Compare: ${summary}`),
+  ]).slice(-6)
+
+  return {
+    rows: rows.filter((row) => row.severity !== 'same' || row.id === 'focused-edge-route-event-count'),
+    summaries,
+  }
+}
+
 function nodeIdsForFocusedScope(options: {
   focusNodeId?: string | null
   focusConnectionId?: string | null
@@ -606,6 +815,8 @@ function nodeIdsForFocusedScope(options: {
 
 function buildFocusedScopeView(options: {
   groups: readonly RunDetailStepEvidenceDiffGroup[]
+  leftRecord?: WorkflowRunRecord
+  rightRecord?: WorkflowRunRecord
   focusNodeId?: string | null
   focusConnectionId?: string | null
   connections?: readonly WorkflowConnection[]
@@ -617,6 +828,9 @@ function buildFocusedScopeView(options: {
       ? options.groups.filter((group) => group.nodeId && nodeIds.includes(group.nodeId))
       : []
     const policySummary = connection ? summarizeConnectionRuntimePolicy(connection) : null
+    const routeMetadata = connection
+      ? buildEdgeRouteMetadataRows(options.leftRecord, options.rightRecord, connection)
+      : { rows: [], summaries: [] }
     return {
       targetLabel: connection
         ? `edge ${connection.sourceNodeId} -> ${connection.targetNodeId}`
@@ -625,6 +839,8 @@ function buildFocusedScopeView(options: {
         ? `${connection.kind} / ${connection.status} / ${policySummary?.conditionSummary ?? 'no branch condition'} / ${policySummary?.retrySummary ?? 'no retry policy'}`
         : 'Focused edge は現在の workflow connections で見つかりません。',
       groups,
+      routeMetadataRows: routeMetadata.rows,
+      routeEventSummaries: routeMetadata.summaries,
     }
   }
 
@@ -636,6 +852,8 @@ function buildFocusedScopeView(options: {
         ? 'Focused node の safe step evidence 差分です。'
         : 'Focused node の audit evidence は選択した2件にありません。',
       groups,
+      routeMetadataRows: [],
+      routeEventSummaries: [],
     }
   }
 
@@ -643,6 +861,8 @@ function buildFocusedScopeView(options: {
     targetLabel: 'focusなし',
     summary: 'Canvas で node または edge を選択すると scoped diff を表示します。',
     groups: options.groups.filter((group) => group.severity !== 'same').slice(0, 3),
+    routeMetadataRows: [],
+    routeEventSummaries: [],
   }
 }
 
@@ -672,6 +892,8 @@ export function buildRunComparisonView(options: {
         targetLabel: 'focusなし',
         summary: 'safe audit summary が2件以上保存されるまで scoped diff は表示されません。',
         groups: [],
+        routeMetadataRows: [],
+        routeEventSummaries: [],
       },
       summary: 'Compare には traceAudit 付き run が2件必要です。',
       warning: 'safe audit summary が2件以上保存されるまで比較は表示されません。',
@@ -703,6 +925,8 @@ export function buildRunComparisonView(options: {
         targetLabel: 'focusなし',
         summary: 'Compare 対象の safe audit summary を復元できません。',
         groups: [],
+        routeMetadataRows: [],
+        routeEventSummaries: [],
       },
       summary: 'Compare 対象の safe audit summary を復元できません。',
       warning: '無効な run record は比較から除外されます。',
@@ -713,6 +937,8 @@ export function buildRunComparisonView(options: {
   const stepGroups = buildStepEvidenceDiffGroups(leftRecord, rightRecord)
   const focusScope = buildFocusedScopeView({
     groups: stepGroups,
+    leftRecord,
+    rightRecord,
     focusNodeId: options.focusNodeId,
     focusConnectionId: options.focusConnectionId,
     connections: options.connections,
