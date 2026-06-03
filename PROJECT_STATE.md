@@ -4,6 +4,66 @@ Last updated: 2026-06-03
 
 ---
 
+## Phase Animated Replay UI Candidate
+
+- Branch: `codex/animated-replay-ui-candidate`
+- Date: 2026-06-03
+- Model gate: `ALLOW_XHIGH` はないため、Codex Desktop 運用ラベルとして `GPT-5.5 high` のまま実施した。API model id として記録する場合は `gpt-5.5` とする。
+- Scope: `docs/project/ACTIVE_PLAN.md` の次スライスである Animated replay UI candidate を実装する。safe runtime timeline から metadata-only replay candidate を派生し、Run Detail 内だけで frame navigation / Play-Pause 候補表示を行う。
+
+### Implemented
+
+- `runDetail.ts` に `buildRunDetailReplayCandidateView(...)` を追加した。
+  - 入力は既存の `RunDetailRuntimeTimelineView`。
+  - 出力は selected frame、progress、marker、safe copy summary に限定する。
+  - raw config / prompt / payload / artifact body / credential / token / API key は扱わない。
+- `RunDetailPanel` に `metadata-only replay` セクションを追加した。
+  - `Play / Pause / Prev / Next` は session-only UI state。
+  - frame marker で safe runtime event を選択できる。
+  - 表示対象は title / summary / event kind / route kind / severity / source / target / edge / safe metadata summary に限定する。
+- `npm.cmd run qa:direct` に Run Detail metadata-only replay candidate validation を追加した。
+- `ACTIVE_PLAN.md` を更新し、今回選定済みの issue-roadmap slices を完了済みに移した。次は新しい小スライスを #31 / #34 / #37 / #46 から選ぶ状態。
+- audit docs を更新し、metadata-only replay candidate と full animated replay engine / full route reconstruction の残ギャップを分けて記録した。
+
+### Concept checklist classification
+
+- Classification: MVP surface / safe projection / detail-history surface.
+- Cognitive HUD claim: Run Detail が読む safe runtime metadata の表示面を少し強める候補実装。Cognitive HUD 全体完成ではない。
+- Situation Assistant claim: Incident Replay の入力になり得る safe metadata playback 候補。Situation Assistant 本体、音声、アバター、動画生成は実装していない。
+- Safety: raw config / prompt / payload / artifact body / credential / token / API key は replay candidate / summary に表示・保存・copy しない。sentinel で direct validation した。
+- Persistence/API: 新 localStorage key、backend/API、credential storage、dependency は追加していない。再生状態は session state のみ。
+
+### Validation
+
+- `npm.cmd run qa:direct`: pass
+- `npm.cmd run typecheck`: pass
+- `npm.cmd run lint`: pass
+- `npm.cmd run build`: pass
+- Vite chunk-size warning は既存許容警告として扱う。
+
+### Browser QA
+
+- Preview: `http://127.0.0.1:4178/`
+- Initial/Run Detail: `T` から Run Detail を開き、safe runtime event がない状態では empty replay candidate が表示されることを確認した。
+- Run: `Run` 実行後、Run Detail に `Replay-ready timeline` と `metadata-only replay` が表示され、`Safe metadata replay 1/2` が出ることを確認した。
+- Replay controls: `Next` で `Frame 2/2` に進み、`Play` で `Pause` 表示へ変わることを確認した。確認後に停止した。
+- Raw sentinel check: Browser 表示上に `RAW_PROMPT_SENTINEL` / `RAW_PAYLOAD_SENTINEL` / `CREDENTIAL_SENTINEL` / `PASSWORD_SENTINEL` / `BEARER_SENTINEL` / `sk-live-direct-qa-secret` が出ないことを確認した。
+- Console error: 0。
+- External script/link/image request: localhost 以外 0。
+
+### Remaining gaps
+
+- Full animated route reconstruction、multi-run visual replay animation、edge-level durable replay record、expression evaluation は未実装。
+- Revived audit snapshot timeline で `traceAudit.runtimeEvents` を全経路へより厳密に露出する tightening は次候補。
+
+### Next recommended slice
+
+1. Revived audit snapshot runtimeEvents tightening: 既存 run history record の safe `traceAudit.runtimeEvents` を Run Detail timeline / replay の全経路で一貫して使えるようにする。
+2. HUD notification read/ack/pin session behavior: on-demand HUD notification を session state で硬くする。
+3. Concept naming cleanup plan: MVP panels と full concept layers の命名誤認をさらに減らす。
+
+---
+
 ## Phase Runtime Policy Fixed Preset Route Enforcement
 
 - Branch: `codex/runtime-policy-fixed-preset-enforcement`

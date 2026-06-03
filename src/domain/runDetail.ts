@@ -103,6 +103,45 @@ export type RunDetailRuntimeTimelineView = {
   safeCopySummary: string
 }
 
+export type RunDetailReplayCandidateMarker = {
+  id: string
+  label: string
+  severity: RuntimeAuditContractEvent['severity']
+  focusMatched: boolean
+}
+
+export type RunDetailReplayCandidateFrame = {
+  id: string
+  position: number
+  count: number
+  progressPercent: number
+  label: string
+  title: string
+  summary: string
+  eventKind: RuntimeAuditContractEvent['kind']
+  routeKind: RuntimeAuditContractEvent['routeKind']
+  severity: RuntimeAuditContractEvent['severity']
+  createdAtLabel: string
+  sourceNodeId: string | null
+  targetNodeId: string | null
+  connectionId: string | null
+  metadataSummary: string
+  focusMatched: boolean
+  safeCopySummary: string
+}
+
+export type RunDetailReplayCandidateView = {
+  available: boolean
+  eventCount: number
+  focusedEventCount: number
+  selectedIndex: number
+  playbackLabel: string
+  playbackHint: string
+  markers: RunDetailReplayCandidateMarker[]
+  currentFrame: RunDetailReplayCandidateFrame | null
+  safeCopySummary: string
+}
+
 export type RunDetailComparisonOption = {
   id: string
   runId: string
@@ -1264,6 +1303,79 @@ export function buildRunDetailRuntimeTimelineView(options: {
       `warn ${warningEventCount} / error ${errorEventCount}`,
       latestEvent ? `latest: ${formatRuntimeAuditContractSummary(latestEvent)}` : 'latest: none',
     ].join('\n'),
+  }
+}
+
+function clampReplayFrameIndex(index: number | undefined, count: number): number {
+  if (count <= 0) return 0
+  if (typeof index !== 'number' || !Number.isFinite(index)) return 0
+  return Math.min(Math.max(Math.trunc(index), 0), count - 1)
+}
+
+export function buildRunDetailReplayCandidateView(options: {
+  timeline: RunDetailRuntimeTimelineView
+  selectedIndex?: number
+}): RunDetailReplayCandidateView {
+  const { timeline } = options
+  const count = timeline.items.length
+  const selectedIndex = clampReplayFrameIndex(options.selectedIndex, count)
+  const currentItem = timeline.items[selectedIndex] ?? null
+  const currentFrame: RunDetailReplayCandidateFrame | null = currentItem
+    ? {
+        id: currentItem.id,
+        position: selectedIndex + 1,
+        count,
+        progressPercent: count <= 1 ? 100 : Math.round((selectedIndex / (count - 1)) * 100),
+        label: `Frame ${selectedIndex + 1}/${count}`,
+        title: currentItem.title,
+        summary: currentItem.summary,
+        eventKind: currentItem.eventKind,
+        routeKind: currentItem.routeKind,
+        severity: currentItem.severity,
+        createdAtLabel: currentItem.createdAtLabel,
+        sourceNodeId: currentItem.sourceNodeId,
+        targetNodeId: currentItem.targetNodeId,
+        connectionId: currentItem.connectionId,
+        metadataSummary: currentItem.metadataSummary,
+        focusMatched: currentItem.focusMatched,
+        safeCopySummary: [
+          `replay candidate frame ${selectedIndex + 1}/${count}`,
+          `${currentItem.eventKind} / ${currentItem.routeKind} / ${currentItem.severity}`,
+          currentItem.connectionId ? `edge ${currentItem.connectionId}` : 'edge none',
+          currentItem.sourceNodeId ? `from ${currentItem.sourceNodeId}` : 'from none',
+          currentItem.targetNodeId ? `to ${currentItem.targetNodeId}` : 'to none',
+          currentItem.metadataSummary,
+        ].join('\n'),
+      }
+    : null
+
+  const markers = timeline.items.map((item, index) => ({
+    id: item.id,
+    label: `${index + 1}`,
+    severity: item.severity,
+    focusMatched: item.focusMatched,
+  }))
+  const safeCopySummary = currentFrame
+    ? [
+        'metadata-only replay candidate',
+        `events ${timeline.eventCount} / focused ${timeline.focusedEventCount}`,
+        currentFrame.safeCopySummary,
+      ].join('\n')
+    : 'metadata-only replay candidate: no safe runtime event'
+
+  return {
+    available: count > 0,
+    eventCount: timeline.eventCount,
+    focusedEventCount: timeline.focusedEventCount,
+    selectedIndex,
+    playbackLabel: count > 0 ? `Safe metadata replay ${selectedIndex + 1}/${count}` : 'Safe metadata replay',
+    playbackHint:
+      count > 0
+        ? '安全な runtime metadata だけを順番に読む候補表示です。経路の視覚再構築や式評価は行いません。'
+        : 'Run 実行後または audit snapshot 選択後に safe metadata replay 候補を表示します。',
+    markers,
+    currentFrame,
+    safeCopySummary,
   }
 }
 

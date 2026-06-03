@@ -32,12 +32,22 @@ Runtime Audit remains a detail backlog in `docs/implementation/runtime-audit-nex
 
 ## Current Recommended Order
 
-The previously selected Runtime policy route enforcement design spike is complete. The next implementation should be a small vertical slice that supports the open issue roadmap above.
+The previously selected issue-roadmap slices are complete. The next implementation should be chosen as a new small vertical slice against #31 / #34 / #37 / #46, with the concept checklist applied before coding.
 
-1. **Animated replay UI candidate**
+Suggested next candidates:
+
+1. **Revived audit snapshot runtimeEvents tightening**
    - Issue alignment: #37, #46.
-   - Goal: use the replay-ready safe runtime timeline as a read-only metadata-only replay surface.
-   - Constraint: no raw config, prompt, payload, artifact body, credential-derived values, or visual route reconstruction beyond safe metadata.
+   - Goal: ensure revived `traceAudit` snapshots consistently expose normalized safe `runtimeEvents` to every Run Detail timeline/replay path.
+   - Constraint: no new localStorage key; continue using existing run history records only.
+2. **HUD notification read/ack/pin session behavior**
+   - Issue alignment: #34, #37.
+   - Goal: harden on-demand HUD notification behavior without making it a permanent panel.
+   - Constraint: session state first; persisted settings require a separate plan.
+3. **Concept naming cleanup plan**
+   - Issue alignment: #31.
+   - Goal: reduce naming that makes MVP panels look like full concept layers.
+   - Constraint: docs/UI label slice first; component renames only when low-risk.
 
 ## Completed Plan Slices
 
@@ -52,6 +62,7 @@ The previously selected Runtime policy route enforcement design spike is complet
 | Browser QA direct validation harness | `npm.cmd run qa:direct` now reproduces import/export validation, two-run safe audit comparison, selected edge focus, Edge HUD safe copy, legacy audit normalization, and storage-key checks without Browser file picker/download support. |
 | Review decision persistence boundary | Human Review now shows the persistence boundary: current decisions are session-only; any future durable form must be safe metadata inside an existing run history record, with sensitive notes excluded from safe summaries. |
 | Runtime policy route enforcement design spike | Mock run now applies fixed preset connection policy pass/non-pass to route gating: passing presets continue on `main`, failing presets create `skip`, and `expression` remains metadata-only without evaluation. |
+| Animated replay UI candidate | `RunDetailPanel` now exposes a metadata-only replay candidate with Play/Pause, frame navigation, progress, and frame markers derived only from safe runtime timeline items. |
 
 ## Plan Document Roles
 
