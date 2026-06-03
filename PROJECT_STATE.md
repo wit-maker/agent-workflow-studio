@@ -4,6 +4,65 @@ Last updated: 2026-06-03
 
 ---
 
+## Phase Browser QA Direct Validation Harness
+
+- Branch: `codex/browser-qa-direct-validation-harness`
+- Date: 2026-06-03
+- Model gate: `ALLOW_XHIGH` はないため、Codex Desktop 運用ラベルとして `GPT-5.5 high` のまま実施した。API model id として記録する場合は `gpt-5.5` とする。
+- Scope: `docs/project/ACTIVE_PLAN.md` の最優先スライスである Browser QA direct validation harness を実装する。Browser の file picker / download / edge focus / Run Detail comparison が環境制約で詰まる場合でも、pure domain code path を再現できる検証に限定する。
+
+### Implemented
+
+- `npm.cmd run qa:direct` を追加した。
+- `scripts/qa-direct-validation-runner.mjs` は既存依存の Vite SSR loader を使い、TypeScript の domain helper を dependency 追加なしで直接実行する。
+- `scripts/qa-direct-validation.entry.ts` は以下を direct validation する。
+  - generated bundle の import/export validation。
+  - 2件の safe audit/run history snapshot 作成。
+  - `buildRunComparisonView(...)` による Run Detail safe metadata diff と focused edge route metadata rows。
+  - `buildRunDetailReplayView(...)` による edge focus selection。
+  - `buildRunDetailRuntimeTimelineView(...)` による current trace safe runtime timeline。
+  - `buildSelectedEdgeHudView(...)` による Edge HUD safe copy/focus summary。
+  - runtimeEvents を持たない旧 run history record の normalize 互換。
+  - `STORAGE_KEYS` registry が増えていないこと。
+- fixture には raw prompt / raw payload / credential-like sentinel を混ぜ、safe audit / Run Detail / Edge HUD / copy summary 系 output に出ないことを assertion する。
+- `docs/project/ACTIVE_PLAN.md` を更新し、Browser QA direct validation harness を完了済みに移し、次推奨スライスを Review decision persistence boundary に進めた。
+- `docs/audit/current-implementation-map.md` と `docs/audit/technical-debt.md` を更新し、direct QA harness の役割と残ギャップを記録した。
+
+### Concept checklist classification
+
+- Classification: QA foundation / safe projection validation / detail-history validation.
+- Cognitive HUD claim: rendered HUD の新機能ではなく、#34 / #37 の HUD interaction を今後壊さないための検証基盤。
+- Situation Assistant claim: なし。Situation Assistant 本体や出力チャネルは実装していない。
+- Runtime Audit claim: safe audit summary / runtime metadata / focused edge projection の direct validation。animated replay、full route reconstruction、runtime enforcement ではない。
+- Safety: raw config / prompt / payload / artifact body / credential / token / API key は safe view / audit summary / copy summary に表示・保存・copy されないことを sentinel で検証した。
+- Persistence/API: 新 localStorage key、backend/API、credential storage、dependency は追加していない。
+
+### Validation
+
+- `npm.cmd run qa:direct`: pass
+- `npm.cmd run typecheck`: pass
+- `npm.cmd run lint`: pass
+- `npm.cmd run build`: pass
+- Vite chunk-size warning は既存許容警告として扱う。
+
+### Browser QA
+
+- UI変更なしの validation helper slice のため interactive Browser QA は対象外。
+- Browser file picker / download が扱えない場合の補完として、direct code-path validation を追加した。
+
+### Remaining gaps
+
+- `reviveRunTraceFromAuditSummary(...)` は現時点で `traceAudit.runtimeEvents` を revived `RunTrace` へ戻していない。focused comparison は record の `traceAudit.runtimeEvents` を直接読めるが、revived audit snapshot timeline の完全性は次の runtime-audit slice で締める余地がある。
+- direct QA は rendered interaction QA の代替ではない。UI を触る次スライスでは Browser QA を別途行う。
+
+### Next recommended slice
+
+1. Review decision persistence boundary: human review decisions を session-only のままにするか、既存 run history 内の safe audit metadata として扱うかを決める。
+2. Runtime policy route enforcement design spike: fixed preset だけを mock execution の pass / non-pass route behavior へ反映する範囲を設計する。
+3. Animated replay UI candidate: safe runtime timeline を read-only metadata replay surface として拡張する。
+
+---
+
 ## Phase Plan Unification: GitHub Issue Priority Roadmap
 
 - Branch: `codex/github-issues-plan-unification`

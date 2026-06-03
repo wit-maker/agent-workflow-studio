@@ -41,6 +41,7 @@ The Runtime Audit parallel worktree phase landed the safe route-event foundation
 | Durable Audit | `traceAudit.runtimeEvents` stores the safe event metadata inside existing run history records, and old records without the field normalize to `[]`. | This reuses the existing run history key; it is not a new audit store or new localStorage scope. |
 | Run Detail Replay / Diff | `RunDetailPanel` comparison includes runtime event count metadata, step evidence grouping, focused node/edge scoped diff, focused edge safe route-event metadata rows when two safe audit snapshots are selected, and a replay-ready safe runtime timeline for the selected current trace or revived audit snapshot. | This is metadata ordering and safe projection, not animated replay or full route reconstruction. |
 | Edge HUD Deep Link | `SelectedEdgeHud` can keep the selected edge and open Run Detail in an edge-focused context. Safe copy summary includes the Run Detail focus label. | This is a session-state deep link, not a persistent URL router or durable replay engine. |
+| Direct QA Harness | `npm.cmd run qa:direct` exercises import/export validation, safe audit/run history summaries, two-run Run Detail comparison, current-trace timeline focus, selected Edge HUD safe copy, legacy audit normalization, and storage-key registry checks without Browser file picker/download support. | This supplements Browser QA; it does not replace rendered interaction QA. |
 
 ## Concept Layer Note (Issue #31)
 

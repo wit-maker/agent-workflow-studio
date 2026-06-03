@@ -9,7 +9,7 @@ This file lists current limits that may block later work if ignored.
 - GitHub issues #31 / #34 / #37 / #46 are broad open epics. They should drive planning priority, but they are not branch-sized tasks and should not be closed by a thin vertical slice.
 - `docs/project/ACTIVE_PLAN.md` is the single active selector. Runtime Audit, task docs, and older implementation plans are subordinate detail or history unless linked from that file.
 - Previous "completion" notes for #31 / #34 / #37 / #46 should be read as landed foundation or partial alignment, not as epic closure.
-- Browser QA has repeatedly needed direct code-path supplementation for file picker, download, edge focus, and comparison paths. This is now the highest-value next planning slice because it protects #34 / #37 UI work and #46 vertical-slice behavior from weak regression evidence.
+- Browser QA has repeatedly needed direct code-path supplementation for file picker, download, edge focus, and comparison paths. `npm.cmd run qa:direct` now covers the core import/export, Run Detail comparison, selected edge focus, Edge HUD safe copy, legacy audit normalization, and storage-key checks, but future UI slices still need targeted Browser QA for rendered behavior.
 - Issue comments may summarize the repo plan when explicitly allowed, but comments must not become the canonical plan or imply issue closure.
 
 ## Concept Layer Debt (Issue #31)
@@ -61,6 +61,7 @@ These items do not block SA-1, but they should be tracked so that SA-5 onward do
 
 - Logs, metrics, queue, and execution graph are visible; completed runs now store a credential-safe `traceAudit` snapshot plus normalized safe `runtimeEvents` inside the existing run history record.
 - `RunTrace` exists as a read-only derived view and can be revived from `traceAudit` when current runtime logs are not present. Run Detail can now select current trace or a safe audit snapshot, deep-link node/edge focus, and compare two safe audit snapshots with metadata rows, runtime-event count diff, step-level safe evidence grouping, and focused node/edge scoped diff. This is durable evidence recall and scoped diff, not a full animated replayable audit model.
+- Direct QA found that `reviveRunTraceFromAuditSummary(...)` does not currently copy `traceAudit.runtimeEvents` back into the revived `RunTrace`. Focused comparison can still read audit runtime events directly from records, and current-trace timelines work, but revived audit snapshot timelines should be tightened in a later runtime-audit slice.
 - There is no durable audit log for safety decisions, approvals, external calls, command risk checks, publish gates, replay, visual multi-run replay animation, or edge-level route event replay. Connection runtime policy summaries and runtime events are safe metadata only, not enforced route behavior.
 - Metrics do not yet cover error rate, parallelism, resource load, or policy-backed multi-run regression analysis.
 

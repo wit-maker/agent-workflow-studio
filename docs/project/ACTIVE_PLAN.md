@@ -32,25 +32,19 @@ Runtime Audit remains a detail backlog in `docs/implementation/runtime-audit-nex
 
 ## Current Recommended Order
 
-The previously selected active implementation plan is complete. The next implementation should be a small vertical slice that supports the open issue roadmap above.
+The previously selected Browser QA direct validation harness is complete. The next implementation should be a small vertical slice that supports the open issue roadmap above.
 
-1. **Browser QA direct validation harness**
-   - Issue alignment: #31, #34, #37, #46.
-   - Goal: make file picker/download, Run Detail comparison, selected edge focus, and safe leak checks reproducible when Browser automation cannot complete them.
-   - Why first: it stabilizes regression evidence for all four broad epics and makes later UI/runtime changes easier to judge.
-   - Constraint: validation helper only; no product runtime behavior change, no new localStorage key, no dependency addition.
-
-2. **Review decision persistence boundary**
+1. **Review decision persistence boundary**
    - Issue alignment: #31, #34, #46.
    - Goal: clarify whether human review decisions stay session-only or become durable safe audit metadata inside an existing record.
    - Constraint: do not add a new localStorage key unless a future active plan explicitly approves it.
 
-3. **Runtime policy route enforcement design spike**
+2. **Runtime policy route enforcement design spike**
    - Issue alignment: #37, #46.
    - Goal: document and prototype only fixed preset pass / non-pass route behavior for mock execution.
    - Constraint: no arbitrary expression evaluator and no raw expression execution.
 
-4. **Animated replay UI candidate**
+3. **Animated replay UI candidate**
    - Issue alignment: #37, #46.
    - Goal: use the replay-ready safe runtime timeline as a read-only metadata-only replay surface.
    - Constraint: no raw config, prompt, payload, artifact body, credential-derived values, or visual route reconstruction beyond safe metadata.
@@ -65,6 +59,7 @@ The previously selected active implementation plan is complete. The next impleme
 | Review-required HUD behavior | Approval semantic focus now creates a compact review-required state cue and highlights Detail / Run Detail entry points from the always-on HUD. |
 | Replay-ready audit view model | `RunDetailPanel` now shows a safe runtime metadata timeline derived from `RunTrace.runtimeEvents` or revived audit snapshots. |
 | Five-pillar vertical thickening | The safe runtime timeline now feeds Situation Assistant input and mock briefing output through a visible Replay cue. |
+| Browser QA direct validation harness | `npm.cmd run qa:direct` now reproduces import/export validation, two-run safe audit comparison, selected edge focus, Edge HUD safe copy, legacy audit normalization, and storage-key checks without Browser file picker/download support. |
 
 ## Plan Document Roles
 
