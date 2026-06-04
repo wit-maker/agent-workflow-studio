@@ -20,7 +20,7 @@ import { RunDetailPanel } from './RunDetailPanel'
 import { AgentConnectorPanel } from './AgentConnectorPanel'
 import { ArtifactVersionHistory } from './ArtifactVersionHistory'
 import { BriefingPanel } from './BriefingPanel'
-import { CognitiveHudPanel } from './CognitiveHudPanel'
+import { HudSignalList } from './HudSignalList'
 import { ConnectorQueuePanel } from './ConnectorQueuePanel'
 import { ConnectorRoadmapPanel } from './ConnectorRoadmapPanel'
 import { CredentialBoundaryPanel } from './CredentialBoundaryPanel'
@@ -188,7 +188,7 @@ export function BottomMonitor({
   })
 
   const tabLabels = {
-    HUD: '認知HUD',
+    HUD: '注意信号',
     Logs: 'ログ',
     Metrics: 'メトリクス',
     Queue: 'キュー',
@@ -240,8 +240,8 @@ export function BottomMonitor({
 
       <section className="monitor-panel">
         {activeTab === 'HUD' ? (
-          <div className="cognitive-hud-tab-panel">
-            <CognitiveHudPanel snapshot={hudSnapshot} />
+          <div className="hud-signal-list-tab-panel">
+            <HudSignalList snapshot={hudSnapshot} />
           </div>
         ) : null}
 

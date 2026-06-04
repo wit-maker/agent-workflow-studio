@@ -36,18 +36,18 @@ The previously selected issue-roadmap slices and the follow-up candidates below 
 
 Next broad candidates, not yet selected:
 
-1. **Edge-level durable replay record design**
-   - Issue alignment: #37, #46.
-   - Goal: define how safe edge-level route replay records would live inside existing run history without raw payloads or new storage keys.
-   - Constraint: design/pure-domain first; no expression evaluation or external API.
-2. **HUD notification durability plan**
+1. **HUD notification durability plan**
    - Issue alignment: #34, #37.
    - Goal: decide whether read/ack/pin state should ever persist, and if so which existing storage boundary owns safe metadata.
    - Constraint: do not add a new localStorage key without an explicit updated plan.
-3. **Concept naming cleanup continuation**
+2. **Concept naming cleanup continuation**
    - Issue alignment: #31.
    - Goal: continue reducing names that imply MVP panels are full concept layers.
    - Constraint: visible labels/docs first; component renames only when low-risk.
+3. **Edge replay visual reconstruction candidate**
+   - Issue alignment: #37, #46.
+   - Goal: use the safe edge replay records as input for a visual route replay candidate without adding raw payloads or expression evaluation.
+   - Constraint: metadata-only first; no animated engine until Browser QA coverage is updated.
 
 ## Completed Plan Slices
 
@@ -66,6 +66,7 @@ Next broad candidates, not yet selected:
 | Revived audit snapshot runtimeEvents tightening | Revived `traceAudit` snapshots now copy normalized safe `runtimeEvents` back into `RunTrace`, so Run Detail timeline/replay paths use the same safe events for current traces and selected audit snapshots. |
 | HUD notification read/ack/pin session behavior | `HudNotificationBundle` now supports session-only read, acknowledge, and pin state. Acknowledged unpinned notifications leave the active list; pinned notifications stay visible without creating storage. |
 | Concept naming cleanup | User-facing labels now describe the current text explanation surface as `4D Text Briefing MVP` / `4D説明`, reducing the chance that the MVP panel is mistaken for the full Situation Assistant. |
+| Edge-level durable replay record | `traceAudit.edgeReplayRecords` now stores safe edge-level replay summaries derived from safe runtime events inside existing run history records. `RunDetailPanel`, `SelectedEdgeHud`, and React Flow edge runtime classes can surface selected-edge replay evidence without raw payloads or new storage keys. |
 
 ## Plan Document Roles
 

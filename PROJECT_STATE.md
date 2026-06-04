@@ -4,6 +4,77 @@ Last updated: 2026-06-05
 
 ---
 
+## Phase Edge Durable Replay / HUD Signal Naming Correction
+
+- Branch: `codex/edge-durable-replay-record`
+- Date: 2026-06-05
+- Model gate: `ALLOW_XHIGH` はないため、Codex Desktop 運用ラベルとして `GPT-5.5 high` のまま実施した。API model id として記録する場合は `gpt-5.5` とする。
+- Scope: `docs/project/ACTIVE_PLAN.md` の次スライスとして、safe edge-level durable replay record を既存 run history / `traceAudit` 内に追加する。追加のユーザー訂正により、Bottom Console の `認知HUD` タブ表現を `注意信号` / `HudSignalList` に修正し、認知HUD本体をタブではなく canvas / shell attention layer として扱う。新 localStorage key、backend/API、credential storage、dependency、source-specs、GitHub issue state は変更しない。
+
+### Implemented
+
+- `src/domain/runAuditEdgeReplay.ts` を追加し、safe `RuntimeAuditContractEvent` から edge 単位の `RunAuditEdgeReplayRecord` を生成・normalize する pure helper を実装した。
+- `RunTraceAuditSummary` に optional-compatible な `edgeReplayRecords` を追加した。
+  - 保存先は既存 `agent-workflow-studio.run-history.v1` record 内の `traceAudit`。
+  - 新 localStorage key は追加していない。
+  - 古い record は normalize 時に `runtimeEvents` から safe edge replay records を再構築する。
+- `RunDetailPanel` に `durable safe edge replay` 表示を追加した。
+  - edge の通過 event count、route kinds、event kinds、severity mix、latest safe summary、condition/delay/retry/error-route の safe metadata だけを表示する。
+  - raw config / prompt / payload / artifact body / credential / token / API key は view model に含めない。
+- `SelectedEdgeHud` に durable replay summary を追加した。
+  - Copy summary も edge id / source / target / status / counts / latest safe event summary に限定した。
+- React Flow edge runtime class に `edge-replay-observed` / `edge-replay-warning` / `edge-replay-error` / `edge-replay-retry` / `edge-replay-error-route` を追加し、safe edge replay summary を canvas 上の edge 強調・警告表示へ反映した。
+- Bottom Console の旧 `HUD` tab 表示名を `注意信号` に変更し、`CognitiveHudPanel` を `HudSignalList` にリネームした。
+  - 内部 tab id `HUD` は既存 `localAppSettings` 互換のため維持した。
+  - このパネルは補助的な signal inspection surface であり、Cognitive HUD body とは記述しない。
+- `SituationPanel` の案内文を、`認知HUD` ではなく `Console HUD の注意信号一覧` へ変更した。
+- `ACTIVE_PLAN.md` / audit docs を更新し、edge replay record の実装と HUD signal naming correction を反映した。
+
+### Concept checklist classification
+
+- Classification: safe projection / detail-history surface / canvas attention behavior / naming correction.
+- Cognitive HUD claim: safe edge replay summary を canvas edge の強調・減光・警告 class へ投影する attention behavior。`HudSignalList` は補助的な信号一覧であり、Cognitive HUD 本体ではない。
+- Run Detail claim: edge replay evidence は detail/debug surface。Run Detail は認知HUD本体ではない。
+- Situation Assistant claim: なし。Briefing / Assistant は HUD signals、Run Trace、logs、metrics を読めるが、タブへ縮小しない。
+- Runtime Audit claim: safe `traceAudit.edgeReplayRecords` を既存 run history record 内に追加した。full animated replay、visual route reconstruction、expression evaluation ではない。
+- Safety: raw config / prompt / payload / artifact body / credential / token / API key は保存・表示・copy summary に含めない。
+
+### Validation
+
+- `npm.cmd run qa:direct`: pass
+- `npm.cmd run typecheck`: pass
+- `npm.cmd run lint`: pass
+- `npm.cmd run build`: pass
+- Vite chunk-size warning は既存許容警告として扱う。
+
+### Browser QA
+
+- Preview: `http://127.0.0.1:4179/`
+- Initial render: app title、React Flow canvas、Run command HUD が表示されることを確認した。
+- Bottom Console: `C` toggle で Console HUD を開き、tab list が `注意信号 / ログ / ... / 4D説明 / 実行詳細` になっていることを確認した。
+- Naming correction: Browser 表示上に旧 `認知HUD` ラベルが出ないことを確認した。
+- Run / Edge HUD: Run 実行後に React Flow edge を選択し、`L2 Flow HUD` と replay summary が表示されることを確認した。
+- Run Detail: `T` で Run Detail を開き、`durable safe edge replay` / edge replay evidence が表示されることを確認した。
+- Canvas edge projection: React Flow edge class に `edge-replay-observed` が付くことを確認した。
+- Raw sentinel check: Browser 表示上に `RAW_PROMPT_SENTINEL` / `RAW_PAYLOAD_SENTINEL` / `CREDENTIAL_SENTINEL` / `PASSWORD_SENTINEL` / `BEARER_SENTINEL` / `sk-live-direct-qa-secret` が出ないことを確認した。
+- Console error: 0。
+- External script/link/image asset: 0。
+- Note: Browser runtime で `performance.getEntriesByType` は読めなかったため、DOM の `script[src]` / `link[href]` / `img[src]` で外部 asset を補完確認した。
+
+### Remaining gaps
+
+- Broad epics #31 / #34 / #37 / #46 は open 前提のまま。今回のスライスは epic closure ではない。
+- Full animated replay engine、visual route reconstruction、full branch graph enforcement、expression evaluation、durable notification state、persisted HUD preferences、critical short-tone audio、real assistant audio/avatar/video renderers は未実装。
+- `HudSignalList` への命名修正は product code では完了したが、古い historical task docs / source-specs には過去状態や禁止例として `CognitiveHudPanel` / HUD tab 記述が残る。
+
+### Next recommended slice
+
+1. HUD notification durability plan: read/ack/pin を永続化する必要があるか、永続化する場合に既存 storage boundary のどこに置くかを決める。
+2. Edge replay visual reconstruction candidate: safe edge replay records を visual route replay 候補へ使う。ただし metadata-only first、Browser QA coverage 更新後に進める。
+3. Concept naming cleanup continuation: historical docs と現行 docs の境界をさらに明確にする。
+
+---
+
 ## Phase Active Plan Completion Tightening
 
 - Branch: `codex/active-plan-completion-tightening`

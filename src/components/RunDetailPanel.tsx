@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type {
   RunDetailComparisonView,
   RunDetailDiffRow,
+  RunDetailEdgeReplayEvidenceView,
   RunDetailFocusTarget,
   RunDetailMode,
   RunDetailReplayCandidateView,
@@ -13,6 +14,7 @@ import type {
 } from '../domain/runDetail'
 import {
   buildRunComparisonView,
+  buildRunDetailEdgeReplayEvidenceView,
   buildRunDetailReplayCandidateView,
   buildRunDetailReplayView,
   buildRunDetailRuntimeTimelineView,
@@ -110,6 +112,15 @@ export function RunDetailPanel({
       }),
     [focusedConnectionId, focusedNodeId, replay.selectedTrace],
   )
+  const edgeReplayEvidence = useMemo(
+    () =>
+      buildRunDetailEdgeReplayEvidenceView({
+        trace: replay.selectedTrace,
+        focusConnectionId: focusedConnectionId,
+        connections,
+      }),
+    [connections, focusedConnectionId, replay.selectedTrace],
+  )
   const replayCandidate = useMemo(
     () =>
       buildRunDetailReplayCandidateView({
@@ -184,6 +195,7 @@ export function RunDetailPanel({
       />
 
       <RuntimeTimelinePanel timeline={runtimeTimeline} />
+      <EdgeReplayEvidencePanel evidence={edgeReplayEvidence} />
       <ReplayCandidatePanel
         replay={replayCandidate}
         playing={replayPlaying}
@@ -240,6 +252,59 @@ export function RunDetailPanel({
               onSelectConnection={onSelectConnection}
             />
           ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+type EdgeReplayEvidencePanelProps = {
+  evidence: RunDetailEdgeReplayEvidenceView
+}
+
+function EdgeReplayEvidencePanel({ evidence }: EdgeReplayEvidencePanelProps) {
+  return (
+    <section className="run-detail-edge-replay-evidence" aria-label="Edge replay evidence">
+      <div className="run-detail-step-diff-heading">
+        <div>
+          <span className="run-detail-comparison-kicker">durable safe edge replay</span>
+          <strong>{evidence.targetLabel}</strong>
+        </div>
+        <span>
+          {evidence.recordCount} edges / {evidence.totalEventCount} events
+        </span>
+      </div>
+      <p>{evidence.summary}</p>
+      {evidence.records.length > 0 ? (
+        <div className="run-detail-edge-replay-grid">
+          {evidence.records.map((record) => (
+            <article
+              key={record.id}
+              className={`run-detail-edge-replay-card ${record.focusMatched ? 'run-detail-edge-replay-focused' : ''}`}
+            >
+              <div className="run-detail-runtime-item-head">
+                <span>{record.statusLabel}</span>
+                <strong>{record.connectionId}</strong>
+                <small>{record.latestCreatedAtLabel}</small>
+              </div>
+              <p>{record.latestSummary}</p>
+              <div className="run-detail-runtime-meta">
+                <span>{record.eventCount} events</span>
+                <span>{record.routeSummary}</span>
+                <span>{record.eventKindSummary}</span>
+                <span>{record.severityMix}</span>
+                <span>{record.policySummary}</span>
+                {record.focusMatched ? <span>focused</span> : null}
+              </div>
+              <small>
+                {record.sourceNodeId} -&gt; {record.targetNodeId}
+              </small>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="run-detail-step-diff-empty">
+          この snapshot には edge replay evidence がありません。
         </div>
       )}
     </section>

@@ -84,7 +84,7 @@ The next recommended slice is **Browser QA direct validation harness** because i
 
 ## Cognitive HUD — full layer elements
 
-The MVP has `HudSignal` / `HudSnapshot` / `CognitiveHudPanel`. The cognitive HUD as an **attention-allocation layer** still needs the following.
+The MVP has `HudSignal` / `HudSnapshot` / `HudSignalList` as a supplementary signal inspection surface. The cognitive HUD as an **attention-allocation layer** still needs the following.
 
 | Element | Why it is needed |
 |---|---|

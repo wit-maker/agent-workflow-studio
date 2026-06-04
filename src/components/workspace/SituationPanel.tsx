@@ -83,7 +83,7 @@ export function SituationPanel({ hudSnapshot }: SituationPanelProps) {
           </ul>
         )}
         {remaining > 0 ? (
-          <p className="muted">他 {remaining} 件のシグナルがあります。Detail Drawer の認知HUDで確認できます。</p>
+          <p className="muted">他 {remaining} 件のシグナルがあります。Console HUD の注意信号一覧で確認できます。</p>
         ) : null}
       </section>
 

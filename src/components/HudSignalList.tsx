@@ -8,7 +8,7 @@ import {
   hudSignalKindLabels,
 } from '../domain/cognitiveHud'
 
-type CognitiveHudPanelProps = {
+type HudSignalListProps = {
   snapshot: HudSnapshot
 }
 
@@ -27,18 +27,18 @@ function priorityClass(priority: HudPriority): string {
 
 const TOP_SIGNAL_LIMIT = 6
 
-export function CognitiveHudPanel({ snapshot }: CognitiveHudPanelProps) {
+export function HudSignalList({ snapshot }: HudSignalListProps) {
   const topSignals = snapshot.signals.slice(0, TOP_SIGNAL_LIMIT)
   const remainingSignalCount = Math.max(snapshot.signals.length - topSignals.length, 0)
 
   return (
-    <section className="cognitive-hud-panel" aria-label="認知HUD">
-      <header className={`cognitive-hud-header ${priorityClass(snapshot.priority)}`}>
-        <div className="cognitive-hud-headline">
-          <span className="cognitive-hud-eyebrow">認知HUD</span>
+    <section className="hud-signal-list-panel" aria-label="注意信号一覧">
+      <header className={`hud-signal-list-header ${priorityClass(snapshot.priority)}`}>
+        <div className="hud-signal-list-headline">
+          <span className="hud-signal-list-eyebrow">注意信号</span>
           <strong>{snapshot.summary}</strong>
         </div>
-        <div className="cognitive-hud-meta">
+        <div className="hud-signal-list-meta">
           <div>
             <span className="eyebrow">アラート</span>
             <strong>L{snapshot.alertLevel}</strong>
@@ -51,7 +51,7 @@ export function CognitiveHudPanel({ snapshot }: CognitiveHudPanelProps) {
             <span className="eyebrow">フォーカス</span>
             <strong>
               {snapshot.focusTargetLabel ?? 'なし'}
-              <span className="cognitive-hud-focus-type">
+              <span className="hud-signal-list-focus-type">
                 {' '}
                 ({focusTargetLabels[snapshot.focusTargetType]})
               </span>
@@ -64,11 +64,11 @@ export function CognitiveHudPanel({ snapshot }: CognitiveHudPanelProps) {
         </div>
       </header>
 
-      <p className="cognitive-hud-action" aria-label="推奨アクション">
+      <p className="hud-signal-list-action" aria-label="推奨アクション">
         次の一手: {snapshot.recommendedAction}
       </p>
 
-      <section className="cognitive-hud-counts" aria-label="状態カウント">
+      <section className="hud-signal-list-counts" aria-label="状態カウント">
         <CountTile label="ノード合計" value={snapshot.counts.totalNodes} />
         <CountTile label="実行中" value={snapshot.counts.runningNodes} />
         <CountTile label="待機列" value={snapshot.counts.queuedNodes} />
@@ -105,12 +105,12 @@ export function CognitiveHudPanel({ snapshot }: CognitiveHudPanelProps) {
         <CountTile label="実行履歴" value={snapshot.counts.runHistoryCount} />
       </section>
 
-      <section className="cognitive-hud-signals" aria-label="主要シグナル">
+      <section className="hud-signal-list-signals" aria-label="主要シグナル">
         <h4>主要シグナル</h4>
         {topSignals.length === 0 ? (
           <p className="muted">注視すべきシグナルはありません。</p>
         ) : (
-          <ul className="cognitive-hud-signal-list">
+          <ul className="hud-signal-list-items">
             {topSignals.map((signal) => (
               <SignalRow key={signal.id} signal={signal} />
             ))}
@@ -132,7 +132,7 @@ type CountTileProps = {
 
 function CountTile({ label, value, tone = 'normal' }: CountTileProps) {
   return (
-    <div className={`cognitive-hud-count cognitive-hud-count-${tone}`}>
+    <div className={`hud-signal-list-count hud-signal-list-count-${tone}`}>
       <span className="eyebrow">{label}</span>
       <strong>{value}</strong>
     </div>
@@ -141,10 +141,10 @@ function CountTile({ label, value, tone = 'normal' }: CountTileProps) {
 
 function SignalRow({ signal }: { signal: HudSignal }) {
   return (
-    <li className={`cognitive-hud-signal ${priorityClass(signal.priority)}`}>
-      <div className="cognitive-hud-signal-head">
-        <span className="cognitive-hud-signal-level">L{signal.alertLevel}</span>
-        <span className="cognitive-hud-signal-kind">
+    <li className={`hud-signal-list-item ${priorityClass(signal.priority)}`}>
+      <div className="hud-signal-list-item-head">
+        <span className="hud-signal-list-level">L{signal.alertLevel}</span>
+        <span className="hud-signal-list-kind">
           {hudSignalKindLabels[signal.kind]}
         </span>
         <strong>{signal.title}</strong>

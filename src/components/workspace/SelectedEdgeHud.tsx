@@ -127,6 +127,8 @@ export function SelectedEdgeHud({
         <strong>{view.runtimeLabel}</strong>
         <span>Observed</span>
         <strong>{view.observedRouteSummary}</strong>
+        <span>Replay</span>
+        <strong>{view.durableReplaySummary}</strong>
       </div>
 
       <section className="selected-edge-hud-runtime" aria-label="選択接続の実行観測">

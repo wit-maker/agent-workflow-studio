@@ -1,6 +1,7 @@
 import {
   buildHudNotificationBundle,
   buildSelectedEdgeHudView,
+  buildWorkflowEdgeRuntimeMap,
   type HudSnapshot,
 } from '../src/domain/cognitiveHud'
 import {
@@ -12,6 +13,7 @@ import { validateImportBundle } from '../src/domain/importValidation'
 import { createRunTraceAuditSummary } from '../src/domain/runAudit'
 import {
   buildRunComparisonView,
+  buildRunDetailEdgeReplayEvidenceView,
   buildRunDetailReplayCandidateView,
   buildRunDetailReplayView,
   buildRunDetailRuntimeTimelineView,
@@ -317,6 +319,13 @@ export async function runDirectQaValidation(): Promise<DirectQaValidationResult>
   )
   assertNoForbiddenSentinels(comparisonView, 'run detail comparison view')
   checked.push('Run Detail safe metadata comparison')
+  assert(leftAudit.edgeReplayRecords.length > 0, 'trace audit should persist edge replay records')
+  assert(
+    leftAudit.edgeReplayRecords.some((record) => record.connectionId === 'edge-input-normalize'),
+    'trace audit should persist selected edge replay record',
+  )
+  assertNoForbiddenSentinels(leftAudit.edgeReplayRecords, 'trace audit edge replay records')
+  checked.push('traceAudit durable edge replay records')
 
   const replayView = buildRunDetailReplayView({
     currentTrace: null,
@@ -367,6 +376,23 @@ export async function runDirectQaValidation(): Promise<DirectQaValidationResult>
   assertNoForbiddenSentinels(revivedReplayCandidate, 'revived audit replay candidate')
   checked.push('revived audit snapshot runtimeEvents timeline/replay')
 
+  const edgeReplayEvidence = buildRunDetailEdgeReplayEvidenceView({
+    trace: replayView.selectedTrace,
+    focusConnectionId: 'edge-input-normalize',
+    connections: workflow.connections,
+  })
+  assert(edgeReplayEvidence.available, 'edge replay evidence should be available from revived audit snapshot')
+  assert(
+    edgeReplayEvidence.focusedRecordCount > 0,
+    'edge replay evidence should include focused selected edge record',
+  )
+  assert(
+    edgeReplayEvidence.records.some((record) => record.connectionId === 'edge-input-normalize'),
+    'edge replay evidence should surface the selected edge id',
+  )
+  assertNoForbiddenSentinels(edgeReplayEvidence, 'Run Detail edge replay evidence')
+  checked.push('Run Detail edge replay evidence')
+
   const replayCandidate = buildRunDetailReplayCandidateView({
     timeline: timelineView,
     selectedIndex: 1,
@@ -393,7 +419,22 @@ export async function runDirectQaValidation(): Promise<DirectQaValidationResult>
   })
   assert(edgeHud, 'selected edge HUD should be available')
   assert(edgeHud.connectionId === 'edge-input-normalize', 'selected edge HUD should target selected edge')
+  assert(
+    edgeHud.durableReplaySummary.includes('event'),
+    'selected edge HUD should include durable replay summary',
+  )
+  assert(
+    edgeHud.safeCopySummary.includes('durable edge replay'),
+    'selected edge copy summary should include safe durable replay metadata',
+  )
   assertNoForbiddenSentinels(edgeHud, 'selected edge HUD view')
+  const edgeRuntimeMap = buildWorkflowEdgeRuntimeMap({
+    workflow,
+    runTrace: replayView.selectedTrace,
+  })
+  const edgeRuntime = edgeRuntimeMap.get('edge-input-normalize')
+  assert(edgeRuntime?.className.includes('edge-replay-observed'), 'edge replay should project to canvas edge class')
+  assertNoForbiddenSentinels(edgeRuntime, 'selected edge runtime replay class projection')
   checked.push('Edge HUD safe copy/focus summary')
 
   const skippedPolicyRoute = resolveConnectionRuntimePolicyRoute({

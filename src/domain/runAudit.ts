@@ -5,6 +5,11 @@ import {
   buildRunAuditRouteEvents,
   normalizeRunAuditRouteEvents,
 } from './runAuditRouteEvents'
+import {
+  buildRunAuditEdgeReplayRecords,
+  normalizeRunAuditEdgeReplayRecords,
+  type RunAuditEdgeReplayRecord,
+} from './runAuditEdgeReplay'
 import type { RuntimeAuditContractEvent } from './runtimeAuditContract'
 import {
   makeRunStepEvidence,
@@ -129,6 +134,7 @@ export type RunTraceAuditSummary = {
   runEvidence: RunAuditEvidence[]
   events: RunAuditEvent[]
   runtimeEvents: RuntimeAuditContractEvent[]
+  edgeReplayRecords: RunAuditEdgeReplayRecord[]
 }
 
 export type CreateRunTraceAuditSummaryOptions = {
@@ -370,6 +376,13 @@ export function createRunTraceAuditSummary(
   const evidenceCount =
     runEvidence.length + steps.reduce((total, step) => total + step.evidence.length, 0)
   const events = createAuditEvents(trace, steps, runEvidence, options)
+  const runtimeEvents =
+    trace.runtimeEvents && trace.runtimeEvents.length > 0
+      ? trace.runtimeEvents
+      : buildRunAuditRouteEvents({
+          runId: trace.runId,
+          steps,
+        })
 
   return {
     schemaVersion: RUN_TRACE_AUDIT_SCHEMA_VERSION,
@@ -392,10 +405,8 @@ export function createRunTraceAuditSummary(
     steps,
     runEvidence,
     events,
-    runtimeEvents: buildRunAuditRouteEvents({
-      runId: trace.runId,
-      steps,
-    }),
+    runtimeEvents,
+    edgeReplayRecords: buildRunAuditEdgeReplayRecords(runtimeEvents),
   }
 }
 
@@ -535,6 +546,7 @@ export function normalizeRunTraceAuditSummary(
     finiteNumber(raw.evidenceCount) ??
     runEvidence.length + steps.reduce((total, step) => total + step.evidence.length, 0)
 
+  const runtimeEvents = normalizeRunAuditRouteEvents(raw.runtimeEvents)
   return {
     schemaVersion: RUN_TRACE_AUDIT_SCHEMA_VERSION,
     runId: raw.runId,
@@ -565,7 +577,11 @@ export function normalizeRunTraceAuditSummary(
           .filter((event): event is RunAuditEvent => event !== null)
           .slice(-MAX_AUDIT_EVENTS)
       : [],
-    runtimeEvents: normalizeRunAuditRouteEvents(raw.runtimeEvents),
+    runtimeEvents,
+    edgeReplayRecords: normalizeRunAuditEdgeReplayRecords({
+      raw: raw.edgeReplayRecords,
+      runtimeEvents,
+    }),
   }
 }
 
