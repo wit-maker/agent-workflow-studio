@@ -1,4 +1,8 @@
-import { buildSelectedEdgeHudView } from '../src/domain/cognitiveHud'
+import {
+  buildHudNotificationBundle,
+  buildSelectedEdgeHudView,
+  type HudSnapshot,
+} from '../src/domain/cognitiveHud'
 import {
   normalizeConnectionRuntimePolicy,
   resolveConnectionRuntimePolicyRoute,
@@ -323,6 +327,10 @@ export async function runDirectQaValidation(): Promise<DirectQaValidationResult>
   })
   assert(replayView.selectedRunId === 'run-left', 'run detail replay should select requested run')
   assert(replayView.focusTarget.type === 'connection', 'run detail replay should keep edge focus')
+  assert(
+    (replayView.selectedTrace?.runtimeEvents?.length ?? 0) > 0,
+    'revived audit snapshot should expose safe runtimeEvents on the selected RunTrace',
+  )
   assertNoForbiddenSentinels(replayView, 'run detail replay view')
 
   const currentTrace = buildRunTrace({
@@ -338,6 +346,26 @@ export async function runDirectQaValidation(): Promise<DirectQaValidationResult>
   assert(timelineView.eventCount > 0, 'runtime timeline should include safe events')
   assertNoForbiddenSentinels(timelineView, 'runtime timeline view')
   checked.push('Run Detail replay/timeline focus')
+
+  const revivedTimelineView = buildRunDetailRuntimeTimelineView({
+    trace: replayView.selectedTrace,
+    focusConnectionId: 'edge-input-normalize',
+  })
+  assert(
+    revivedTimelineView.eventCount === replayView.selectedTrace?.runtimeEvents?.length,
+    'revived audit snapshot timeline should read the same safe runtimeEvents as the selected trace',
+  )
+  const revivedReplayCandidate = buildRunDetailReplayCandidateView({
+    timeline: revivedTimelineView,
+    selectedIndex: 0,
+  })
+  assert(
+    revivedReplayCandidate.available,
+    'revived audit snapshot replay candidate should be available from safe runtimeEvents',
+  )
+  assertNoForbiddenSentinels(revivedTimelineView, 'revived audit runtime timeline view')
+  assertNoForbiddenSentinels(revivedReplayCandidate, 'revived audit replay candidate')
+  checked.push('revived audit snapshot runtimeEvents timeline/replay')
 
   const replayCandidate = buildRunDetailReplayCandidateView({
     timeline: timelineView,
@@ -418,6 +446,74 @@ export async function runDirectQaValidation(): Promise<DirectQaValidationResult>
   )
   assertNoForbiddenSentinels(reviewBoundary, 'review decision audit boundary')
   checked.push('review decision session-only safe boundary')
+
+  const hudSnapshot: HudSnapshot = {
+    alertLevel: 3,
+    priority: 'alert',
+    summary: 'Normalize needs review',
+    recommendedAction: 'Open Run Detail safe metadata',
+    focusTargetType: 'node',
+    focusTargetId: 'node-normalize',
+    focusTargetLabel: 'Normalize text',
+    signals: [
+      {
+        id: 'signal-normalize-review',
+        kind: 'review_required',
+        alertLevel: 3,
+        priority: 'alert',
+        title: 'Normalize review required',
+        detail: 'Safe metadata review signal',
+        targetType: 'node',
+        targetId: 'node-normalize',
+        targetLabel: 'Normalize text',
+      },
+    ],
+    counts: {
+      totalNodes: 3,
+      runningNodes: 0,
+      queuedNodes: 1,
+      failedNodes: 1,
+      reviewRequiredNodes: 1,
+      blockedNodes: 0,
+      retryReadyNodes: 0,
+      connectorJobsFailed: 0,
+      connectorJobsReviewRequired: 0,
+      connectorJobsRetryable: 0,
+      runHistoryCount: 2,
+    },
+  }
+  const pinnedNotificationView = buildHudNotificationBundle({
+    hudSnapshot,
+    centralHudView: null,
+    runTrace: null,
+    runHistoryRecords: [leftRecord, rightRecord],
+    notificationSessionState: {
+      'signal-normalize-review': { read: true, pinned: true },
+    },
+  })
+  assert(pinnedNotificationView.pinnedNotificationCount === 1, 'pinned session notification should be counted')
+  assert(pinnedNotificationView.unreadNotificationCount === 0, 'read pinned notification should not be unread')
+  assert(
+    pinnedNotificationView.notificationItems[0]?.statusLabel === 'pinned / read',
+    'pinned read notification should remain visible with status',
+  )
+  const acknowledgedNotificationView = buildHudNotificationBundle({
+    hudSnapshot,
+    centralHudView: null,
+    notificationSessionState: {
+      'signal-normalize-review': { read: true, acknowledged: true },
+    },
+  })
+  assert(
+    acknowledgedNotificationView.notificationItems.length === 0,
+    'acknowledged unpinned notification should leave the active signal list',
+  )
+  assert(
+    acknowledgedNotificationView.acknowledgedNotificationCount === 1,
+    'acknowledged session notification should be counted',
+  )
+  assertNoForbiddenSentinels([pinnedNotificationView, acknowledgedNotificationView], 'HUD notification session view')
+  checked.push('HUD notification session read/ack/pin projection')
 
   const normalizedOldHistory = normalizeRunHistory({
     records: [

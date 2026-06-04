@@ -7,6 +7,9 @@ type HudNotificationBundleProps = {
   onClose: () => void
   onSelectNode: (nodeId: string) => void
   onSelectRun: (runId: string) => void
+  onMarkNotificationRead: (notificationId: string) => void
+  onAcknowledgeNotification: (notificationId: string) => void
+  onToggleNotificationPinned: (notificationId: string) => void
   onCycleHudDensity: () => void
 }
 
@@ -24,6 +27,9 @@ export function HudNotificationBundle({
   onClose,
   onSelectNode,
   onSelectRun,
+  onMarkNotificationRead,
+  onAcknowledgeNotification,
+  onToggleNotificationPinned,
   onCycleHudDensity,
 }: HudNotificationBundleProps) {
   const [tab, setTab] = useState<HudNotificationTab>('signals')
@@ -53,6 +59,9 @@ export function HudNotificationBundle({
           <span className="eyebrow">HUD Feed</span>
           <strong>{view.headline}</strong>
           <span className="hud-notification-status">{view.statusLine}</span>
+          <span className="hud-notification-status">
+            unread {view.unreadNotificationCount} / ack {view.acknowledgedNotificationCount} / pinned {view.pinnedNotificationCount} / session-only
+          </span>
         </div>
         <button type="button" className="hud-icon-button" onClick={onClose} title="通知HUDを閉じる">
           Close
@@ -81,6 +90,9 @@ export function HudNotificationBundle({
                   key={item.id}
                   item={item}
                   onSelectNode={onSelectNode}
+                  onMarkRead={onMarkNotificationRead}
+                  onAcknowledge={onAcknowledgeNotification}
+                  onTogglePinned={onToggleNotificationPinned}
                 />
               ))}
             </ul>
@@ -174,21 +186,65 @@ export function HudNotificationBundle({
 function HudNotificationRow({
   item,
   onSelectNode,
+  onMarkRead,
+  onAcknowledge,
+  onTogglePinned,
 }: {
   item: HudNotificationItem
   onSelectNode: (nodeId: string) => void
+  onMarkRead: (notificationId: string) => void
+  onAcknowledge: (notificationId: string) => void
+  onTogglePinned: (notificationId: string) => void
 }) {
   const canFocusNode = item.targetType === 'node' && item.targetId
 
   return (
-    <li className={`hud-notification-item hud-notification-${item.tone}`}>
+    <li
+      className={[
+        'hud-notification-item',
+        `hud-notification-${item.tone}`,
+        item.read ? 'hud-notification-read' : '',
+        item.acknowledged ? 'hud-notification-acknowledged' : '',
+        item.pinned ? 'hud-notification-pinned' : '',
+      ].filter(Boolean).join(' ')}
+    >
       <div>
         <span className="hud-notification-source">
           L{item.alertLevel} / {item.sourceLabel}
         </span>
+        <span className="hud-notification-target">{item.statusLabel}</span>
         <strong>{item.title}</strong>
         <p>{item.detail}</p>
         {item.targetLabel ? <span className="hud-notification-target">{item.targetLabel}</span> : null}
+      </div>
+      <div className="hud-notification-actions">
+        <button
+          type="button"
+          className="hud-icon-button"
+          onClick={() => onTogglePinned(item.id)}
+          aria-pressed={item.pinned}
+          title={item.pinned ? 'Pin を外す' : 'Pin して表示を保持'}
+        >
+          Pin
+        </button>
+        <button
+          type="button"
+          className="hud-icon-button"
+          onClick={() => onMarkRead(item.id)}
+          disabled={item.read}
+          title="既読にする"
+        >
+          Read
+        </button>
+        <button
+          type="button"
+          className="hud-icon-button"
+          onClick={() => onAcknowledge(item.id)}
+          disabled={item.acknowledged && !item.pinned}
+          title="確認済みにして通常リストから外す"
+        >
+          Ack
+        </button>
       </div>
       {canFocusNode ? (
         <button

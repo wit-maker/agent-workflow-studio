@@ -1,6 +1,6 @@
 # Active Plan
 
-Last updated: 2026-06-03
+Last updated: 2026-06-05
 
 ## Purpose
 
@@ -32,22 +32,22 @@ Runtime Audit remains a detail backlog in `docs/implementation/runtime-audit-nex
 
 ## Current Recommended Order
 
-The previously selected issue-roadmap slices are complete. The next implementation should be chosen as a new small vertical slice against #31 / #34 / #37 / #46, with the concept checklist applied before coding.
+The previously selected issue-roadmap slices and the follow-up candidates below are complete. There is no active implementation slice selected in this file right now. The next implementation should be chosen as a new small vertical slice against #31 / #34 / #37 / #46, with the concept checklist applied before coding.
 
-Suggested next candidates:
+Next broad candidates, not yet selected:
 
-1. **Revived audit snapshot runtimeEvents tightening**
+1. **Edge-level durable replay record design**
    - Issue alignment: #37, #46.
-   - Goal: ensure revived `traceAudit` snapshots consistently expose normalized safe `runtimeEvents` to every Run Detail timeline/replay path.
-   - Constraint: no new localStorage key; continue using existing run history records only.
-2. **HUD notification read/ack/pin session behavior**
+   - Goal: define how safe edge-level route replay records would live inside existing run history without raw payloads or new storage keys.
+   - Constraint: design/pure-domain first; no expression evaluation or external API.
+2. **HUD notification durability plan**
    - Issue alignment: #34, #37.
-   - Goal: harden on-demand HUD notification behavior without making it a permanent panel.
-   - Constraint: session state first; persisted settings require a separate plan.
-3. **Concept naming cleanup plan**
+   - Goal: decide whether read/ack/pin state should ever persist, and if so which existing storage boundary owns safe metadata.
+   - Constraint: do not add a new localStorage key without an explicit updated plan.
+3. **Concept naming cleanup continuation**
    - Issue alignment: #31.
-   - Goal: reduce naming that makes MVP panels look like full concept layers.
-   - Constraint: docs/UI label slice first; component renames only when low-risk.
+   - Goal: continue reducing names that imply MVP panels are full concept layers.
+   - Constraint: visible labels/docs first; component renames only when low-risk.
 
 ## Completed Plan Slices
 
@@ -63,6 +63,9 @@ Suggested next candidates:
 | Review decision persistence boundary | Human Review now shows the persistence boundary: current decisions are session-only; any future durable form must be safe metadata inside an existing run history record, with sensitive notes excluded from safe summaries. |
 | Runtime policy route enforcement design spike | Mock run now applies fixed preset connection policy pass/non-pass to route gating: passing presets continue on `main`, failing presets create `skip`, and `expression` remains metadata-only without evaluation. |
 | Animated replay UI candidate | `RunDetailPanel` now exposes a metadata-only replay candidate with Play/Pause, frame navigation, progress, and frame markers derived only from safe runtime timeline items. |
+| Revived audit snapshot runtimeEvents tightening | Revived `traceAudit` snapshots now copy normalized safe `runtimeEvents` back into `RunTrace`, so Run Detail timeline/replay paths use the same safe events for current traces and selected audit snapshots. |
+| HUD notification read/ack/pin session behavior | `HudNotificationBundle` now supports session-only read, acknowledge, and pin state. Acknowledged unpinned notifications leave the active list; pinned notifications stay visible without creating storage. |
+| Concept naming cleanup | User-facing labels now describe the current text explanation surface as `4D Text Briefing MVP` / `4D説明`, reducing the chance that the MVP panel is mistaken for the full Situation Assistant. |
 
 ## Plan Document Roles
 

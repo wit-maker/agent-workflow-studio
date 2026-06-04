@@ -340,7 +340,19 @@ export type HudNotificationItem = {
   targetType: HudFocusTargetType
   targetId: string | null
   targetLabel: string | null
+  read: boolean
+  acknowledged: boolean
+  pinned: boolean
+  statusLabel: string
 }
+
+export type HudNotificationSessionEntry = {
+  read?: boolean
+  acknowledged?: boolean
+  pinned?: boolean
+}
+
+export type HudNotificationSessionState = Record<string, HudNotificationSessionEntry>
 
 export type HudHistoryEntry = {
   id: string
@@ -362,6 +374,9 @@ export type HudNotificationBundleView = {
   statusLine: string
   notificationItems: HudNotificationItem[]
   hiddenNotificationCount: number
+  unreadNotificationCount: number
+  acknowledgedNotificationCount: number
+  pinnedNotificationCount: number
   historyEntries: HudHistoryEntry[]
   hiddenHistoryCount: number
   latestRunSummary: string
@@ -1305,6 +1320,7 @@ export function buildHudNotificationBundle(options: {
   runTrace?: RunTrace | null
   runHistoryRecords?: readonly WorkflowRunRecord[]
   densityMode?: HudDensityMode
+  notificationSessionState?: HudNotificationSessionState
 }): HudNotificationBundleView {
   const {
     hudSnapshot,
@@ -1312,6 +1328,7 @@ export function buildHudNotificationBundle(options: {
     runTrace = null,
     runHistoryRecords = [],
     densityMode = 'balanced',
+    notificationSessionState = {},
   } = options
   const density = buildHudDensityView(densityMode)
   const centralItem = centralHudView
@@ -1325,6 +1342,10 @@ export function buildHudNotificationBundle(options: {
         targetType: hudSnapshot.focusTargetType,
         targetId: hudSnapshot.focusTargetId,
         targetLabel: sanitizeOptionalHudText(centralHudView.focusLabel ?? hudSnapshot.focusTargetLabel),
+        read: false,
+        acknowledged: false,
+        pinned: false,
+        statusLabel: 'unread',
       } satisfies HudNotificationItem]
     : []
   const signalItems = hudSnapshot.signals.map((signal) => ({
@@ -1337,6 +1358,10 @@ export function buildHudNotificationBundle(options: {
     targetType: signal.targetType,
     targetId: signal.targetId,
     targetLabel: sanitizeOptionalHudText(signal.targetLabel),
+    read: false,
+    acknowledged: false,
+    pinned: false,
+    statusLabel: 'unread',
   } satisfies HudNotificationItem))
   const safetyItems = (runTrace?.safetyWarnings ?? []).slice(0, 2).map((warning, index) => ({
     id: `trace-safety:${index}`,
@@ -1348,13 +1373,28 @@ export function buildHudNotificationBundle(options: {
     targetType: 'storage' as HudFocusTargetType,
     targetId: runTrace?.runId ?? null,
     targetLabel: 'Run trace',
+    read: false,
+    acknowledged: false,
+    pinned: false,
+    statusLabel: 'unread',
   } satisfies HudNotificationItem))
   const allNotifications = uniqueHudNotifications([
     ...centralItem,
     ...signalItems,
     ...safetyItems,
   ])
-  const notificationItems = allNotifications.slice(0, density.signalLimit)
+  const statefulNotifications = applyHudNotificationSessionState(allNotifications, notificationSessionState)
+  const pinnedNotifications = statefulNotifications.filter((item) => item.pinned)
+  const activeNotifications = statefulNotifications.filter((item) => !item.pinned && !item.acknowledged)
+  const notificationItems = [
+    ...pinnedNotifications,
+    ...activeNotifications,
+  ].slice(0, density.signalLimit)
+  const unreadNotificationCount = statefulNotifications.filter(
+    (item) => !item.read && !item.acknowledged,
+  ).length
+  const acknowledgedNotificationCount = statefulNotifications.filter((item) => item.acknowledged).length
+  const pinnedNotificationCount = statefulNotifications.filter((item) => item.pinned).length
   const historyRecords = [...runHistoryRecords].reverse()
   const historyEntries = historyRecords
     .slice(0, density.historyLimit)
@@ -1373,6 +1413,9 @@ export function buildHudNotificationBundle(options: {
   const statusLine = [
     `L${hudSnapshot.alertLevel} ${hudPriorityLabels[hudSnapshot.priority]}`,
     `signals ${hudSnapshot.signals.length}`,
+    `unread ${unreadNotificationCount}`,
+    `ack ${acknowledgedNotificationCount}`,
+    `pin ${pinnedNotificationCount}`,
     evidenceSummary,
   ].join(' / ')
 
@@ -1381,7 +1424,10 @@ export function buildHudNotificationBundle(options: {
     headline,
     statusLine,
     notificationItems,
-    hiddenNotificationCount: Math.max(0, allNotifications.length - notificationItems.length),
+    hiddenNotificationCount: Math.max(0, statefulNotifications.length - notificationItems.length),
+    unreadNotificationCount,
+    acknowledgedNotificationCount,
+    pinnedNotificationCount,
     historyEntries,
     hiddenHistoryCount: Math.max(0, historyRecords.length - historyEntries.length),
     latestRunSummary,
@@ -1393,7 +1439,8 @@ export function buildHudNotificationBundle(options: {
       `danger visibility: ${density.dangerVisibilityLabel}`,
       `collapse policy: ${density.collapsePolicy}`,
       `latest run: ${latestRunSummary}`,
-      ...notificationItems.map((item) => `signal: L${item.alertLevel} ${item.title} - ${item.detail}`),
+      `notification state: unread ${unreadNotificationCount} / ack ${acknowledgedNotificationCount} / pinned ${pinnedNotificationCount}`,
+      ...notificationItems.map((item) => `signal: ${item.statusLabel} / L${item.alertLevel} ${item.title} - ${item.detail}`),
       ...historyEntries.map((entry) => `history: ${entry.runId} ${entry.statusLabel} ${entry.summary}`),
     ].join('\n'),
   }
@@ -1642,6 +1689,32 @@ function uniqueHudNotifications(items: HudNotificationItem[]): HudNotificationIt
   }
 
   return result
+}
+
+function applyHudNotificationSessionState(
+  items: readonly HudNotificationItem[],
+  state: HudNotificationSessionState,
+): HudNotificationItem[] {
+  return items.map((item) => {
+    const entry = state[item.id]
+    const read = entry?.read === true
+    const acknowledged = entry?.acknowledged === true
+    const pinned = entry?.pinned === true
+    const statusLabel = [
+      pinned ? 'pinned' : null,
+      acknowledged ? 'acknowledged' : read ? 'read' : 'unread',
+    ]
+      .filter((value): value is string => value !== null)
+      .join(' / ')
+
+    return {
+      ...item,
+      read,
+      acknowledged,
+      pinned,
+      statusLabel,
+    }
+  })
 }
 
 function buildHudHistoryEntry(record: WorkflowRunRecord): HudHistoryEntry {

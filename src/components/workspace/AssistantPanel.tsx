@@ -47,9 +47,9 @@ export function AssistantPanel({
   })
 
   return (
-    <section className="assistant-panel" aria-label="状況補佐官">
+    <section className="assistant-panel" aria-label="状況補佐官 MVP 出力">
       <header className="assistant-header">
-        <span className="eyebrow">状況補佐官</span>
+        <span className="eyebrow">Situation Assistant MVP output</span>
         <h3>状況説明レイヤー / 人間向け表現</h3>
         <p className="muted">
           4D Text Briefing は出力チャネルの 1 つです。音声台本 / アバター台本 / 動画ハイライト指示 / 次アクションは mock 出力として生成し、実レンダラーは将来チャネルとして扱います。

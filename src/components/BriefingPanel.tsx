@@ -29,9 +29,9 @@ export function BriefingPanel({
   const result = state.result
 
   return (
-    <section className="briefing-panel" aria-label="状況ブリーフィング">
+    <section className="briefing-panel" aria-label="4D Text Briefing MVP">
       <div className="briefing-mock-banner" role="note">
-        ⚠ mock モード（実 AI API 未接続）
+        ⚠ 4D Text Briefing MVP / mock（実 AI API 未接続）
       </div>
 
       <div className="briefing-controls">
@@ -42,7 +42,7 @@ export function BriefingPanel({
           onClick={onGenerate}
           disabled={state.status === 'generating'}
         >
-          {state.result ? 'ブリーフィングを再生成' : 'ブリーフィングを生成'}
+          {state.result ? '4D説明を再生成' : '4D説明を生成'}
         </button>
 
         <label className="field-label briefing-mode-field">
@@ -77,9 +77,9 @@ export function BriefingPanel({
 
       {!result && state.status !== 'generating' ? (
         <div className="briefing-empty-state">
-          <p>ブリーフィングはまだ生成されていません。</p>
+          <p>4D Text Briefing MVP はまだ生成されていません。</p>
           <p className="muted">
-            「ブリーフィングを生成」を押してください。Run 後に生成すると状況の説明が見やすくなります。
+            「4D説明を生成」を押してください。Run 後に生成すると状況の説明が見やすくなります。
           </p>
         </div>
       ) : null}
@@ -88,8 +88,8 @@ export function BriefingPanel({
         <article className="briefing-card">
           <header className="briefing-card-header">
             <div>
-              <span className="briefing-eyebrow">ブリーフィング</span>
-              <h3>📋 4D 状況説明</h3>
+              <span className="briefing-eyebrow">4D Text Briefing MVP</span>
+              <h3>4D 状況説明</h3>
             </div>
             <div className="briefing-meta">
               <span
