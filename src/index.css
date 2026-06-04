@@ -1,4 +1,4 @@
-@import '@xyflow/react/dist/style.css';
+﻿@import '@xyflow/react/dist/style.css';
 
 :root {
   --bg: #f6f7f9;
@@ -2487,19 +2487,19 @@ button:disabled {
   background: var(--surface);
 }
 
-/* ---- Cognitive HUD ---- */
+/* ---- HUD Signal Inspection Surface ---- */
 
-.cognitive-hud-tab-panel {
+.hud-signal-list-tab-panel {
   display: grid;
   gap: 14px;
 }
 
-.cognitive-hud-panel {
+.hud-signal-list-panel {
   display: grid;
   gap: 14px;
 }
 
-.cognitive-hud-header {
+.hud-signal-list-header {
   display: grid;
   gap: 12px;
   padding: 14px;
@@ -2508,50 +2508,50 @@ button:disabled {
   background: var(--surface);
 }
 
-.cognitive-hud-header.hud-priority-critical {
+.hud-signal-list-header.hud-priority-critical {
   border-color: rgba(190, 63, 59, 0.5);
   background: var(--red-soft);
 }
 
-.cognitive-hud-header.hud-priority-alert {
+.hud-signal-list-header.hud-priority-alert {
   border-color: rgba(169, 105, 18, 0.5);
   background: var(--amber-soft);
 }
 
-.cognitive-hud-header.hud-priority-watch {
+.hud-signal-list-header.hud-priority-watch {
   border-color: rgba(47, 111, 189, 0.4);
   background: var(--blue-soft);
 }
 
-.cognitive-hud-header.hud-priority-normal {
+.hud-signal-list-header.hud-priority-normal {
   border-color: rgba(24, 129, 90, 0.35);
   background: var(--green-soft);
 }
 
-.cognitive-hud-headline {
+.hud-signal-list-headline {
   display: grid;
   gap: 4px;
 }
 
-.cognitive-hud-eyebrow {
+.hud-signal-list-eyebrow {
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
-.cognitive-hud-headline strong {
+.hud-signal-list-headline strong {
   font-size: 16px;
   line-height: 1.4;
 }
 
-.cognitive-hud-meta {
+.hud-signal-list-meta {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 10px;
 }
 
-.cognitive-hud-meta div {
+.hud-signal-list-meta div {
   display: grid;
   gap: 4px;
   border: 1px solid var(--border);
@@ -2560,13 +2560,13 @@ button:disabled {
   background: var(--surface);
 }
 
-.cognitive-hud-focus-type {
+.hud-signal-list-focus-type {
   color: var(--muted);
   font-weight: 400;
   font-size: 12px;
 }
 
-.cognitive-hud-action {
+.hud-signal-list-action {
   margin: 0;
   padding: 10px 12px;
   border: 1px dashed var(--border);
@@ -2575,13 +2575,13 @@ button:disabled {
   font-size: 13px;
 }
 
-.cognitive-hud-counts {
+.hud-signal-list-counts {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 8px;
 }
 
-.cognitive-hud-count {
+.hud-signal-list-count {
   display: grid;
   gap: 4px;
   border: 1px solid var(--border);
@@ -2590,31 +2590,31 @@ button:disabled {
   background: var(--surface);
 }
 
-.cognitive-hud-count strong {
+.hud-signal-list-count strong {
   font-size: 18px;
 }
 
-.cognitive-hud-count-failed {
+.hud-signal-list-count-failed {
   border-color: rgba(190, 63, 59, 0.4);
   background: var(--red-soft);
 }
 
-.cognitive-hud-count-review {
+.hud-signal-list-count-review {
   border-color: rgba(169, 105, 18, 0.4);
   background: var(--amber-soft);
 }
 
-.cognitive-hud-count-retry {
+.hud-signal-list-count-retry {
   border-color: rgba(117, 84, 201, 0.4);
   background: var(--purple-soft);
 }
 
-.cognitive-hud-signals h4 {
+.hud-signal-list-signals h4 {
   margin: 0 0 8px;
   font-size: 13px;
 }
 
-.cognitive-hud-signal-list {
+.hud-signal-list-items {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -2622,7 +2622,7 @@ button:disabled {
   gap: 8px;
 }
 
-.cognitive-hud-signal {
+.hud-signal-list-item {
   display: grid;
   gap: 4px;
   border: 1px solid var(--border);
@@ -2631,34 +2631,34 @@ button:disabled {
   background: var(--surface);
 }
 
-.cognitive-hud-signal.hud-priority-critical {
+.hud-signal-list-item.hud-priority-critical {
   border-color: rgba(190, 63, 59, 0.45);
   background: var(--red-soft);
 }
 
-.cognitive-hud-signal.hud-priority-alert {
+.hud-signal-list-item.hud-priority-alert {
   border-color: rgba(169, 105, 18, 0.45);
   background: var(--amber-soft);
 }
 
-.cognitive-hud-signal.hud-priority-watch {
+.hud-signal-list-item.hud-priority-watch {
   border-color: rgba(47, 111, 189, 0.35);
   background: var(--blue-soft);
 }
 
-.cognitive-hud-signal.hud-priority-normal {
+.hud-signal-list-item.hud-priority-normal {
   border-color: rgba(24, 129, 90, 0.3);
   background: var(--green-soft);
 }
 
-.cognitive-hud-signal-head {
+.hud-signal-list-item-head {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.cognitive-hud-signal-level {
+.hud-signal-list-level {
   font-size: 11px;
   font-weight: 600;
   padding: 2px 6px;
@@ -2667,13 +2667,13 @@ button:disabled {
   color: var(--text);
 }
 
-.cognitive-hud-signal-kind {
+.hud-signal-list-kind {
   font-size: 11px;
   color: var(--muted);
   letter-spacing: 0.04em;
 }
 
-.cognitive-hud-signal p {
+.hud-signal-list-item p {
   margin: 0;
   font-size: 12px;
 }
@@ -3107,6 +3107,7 @@ button:disabled {
 .run-detail-step-diff,
 .run-detail-scoped-diff,
 .run-detail-route-metadata-diff,
+.run-detail-edge-replay-evidence,
 .run-detail-replay-candidate,
 .run-detail-runtime-timeline {
   display: grid;
@@ -3120,6 +3121,7 @@ button:disabled {
 .game-hud-workspace .run-detail-step-diff,
 .game-hud-workspace .run-detail-scoped-diff,
 .game-hud-workspace .run-detail-route-metadata-diff,
+.game-hud-workspace .run-detail-edge-replay-evidence,
 .game-hud-workspace .run-detail-replay-candidate,
 .game-hud-workspace .run-detail-runtime-timeline {
   border-color: rgba(34, 211, 238, 0.18);
@@ -3280,6 +3282,7 @@ button:disabled {
 }
 
 .run-detail-replay-candidate > p,
+.run-detail-edge-replay-evidence > p,
 .run-detail-runtime-timeline > p {
   margin: 0;
   color: var(--text-muted);
@@ -3411,6 +3414,45 @@ button:disabled {
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+.run-detail-edge-replay-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 7px;
+}
+
+.run-detail-edge-replay-card {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 8px 9px;
+}
+
+.game-hud-workspace .run-detail-edge-replay-card {
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.run-detail-edge-replay-focused {
+  border-color: rgba(34, 211, 238, 0.7);
+  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.16);
+}
+
+.run-detail-edge-replay-card p {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.79rem;
+  overflow-wrap: anywhere;
+}
+
+.run-detail-edge-replay-card > small {
+  color: var(--text-muted);
+  font-family: monospace;
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
 }
 
 .run-detail-runtime-item {
@@ -5384,6 +5426,23 @@ body:has(.game-hud-workspace) #root {
   stroke-dasharray: 2 8;
 }
 
+.react-flow-canvas-root .react-flow__edge.edge-replay-observed .react-flow__edge-path {
+  filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.22));
+}
+
+.react-flow-canvas-root .react-flow__edge.edge-replay-warning .react-flow__edge-path,
+.react-flow-canvas-root .react-flow__edge.edge-replay-retry .react-flow__edge-path {
+  stroke: rgba(245, 158, 11, 0.92);
+  stroke-dasharray: 7 5;
+}
+
+.react-flow-canvas-root .react-flow__edge.edge-replay-error .react-flow__edge-path,
+.react-flow-canvas-root .react-flow__edge.edge-replay-error-route .react-flow__edge-path {
+  stroke: rgba(251, 113, 133, 0.94);
+  stroke-dasharray: 3 4;
+  filter: drop-shadow(0 0 8px rgba(251, 113, 133, 0.28));
+}
+
 .selected-object-hud,
 .selected-edge-hud {
   pointer-events: auto;
@@ -5698,5 +5757,6 @@ body:has(.game-hud-workspace) #root {
     overflow: hidden;
   }
 }
+
 
 

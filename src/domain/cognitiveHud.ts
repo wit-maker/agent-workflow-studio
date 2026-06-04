@@ -21,6 +21,10 @@ import {
   statusLabels,
 } from './displayLabels'
 import { summarizeConnectionRuntimePolicy } from './edgeRuntimePolicy'
+import {
+  buildRunAuditEdgeReplayRecords,
+  type RunAuditEdgeReplayRecord,
+} from './runAuditEdgeReplay'
 import type { ExecutionGraph, ExecutionRouteKind, ExecutionStepStatus } from './executionGraph'
 import {
   getInputPorts,
@@ -216,6 +220,7 @@ export type SelectedEdgeHudView = {
   traceSource: RunTrace['source'] | 'none'
   runDetailFocusLabel: string
   runDetailFocusSummary: string
+  durableReplaySummary: string
   recommendedAction: string
   safeCopySummary: string
 }
@@ -699,6 +704,11 @@ export function buildSelectedEdgeHudView(options: {
     `${runtime.routeSummary}`,
     runtime.traceRunId ? `trace ${runtime.traceRunId}` : 'trace none',
   ].join(' / ')
+  const durableReplayRecords = buildRunAuditEdgeReplayRecords(runTrace?.runtimeEvents ?? [])
+  const durableReplayRecord = durableReplayRecords.find((record) => record.connectionId === connection.id) ?? null
+  const durableReplaySummary = durableReplayRecord
+    ? `${durableReplayRecord.eventCount} event(s) / ${durableReplayRecord.statusLabel} / ${durableReplayRecord.routeKinds.join(', ') || 'route none'}`
+    : 'No durable edge replay record'
 
   return {
     connectionId: connection.id,
@@ -729,6 +739,7 @@ export function buildSelectedEdgeHudView(options: {
     traceSource: runtime.traceSource,
     runDetailFocusLabel,
     runDetailFocusSummary,
+    durableReplaySummary,
     recommendedAction: runtime.recommendedAction,
     safeCopySummary: [
       `edge: ${connection.id}`,
@@ -744,9 +755,13 @@ export function buildSelectedEdgeHudView(options: {
       `health: ${runtime.healthLabel}`,
       `evidence: ${runtime.evidenceCount}`,
       `trace: ${runtime.traceRunId ?? 'none'} / ${runtime.traceSource}`,
+      `durable edge replay: ${durableReplaySummary}`,
+      durableReplayRecord ? `edge replay latest: ${durableReplayRecord.latestSummary}` : null,
       `run detail focus: ${runDetailFocusSummary}`,
       `next: ${runtime.recommendedAction}`,
-    ].join('\n'),
+    ]
+      .filter((entry): entry is string => entry !== null)
+      .join('\n'),
   }
 }
 
@@ -760,18 +775,24 @@ function buildEdgeRuntimeSemantics(options: {
   const policySummary = summarizeConnectionRuntimePolicy(connection)
   const sourceSteps = collectRuntimeSteps(connection.sourceNodeId, executionGraph, runTrace)
   const targetSteps = collectRuntimeSteps(connection.targetNodeId, executionGraph, runTrace)
+  const durableReplayRecord = buildRunAuditEdgeReplayRecords(runTrace?.runtimeEvents ?? [])
+    .find((record) => record.connectionId === connection.id) ?? null
   const latestSourceStep = sourceSteps[sourceSteps.length - 1] ?? null
   const latestTargetStep = targetSteps[targetSteps.length - 1] ?? null
   const observedRoutes =
     executionGraph?.routes.filter((route) => routeMatchesConnection(route, connection)) ?? []
-  const observedRouteKinds = uniqueRouteKinds(observedRoutes.map((route) => route.kind))
+  const observedRouteKinds = uniqueRouteKinds([
+    ...observedRoutes.map((route) => route.kind),
+    ...executionRouteKindsFromEdgeReplay(durableReplayRecord),
+  ])
   const observedDurationMs = [latestSourceStep?.durationMs, latestTargetStep?.durationMs]
     .filter((value): value is number => typeof value === 'number' && Number.isFinite(value))
     .reduce((total, value) => total + value, 0)
   const estimatedLatencyMs = connection.metrics?.latencyMs ?? 0
   const evidenceCount =
     sourceSteps.reduce((total, step) => total + step.evidenceCount, 0) +
-    targetSteps.reduce((total, step) => total + step.evidenceCount, 0)
+    targetSteps.reduce((total, step) => total + step.evidenceCount, 0) +
+    (durableReplayRecord?.eventCount ?? 0)
   const retryCandidateCount =
     runTrace?.retryCandidateStepIds.filter((stepId) =>
       sourceSteps.some((step) => step.id === stepId) ||
@@ -780,11 +801,13 @@ function buildEdgeRuntimeSemantics(options: {
   const retryRouteCount =
     observedRoutes.filter((route) => route.kind === 'retry').length +
     sourceSteps.filter((step) => step.route === 'retry').length +
-    targetSteps.filter((step) => step.route === 'retry').length
+    targetSteps.filter((step) => step.route === 'retry').length +
+    (durableReplayRecord?.retryObserved ? 1 : 0)
   const errorRouteCount =
     observedRoutes.filter((route) => route.kind === 'error').length +
     sourceSteps.filter((step) => step.status === 'failed').length +
-    targetSteps.filter((step) => step.status === 'failed').length
+    targetSteps.filter((step) => step.status === 'failed').length +
+    (durableReplayRecord?.errorRouteObserved || durableReplayRecord?.status === 'error' ? 1 : 0)
   const reviewRouteCount =
     observedRoutes.filter((route) => route.kind === 'review').length +
     sourceSteps.filter((step) => step.status === 'review_required').length +
@@ -801,6 +824,7 @@ function buildEdgeRuntimeSemantics(options: {
     latestTargetStep?.status === 'running'
   const runtimeObserved =
     observedRoutes.length > 0 ||
+    durableReplayRecord !== null ||
     connection.status === 'success' ||
     (latestSourceStep?.status === 'success' && latestTargetStep?.status === 'success')
   const runtimeReady =
@@ -846,6 +870,8 @@ function buildEdgeRuntimeSemantics(options: {
   const routeSummary =
     observedRouteKinds.length > 0
       ? observedRouteKinds.map((kind) => routeKindLabels[kind]).join(', ')
+      : durableReplayRecord
+        ? durableReplayRecord.routeKinds.join(', ')
       : state === 'stale'
         ? 'step evidence only'
         : 'not observed'
@@ -862,6 +888,8 @@ function buildEdgeRuntimeSemantics(options: {
   const retrySummary =
     connection.runtimePolicy?.retry
       ? policySummary.retrySummary
+      : durableReplayRecord?.retryObserved
+      ? `durable retry observed (${durableReplayRecord.eventCount})`
       : retryRouteCount > 0
       ? `runtime retry observed (${retryRouteCount})`
       : retryCandidateCount > 0
@@ -872,6 +900,8 @@ function buildEdgeRuntimeSemantics(options: {
   const errorRouteSummary =
     connection.runtimePolicy?.errorRoute
       ? policySummary.errorRouteSummary
+      : durableReplayRecord?.errorRouteObserved
+      ? `durable error route observed (${durableReplayRecord.eventCount})`
       : errorRouteCount > 0
       ? `runtime error path observed (${errorRouteCount})`
       : connection.kind === 'error'
@@ -880,6 +910,8 @@ function buildEdgeRuntimeSemantics(options: {
   const conditionSummary =
     connection.runtimePolicy?.condition
       ? policySummary.conditionSummary
+      : durableReplayRecord?.conditionObserved
+      ? `durable ${routeSummary}`
       : observedRouteKinds.length > 0
       ? `runtime ${routeSummary}`
       : ['decision', 'approval', 'error', 'retry'].includes(connection.kind)
@@ -919,9 +951,41 @@ function buildEdgeRuntimeSemantics(options: {
     className: [
       `edge-runtime-${state}`,
       `edge-runtime-health-${health}`,
+      durableReplayRecord ? 'edge-replay-observed' : null,
+      durableReplayRecord?.status === 'warning' ? 'edge-replay-warning' : null,
+      durableReplayRecord?.status === 'error' ? 'edge-replay-error' : null,
+      durableReplayRecord?.retryObserved ? 'edge-replay-retry' : null,
+      durableReplayRecord?.errorRouteObserved ? 'edge-replay-error-route' : null,
       ...observedRouteKinds.map((kind) => `edge-runtime-route-${kind}`),
-    ].join(' '),
+    ]
+      .filter((entry): entry is string => entry !== null)
+      .join(' '),
   }
+}
+
+function executionRouteKindsFromEdgeReplay(
+  record: RunAuditEdgeReplayRecord | null,
+): ExecutionRouteKind[] {
+  if (!record) return []
+  return record.routeKinds
+    .map((kind): ExecutionRouteKind | null => {
+      switch (kind) {
+        case 'main':
+          return 'main'
+        case 'retry':
+          return 'retry'
+        case 'error':
+          return 'error'
+        case 'review':
+          return 'review'
+        case 'skip':
+          return 'skip'
+        case 'condition':
+          return 'main'
+      }
+    })
+    .filter((kind): kind is ExecutionRouteKind => kind !== null)
+    .filter((kind, index, kinds) => kinds.indexOf(kind) === index)
 }
 
 function collectRuntimeSteps(

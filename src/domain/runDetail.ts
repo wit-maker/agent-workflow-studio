@@ -1,4 +1,8 @@
 import { reviveRunTraceFromAuditSummary } from './runAudit'
+import {
+  buildRunAuditEdgeReplayRecords,
+  type RunAuditEdgeReplayRecord,
+} from './runAuditEdgeReplay'
 import type { RunAuditEvidence } from './runAudit'
 import { summarizeConnectionRuntimePolicy } from './edgeRuntimePolicy'
 import type {
@@ -100,6 +104,37 @@ export type RunDetailRuntimeTimelineView = {
   items: RunDetailRuntimeTimelineItem[]
   latestSummary: string | null
   replayHint: string
+  safeCopySummary: string
+}
+
+export type RunDetailEdgeReplayEvidenceRecord = {
+  id: string
+  runId: string
+  connectionId: string
+  sourceNodeId: string
+  targetNodeId: string
+  statusLabel: string
+  eventCount: number
+  routeSummary: string
+  eventKindSummary: string
+  severityMix: string
+  latestCreatedAtLabel: string
+  latestSummary: string
+  policySummary: string
+  focusMatched: boolean
+  safeCopySummary: string
+}
+
+export type RunDetailEdgeReplayEvidenceView = {
+  available: boolean
+  targetLabel: string
+  summary: string
+  recordCount: number
+  totalEventCount: number
+  observedEdgeCount: number
+  focusedRecordCount: number
+  latestSummary: string | null
+  records: RunDetailEdgeReplayEvidenceRecord[]
   safeCopySummary: string
 }
 
@@ -1303,6 +1338,114 @@ export function buildRunDetailRuntimeTimelineView(options: {
       `warn ${warningEventCount} / error ${errorEventCount}`,
       latestEvent ? `latest: ${formatRuntimeAuditContractSummary(latestEvent)}` : 'latest: none',
     ].join('\n'),
+  }
+}
+
+function formatEdgeReplayCreatedAt(record: RunAuditEdgeReplayRecord): string {
+  return formatStartedAt(record.latestCreatedAt)
+}
+
+function formatEdgeReplayPolicySummary(record: RunAuditEdgeReplayRecord): string {
+  return [
+    record.conditionObserved ? 'condition' : null,
+    record.delayObserved ? 'delay' : null,
+    record.retryObserved ? 'retry' : null,
+    record.errorRouteObserved ? 'error-route' : null,
+  ]
+    .filter((entry): entry is string => entry !== null)
+    .join(' / ') || 'policy none'
+}
+
+function buildRunDetailEdgeReplayRecord(options: {
+  record: RunAuditEdgeReplayRecord
+  focusConnectionId?: string | null
+}): RunDetailEdgeReplayEvidenceRecord {
+  const { record, focusConnectionId = null } = options
+  const routeSummary = record.routeKinds.join(', ') || 'route none'
+  const eventKindSummary = record.eventKinds.join(', ') || 'events none'
+  const policySummary = formatEdgeReplayPolicySummary(record)
+  const safeCopySummary = [
+    record.safeCopySummary,
+    `policy: ${policySummary}`,
+  ].join('\n')
+
+  return {
+    id: record.id,
+    runId: record.runId,
+    connectionId: record.connectionId,
+    sourceNodeId: record.sourceNodeId,
+    targetNodeId: record.targetNodeId,
+    statusLabel: record.statusLabel,
+    eventCount: record.eventCount,
+    routeSummary,
+    eventKindSummary,
+    severityMix: record.severityMix,
+    latestCreatedAtLabel: formatEdgeReplayCreatedAt(record),
+    latestSummary: record.latestSummary,
+    policySummary,
+    focusMatched: focusConnectionId === record.connectionId,
+    safeCopySummary,
+  }
+}
+
+export function buildRunDetailEdgeReplayEvidenceView(options: {
+  trace: RunTrace | null
+  focusConnectionId?: string | null
+  connections?: readonly WorkflowConnection[]
+  limit?: number
+}): RunDetailEdgeReplayEvidenceView {
+  const { trace, focusConnectionId = null, connections = [] } = options
+  const records = buildRunAuditEdgeReplayRecords(trace?.runtimeEvents ?? [])
+  const focused = focusConnectionId
+    ? records.filter((record) => record.connectionId === focusConnectionId)
+    : []
+  const visibleSource = focused.length > 0 ? focused : records
+  const limit = options.limit ?? 6
+  const visibleRecords = visibleSource
+    .slice(-limit)
+    .map((record) =>
+      buildRunDetailEdgeReplayRecord({
+        record,
+        focusConnectionId,
+      }),
+    )
+  const focusedConnection = focusConnectionId
+    ? connections.find((connection) => connection.id === focusConnectionId)
+    : undefined
+  const targetLabel = focusedConnection
+    ? `edge ${focusedConnection.sourceNodeId} -> ${focusedConnection.targetNodeId}`
+    : focusConnectionId
+      ? `edge ${focusConnectionId}`
+      : 'all replay edges'
+  const totalEventCount = records.reduce((total, record) => total + record.eventCount, 0)
+  const latest = records[records.length - 1] ?? null
+  const summary =
+    records.length === 0
+      ? 'safe edge replay evidence はまだありません。Run 実行または audit snapshot 選択後に表示します。'
+      : focused.length > 0
+        ? `${targetLabel} の durable safe replay record を表示しています。`
+        : focusConnectionId
+          ? `${targetLabel} の durable record はありません。最近の safe edge replay records を表示します。`
+          : 'Durable safe edge replay records を既存 traceAudit metadata から表示しています。'
+  const safeCopySummary = [
+    `edge replay evidence: records ${records.length}`,
+    `events ${totalEventCount}`,
+    `focus ${targetLabel}`,
+    latest ? `latest ${latest.connectionId}: ${latest.latestSummary}` : 'latest none',
+    ...visibleRecords.map((record) => record.safeCopySummary),
+  ].join('\n')
+
+  return {
+    available: records.length > 0,
+    targetLabel,
+    summary,
+    recordCount: records.length,
+    totalEventCount,
+    observedEdgeCount: records.length,
+    focusedRecordCount: focused.length,
+    latestSummary: latest?.latestSummary ?? null,
+    records: visibleRecords,
+    safeCopySummary,
   }
 }
 
