@@ -1,6 +1,74 @@
 # Project State
 
-Last updated: 2026-06-03
+Last updated: 2026-06-05
+
+---
+
+## Phase Active Plan Completion Tightening
+
+- Branch: `codex/active-plan-completion-tightening`
+- Date: 2026-06-05
+- Model gate: `ALLOW_XHIGH` はないため、Codex Desktop 運用ラベルとして `GPT-5.5 high` のまま実施した。API model id として記録する場合は `gpt-5.5` とする。
+- Scope: `docs/project/ACTIVE_PLAN.md` に残っていた3候補をまとめて完了する。対象は Revived audit snapshot runtimeEvents tightening、HUD notification read/ack/pin session behavior、Concept naming cleanup。新 localStorage key、backend/API、credential storage、dependency、source-specs、GitHub issue state は変更しない。
+
+### Implemented
+
+- `reviveRunTraceFromAuditSummary(...)` が normalized safe `traceAudit.runtimeEvents` を revived `RunTrace.runtimeEvents` へ戻すようにした。
+  - Run Detail の timeline / replay candidate は、current trace と selected audit snapshot のどちらでも同じ safe runtime event 経路を使える。
+  - raw config / prompt / payload / artifact body / credential / token / API key は `RuntimeAuditContractEvent` の safe boundary に引き続き入らない。
+- `HudNotificationBundle` に session-only の read / acknowledge / pin 投影を追加した。
+  - read は unread count から外す。
+  - acknowledge は unpinned 通知を active list から外す。
+  - pin は acknowledged でも表示を保持する。
+  - 状態は `GameHudShell` の React state のみで保持し、保存しない。
+- `BriefingPanel` / Bottom Console tab / `AssistantPanel` の表示ラベルを、full Situation Assistant ではなく `4D Text Briefing MVP` / `4D説明` として読める方向へ寄せた。
+- `npm.cmd run qa:direct` に以下を追加した。
+  - revived audit snapshot の runtimeEvents timeline / replay 検証。
+  - HUD notification session read/ack/pin projection 検証。
+  - forbidden sentinel 非表示と storage key unchanged の既存検証を維持。
+- `ACTIVE_PLAN.md` を更新し、今回の3候補を Completed Plan Slices へ移した。次は未選定の broad candidate から新しい小スライスを選ぶ状態。
+- audit docs を更新し、session-only 実装と durable/persisted 未実装を分けて記録した。
+
+### Concept checklist classification
+
+- Classification: MVP surface / safe projection / session behavior / detail-history surface.
+- Cognitive HUD claim: HUD notification の on-demand surface を session-only に強化した。Cognitive HUD 全体完成、永続HUD設定、durable notification model ではない。
+- Situation Assistant claim: text explanation surface の命名誤認を減らした。Situation Assistant 本体、音声、アバター、動画生成、timeline narration は実装していない。
+- Runtime Audit claim: revived audit snapshot が safe runtimeEvents を Run Detail timeline / replay へ一貫して渡せるようにした。full animated replay、full route reconstruction、edge-level durable replay record、expression evaluation ではない。
+- Safety: raw config / prompt / payload / artifact body / credential / token / API key は表示・保存・copy summary に含めない。direct validation と Browser sentinel check で確認した。
+- Persistence/API: 新 localStorage key、backend/API、credential storage、dependency は追加していない。notification read/ack/pin は session state のみ。
+
+### Validation
+
+- `npm.cmd run qa:direct`: pass
+- `npm.cmd run typecheck`: pass
+- `npm.cmd run lint`: pass
+- `npm.cmd run build`: pass
+- Vite chunk-size warning は既存許容警告として扱う。
+
+### Browser QA
+
+- Preview: `http://127.0.0.1:4178/`
+- Notification HUD: `N4` で HUD Feed を開き、Read / Ack / Pin が表示されることを確認した。
+- Notification session behavior: 1件を Pin + Read + Ack すると `pinned / acknowledged` として残り、別の unpinned 通知を Ack すると active list から外れて collapsed count が増えることを確認した。
+- Run Detail: `T` で Run Detail を開き、audit snapshot option に `runtime 17` が表示されることを確認した。
+- Revived audit replay: audit snapshot を選択し、`durable audit snapshot / events 32 / runtime 17`、`Audit replay / failed / evidence 63 / runtime 17`、`Safe metadata replay 1/2` を確認した。
+- Concept label: Bottom Console の `4D説明` タブを開き、`4D Text Briefing MVP` と `4D説明を生成` が表示されることを確認した。
+- Raw sentinel check: Browser 表示上に `RAW_PROMPT_SENTINEL` / `RAW_PAYLOAD_SENTINEL` / `CREDENTIAL_SENTINEL` / `PASSWORD_SENTINEL` / `BEARER_SENTINEL` / `sk-live-direct-qa-secret` が出ないことを確認した。
+- Console error: 0。
+- External script/link/image request: localhost 以外 0。
+- QA screenshot: `.codex-logs/active-plan-completion-browser-qa.png`
+
+### Remaining gaps
+
+- Broad epics #31 / #34 / #37 / #46 は open 前提のまま。今回の3候補は repo docs 上の active plan 候補であり、epic closure ではない。
+- Full animated route reconstruction、multi-run visual replay animation、edge-level durable replay record、full branch graph enforcement、expression evaluation、durable notification state、persisted HUD preferences、real assistant audio/avatar/video renderers は未実装。
+
+### Next recommended slice
+
+1. Edge-level durable replay record design: safe edge-level route replay record を既存 run history 内にどう持つかを設計する。
+2. HUD notification durability plan: read/ack/pin を永続化する必要があるか、永続化する場合に既存 storage boundary のどこに置くかを決める。
+3. Concept naming cleanup continuation: MVP surfaces と full concept layers の命名誤認をさらに減らす。
 
 ---
 

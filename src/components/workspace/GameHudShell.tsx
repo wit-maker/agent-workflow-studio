@@ -10,6 +10,7 @@ import {
   type HudDensityMode,
   type HudDensityView,
   type HudNotificationBundleView,
+  type HudNotificationSessionState,
   type HudSnapshot,
   type SemanticFocusPathView,
   type ZoomHudView,
@@ -126,6 +127,7 @@ export function GameHudShell(props: GameHudShellProps) {
   const [consoleOpen, setConsoleOpen] = useState(false)
   const [miniMapVisible, setMiniMapVisible] = useState(true)
   const [notificationOpen, setNotificationOpen] = useState(false)
+  const [notificationSessionState, setNotificationSessionState] = useState<HudNotificationSessionState>({})
   const [hudDensityMode, setHudDensityMode] = useState<HudDensityMode>('balanced')
   const [zoomHud, setZoomHud] = useState<ZoomHudView>(() => buildZoomHudView(1))
   const hudDensity = useMemo<HudDensityView>(
@@ -160,6 +162,34 @@ export function GameHudShell(props: GameHudShellProps) {
   }, [])
   const cycleHudDensity = useCallback(() => {
     setHudDensityMode((current) => getNextHudDensityMode(current))
+  }, [])
+  const markNotificationRead = useCallback((notificationId: string) => {
+    setNotificationSessionState((current) => ({
+      ...current,
+      [notificationId]: {
+        ...current[notificationId],
+        read: true,
+      },
+    }))
+  }, [])
+  const acknowledgeNotification = useCallback((notificationId: string) => {
+    setNotificationSessionState((current) => ({
+      ...current,
+      [notificationId]: {
+        ...current[notificationId],
+        read: true,
+        acknowledged: true,
+      },
+    }))
+  }, [])
+  const toggleNotificationPinned = useCallback((notificationId: string) => {
+    setNotificationSessionState((current) => ({
+      ...current,
+      [notificationId]: {
+        ...current[notificationId],
+        pinned: current[notificationId]?.pinned !== true,
+      },
+    }))
   }, [])
   const openRunDetail = useCallback(() => {
     setConsoleOpen(true)
@@ -211,8 +241,16 @@ export function GameHudShell(props: GameHudShellProps) {
         runTrace: props.runTrace,
         runHistoryRecords: props.runHistoryRecords,
         densityMode: hudDensityMode,
+        notificationSessionState,
       }),
-    [centralHudView, hudDensityMode, props.hudSnapshot, props.runHistoryRecords, props.runTrace],
+    [
+      centralHudView,
+      hudDensityMode,
+      notificationSessionState,
+      props.hudSnapshot,
+      props.runHistoryRecords,
+      props.runTrace,
+    ],
   )
 
   const workspaceClassName = [
@@ -311,6 +349,9 @@ export function GameHudShell(props: GameHudShellProps) {
             openRunDetail()
             setNotificationOpen(false)
           }}
+          onMarkNotificationRead={markNotificationRead}
+          onAcknowledgeNotification={acknowledgeNotification}
+          onToggleNotificationPinned={toggleNotificationPinned}
           onCycleHudDensity={cycleHudDensity}
         />
 

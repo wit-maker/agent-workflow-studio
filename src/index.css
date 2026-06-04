@@ -4829,6 +4829,20 @@ body:has(.game-hud-workspace) #root {
   gap: 3px;
 }
 
+.hud-notification-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 4px;
+  max-width: 92px;
+}
+
+.hud-notification-actions .hud-icon-button {
+  min-height: 24px;
+  padding: 0 6px;
+  font-size: 10px;
+}
+
 .hud-notification-item strong,
 .hud-history-entry strong {
   overflow: hidden;
@@ -4877,6 +4891,19 @@ body:has(.game-hud-workspace) #root {
 .hud-notification-info,
 .run-status-success {
   border-left-color: var(--green);
+}
+
+.hud-notification-read {
+  opacity: 0.82;
+}
+
+.hud-notification-acknowledged {
+  background: rgba(15, 23, 42, 0.36);
+}
+
+.hud-notification-pinned {
+  border-color: rgba(103, 232, 249, 0.44);
+  box-shadow: 0 0 0 1px rgba(103, 232, 249, 0.14);
 }
 
 .hud-density-panel dl {

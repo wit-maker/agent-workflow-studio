@@ -585,6 +585,7 @@ export function reviveRunTraceFromAuditSummary(audit: RunTraceAuditSummary): Run
     retryCandidateStepIds: audit.retryCandidateStepIds,
     safetyWarnings: audit.safetyWarnings,
     excludedEvidenceCount: audit.excludedEvidenceCount,
+    runtimeEvents: audit.runtimeEvents,
     source: 'run-history',
     auditCreatedAt: audit.createdAt,
     auditEventCount: audit.events.length,

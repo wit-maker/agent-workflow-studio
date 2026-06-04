@@ -198,7 +198,7 @@ export function BottomMonitor({
     Agent: 'エージェント',
     Storage: 'ストレージ',
     Roadmap: 'Roadmap',
-    Briefing: 'ブリーフィング',
+    Briefing: '4D説明',
     RunDetail: '実行詳細',
   } as const
 
