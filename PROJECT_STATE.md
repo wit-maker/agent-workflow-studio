@@ -4,6 +4,49 @@ Last updated: 2026-06-05
 
 ---
 
+## Phase Five-Pillar Roadmap Plan Selection
+
+- Branch: `codex/five-pillar-roadmap-plan`
+- Date: 2026-06-05
+- Model gate: 現在のセッションは Codex GPT-5 系として扱う。今回の変更は Phase 1 の docs/Markdown guardrail slice のため実施し、通常の product code / UI / runtime 実装sliceへ進む場合は `gpt-5.5 high` 相当を必須gateとして再確認する。`ALLOW_XHIGH` はないため `xhigh` は使わない。
+- Scope: `docs/project/ACTIVE_PLAN.md` を「次slice未選択」から Five-Pillar MVP Roadmap 選択済みに更新し、`docs/implementation/FIVE_PILLAR_MVP_ROADMAP.md` を追加する。product code、storage key、dependency、backend/API、credential storage、GitHub issue state、`docs/source-specs/**` は変更しない。
+
+### Implemented
+
+- `ACTIVE_PLAN.md` の Current Recommended Order を、Five-Pillar MVP Roadmap を選択済みの状態へ更新した。
+- 次の実装slice候補を `UI shell replay / flow-pressure attention slice` として定義した。
+  - safe audit-derived metadata を使って Canvas First 上の replay-ready route evidence と flow-pressure cue を強化する。
+  - Run Detail、4D Text Briefing MVP、template/history hints へ同じ safe projection を接続する。
+- `docs/implementation/FIVE_PILLAR_MVP_ROADMAP.md` を追加し、Phase 1〜11、共通禁止事項、既存基盤再利用、slice completion contract を記録した。
+- `docs/implementation/README.md` に新しい roadmap detail doc の役割を追加した。
+
+### Concept checklist classification
+
+- Classification: planning guardrail / implementation roadmap / safe projection boundary.
+- Cognitive HUD claim: full Cognitive HUD 完成ではない。後続sliceで扱うのは attention-allocation layer の safe metadata projection。
+- Situation Assistant claim: full Situation Assistant 完成ではない。後続sliceで扱うのは mock-only text/script/timeline/decision prompt helpers。
+- Runtime Audit claim: existing safe runtime events and `traceAudit.edgeReplayRecords` を使う計画を選択した。raw payload replay、expression evaluation、new storage key は含めない。
+- Safety: raw config / prompt / payload / artifact body / credential / token / password / API key の表示・保存・copy summary は禁止のまま。
+
+### Validation
+
+- Pre-branch `git pull --ff-only origin main`: already up to date.
+- Pre-branch `npm.cmd run typecheck`: pass.
+- Pre-branch `npm.cmd run lint`: pass.
+- Pre-branch `npm.cmd run build`: pass, with existing Vite chunk-size warning.
+- Post-edit `npm.cmd run typecheck`: pass.
+- Post-edit `npm.cmd run lint`: pass.
+- Post-edit `npm.cmd run build`: pass, with existing Vite chunk-size warning.
+- `npm.cmd run qa:direct`: not run because this slice does not touch storage, import/export, run-audit, runtime-audit, or persistence code paths.
+- Browser QA: not run because this slice is docs-only and does not touch UI/runtime behavior.
+
+### Remaining gaps
+
+- This PR is Phase 1 only. UI shell recomposition, runtime Stop/Resume/Replay, richer HUD projections, Situation Narration helpers, observation projections, visual replay reconstruction, and template/history failure-pattern summaries remain future slices.
+- Broad epics #31 / #34 / #37 / #46 remain open product epics.
+
+---
+
 ## Phase Edge Durable Replay / HUD Signal Naming Correction
 
 - Branch: `codex/edge-durable-replay-record`
