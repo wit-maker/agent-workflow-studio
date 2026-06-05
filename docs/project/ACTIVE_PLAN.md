@@ -36,19 +36,19 @@ The selected active roadmap is **Five-Pillar MVP Roadmap**. The detail document 
 
 Current slice:
 
-1. **Plan Selection / Guardrail Slice**
-   - Issue alignment: #31, #34, #37, #46.
-   - Goal: make the all-phase five-pillar roadmap the selected next plan and record the implementation boundaries.
-   - Scope: documentation and planning only. Do not touch `docs/source-specs/**`, product code, storage keys, dependencies, API behavior, credentials, or GitHub issue state.
-   - Concept checklist: classify current surfaces as MVP surfaces, safe projections, or detail-history surfaces. Do not describe them as the full Cognitive HUD or full Situation Assistant.
-
-Next implementation slice after this guardrail PR:
-
 2. **UI shell replay / flow-pressure attention slice**
    - Issue alignment: #34, #37, #46.
    - Goal: strengthen Canvas First route evidence with replay-ready and flow-pressure cues using safe audit-derived metadata.
    - Expected path: Scratch operation -> mock connector/runtime -> safe runtime trace -> HUD focus -> Run Detail replay -> 4D briefing -> template/history hint.
    - Constraint: metadata/view-model helpers first; no new persistence boundary, no raw payloads, no expression evaluation, no real API behavior.
+
+Next implementation slice after this PR:
+
+3. **Scratch connection feedback / mock connector state slice**
+   - Issue alignment: #34, #37, #46.
+   - Goal: make add/connect/select/delete feedback and fixed mock connector states visibly feed the same safe HUD / Run Detail / 4D briefing path.
+   - Expected path: PartsPalette operation -> valid/invalid React Flow connection -> mock connector state -> safe runtime event -> HUD pressure cue -> Run Detail / 4D explanation.
+   - Constraint: keep reducer architecture, Japanese labels, English identifiers, shared selector/domain validation, and mock-only connector behavior.
 
 Phase roadmap order:
 
@@ -85,6 +85,7 @@ Phase roadmap order:
 | Concept naming cleanup | User-facing labels now describe the current text explanation surface as `4D Text Briefing MVP` / `4D説明`, reducing the chance that the MVP panel is mistaken for the full Situation Assistant. |
 | Edge-level durable replay record | `traceAudit.edgeReplayRecords` now stores safe edge-level replay summaries derived from safe runtime events inside existing run history records. `RunDetailPanel`, `SelectedEdgeHud`, and React Flow edge runtime classes can surface selected-edge replay evidence without raw payloads or new storage keys. |
 | Five-pillar roadmap selection | `docs/implementation/FIVE_PILLAR_MVP_ROADMAP.md` now makes the all-phase roadmap the selected planning spine while preserving small vertical-slice delivery and the existing safety boundaries. |
+| UI shell replay / flow-pressure attention | `RunTrace.runtimeEvents` now drives a safe flow-pressure projection shared by Canvas HUD chips, central HUD overlay, HUD Feed history hints, Run Detail, and 4D Text Briefing MVP without new storage or raw payload display. |
 
 ## Plan Document Roles
 

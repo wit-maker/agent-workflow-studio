@@ -1,12 +1,14 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import {
   buildCentralHudView,
+  buildFlowPressureProjection,
   buildHudDensityView,
   buildHudNotificationBundle,
   buildSemanticFocusPathView,
   buildZoomHudView,
   getNextHudDensityMode,
   type CentralHudView,
+  type FlowPressureProjection,
   type HudDensityMode,
   type HudDensityView,
   type HudNotificationBundleView,
@@ -134,6 +136,10 @@ export function GameHudShell(props: GameHudShellProps) {
     () => buildHudDensityView(hudDensityMode),
     [hudDensityMode],
   )
+  const flowPressure = useMemo<FlowPressureProjection>(
+    () => buildFlowPressureProjection({ runTrace: props.runTrace }),
+    [props.runTrace],
+  )
 
   const handleZoomChange = useCallback((next: ZoomHudView) => {
     setZoomHud((current) =>
@@ -230,8 +236,9 @@ export function GameHudShell(props: GameHudShellProps) {
       buildCentralHudView({
         hudSnapshot: props.hudSnapshot,
         semanticFocusPath,
+        flowPressure,
       }),
-    [props.hudSnapshot, semanticFocusPath],
+    [flowPressure, props.hudSnapshot, semanticFocusPath],
   )
   const notificationBundle = useMemo<HudNotificationBundleView>(
     () =>
@@ -240,11 +247,13 @@ export function GameHudShell(props: GameHudShellProps) {
         centralHudView,
         runTrace: props.runTrace,
         runHistoryRecords: props.runHistoryRecords,
+        flowPressure,
         densityMode: hudDensityMode,
         notificationSessionState,
       }),
     [
       centralHudView,
+      flowPressure,
       hudDensityMode,
       notificationSessionState,
       props.hudSnapshot,
@@ -307,6 +316,7 @@ export function GameHudShell(props: GameHudShellProps) {
           runTrace={props.runTrace}
           runHistoryCount={props.runHistoryCount}
           hudDensity={hudDensity}
+          flowPressure={flowPressure}
           notificationBundle={notificationBundle}
           zoomHud={zoomHud}
           paletteOpen={paletteOpen}

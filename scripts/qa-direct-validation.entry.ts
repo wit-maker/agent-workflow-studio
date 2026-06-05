@@ -1,9 +1,11 @@
 import {
+  buildFlowPressureProjection,
   buildHudNotificationBundle,
   buildSelectedEdgeHudView,
   buildWorkflowEdgeRuntimeMap,
   type HudSnapshot,
 } from '../src/domain/cognitiveHud'
+import { collectBriefingInput } from '../src/domain/briefingInputCollector'
 import {
   normalizeConnectionRuntimePolicy,
   resolveConnectionRuntimePolicyRoute,
@@ -356,6 +358,20 @@ export async function runDirectQaValidation(): Promise<DirectQaValidationResult>
   assertNoForbiddenSentinels(timelineView, 'runtime timeline view')
   checked.push('Run Detail replay/timeline focus')
 
+  const flowPressure = buildFlowPressureProjection({ runTrace: currentTrace })
+  assert(flowPressure.replayReady, 'flow pressure should become replay-ready from safe runtime events')
+  assert(flowPressure.edgeEventCount > 0, 'flow pressure should count edge events')
+  assert(
+    flowPressure.bottleneckConnectionId === 'edge-input-normalize',
+    'flow pressure should identify the safe bottleneck edge candidate',
+  )
+  assert(
+    flowPressure.templateHistoryHint.includes('履歴') || flowPressure.templateHistoryHint.includes('template'),
+    'flow pressure should expose a template/history hint',
+  )
+  assertNoForbiddenSentinels(flowPressure, 'flow pressure projection')
+  checked.push('safe flow-pressure projection')
+
   const revivedTimelineView = buildRunDetailRuntimeTimelineView({
     trace: replayView.selectedTrace,
     focusConnectionId: 'edge-input-normalize',
@@ -526,17 +542,27 @@ export async function runDirectQaValidation(): Promise<DirectQaValidationResult>
   const pinnedNotificationView = buildHudNotificationBundle({
     hudSnapshot,
     centralHudView: null,
-    runTrace: null,
+    runTrace: currentTrace,
     runHistoryRecords: [leftRecord, rightRecord],
+    flowPressure,
     notificationSessionState: {
       'signal-normalize-review': { read: true, pinned: true },
     },
   })
   assert(pinnedNotificationView.pinnedNotificationCount === 1, 'pinned session notification should be counted')
-  assert(pinnedNotificationView.unreadNotificationCount === 0, 'read pinned notification should not be unread')
   assert(
-    pinnedNotificationView.notificationItems[0]?.statusLabel === 'pinned / read',
-    'pinned read notification should remain visible with status',
+    pinnedNotificationView.notificationItems.some(
+      (item) => item.id === 'signal-normalize-review' && item.statusLabel === 'pinned / read',
+    ),
+    'read pinned notification should remain visible as pinned / read',
+  )
+  assert(
+    pinnedNotificationView.flowPressure.bottleneckConnectionId === 'edge-input-normalize',
+    'HUD notification bundle should carry flow pressure projection',
+  )
+  assert(
+    pinnedNotificationView.unreadNotificationCount >= 1,
+    'flow pressure notification should still be unread when not acknowledged',
   )
   const acknowledgedNotificationView = buildHudNotificationBundle({
     hudSnapshot,
@@ -555,6 +581,25 @@ export async function runDirectQaValidation(): Promise<DirectQaValidationResult>
   )
   assertNoForbiddenSentinels([pinnedNotificationView, acknowledgedNotificationView], 'HUD notification session view')
   checked.push('HUD notification session read/ack/pin projection')
+
+  const briefingInput = collectBriefingInput({
+    workflow,
+    executionGraph: graph('run-left', 'failed'),
+    connectorJobs: [],
+    hudSnapshot,
+    runHistoryRecords: [leftRecord, rightRecord],
+    mode: 'latest-run',
+  })
+  assert(
+    briefingInput.runtimeReplay.flowPressureLevel === flowPressure.level,
+    'briefing input should receive the same flow pressure level',
+  )
+  assert(
+    briefingInput.runtimeReplay.templateHistoryHint.length > 0,
+    'briefing input should include safe template/history hint',
+  )
+  assertNoForbiddenSentinels(briefingInput.runtimeReplay, 'briefing runtime replay flow pressure input')
+  checked.push('4D briefing flow-pressure input')
 
   const normalizedOldHistory = normalizeRunHistory({
     records: [

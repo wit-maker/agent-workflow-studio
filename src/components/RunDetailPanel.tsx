@@ -24,6 +24,7 @@ import type { WorkflowRunRecord } from '../domain/runHistory'
 import type { EvidenceSeverity } from '../domain/runStepEvidence'
 import type { RunTrace } from '../domain/runTrace'
 import type { WorkflowConnection } from '../domain/workflow'
+import { buildFlowPressureProjection, type FlowPressureProjection } from '../domain/cognitiveHud'
 
 const modeLabels: Record<RunDetailMode, string> = {
   all: '全証拠',
@@ -112,6 +113,10 @@ export function RunDetailPanel({
       }),
     [focusedConnectionId, focusedNodeId, replay.selectedTrace],
   )
+  const flowPressure = useMemo(
+    () => buildFlowPressureProjection({ runTrace: replay.selectedTrace }),
+    [replay.selectedTrace],
+  )
   const edgeReplayEvidence = useMemo(
     () =>
       buildRunDetailEdgeReplayEvidenceView({
@@ -195,6 +200,7 @@ export function RunDetailPanel({
       />
 
       <RuntimeTimelinePanel timeline={runtimeTimeline} />
+      <FlowPressurePanel projection={flowPressure} />
       <EdgeReplayEvidencePanel evidence={edgeReplayEvidence} />
       <ReplayCandidatePanel
         replay={replayCandidate}
@@ -260,6 +266,33 @@ export function RunDetailPanel({
 
 type EdgeReplayEvidencePanelProps = {
   evidence: RunDetailEdgeReplayEvidenceView
+}
+
+function FlowPressurePanel({ projection }: { projection: FlowPressureProjection }) {
+  return (
+    <section className="run-detail-flow-pressure" aria-label="Flow pressure projection">
+      <div className="run-detail-step-diff-heading">
+        <div>
+          <span className="run-detail-comparison-kicker">safe flow pressure</span>
+          <strong>{projection.label}</strong>
+        </div>
+        <span>
+          {projection.eventCount} events / edge {projection.edgeEventCount}
+        </span>
+      </div>
+      <p>{projection.summary}</p>
+      <div className="run-detail-runtime-stats">
+        <span>route {projection.routeEventCount}</span>
+        <span>warn {projection.warningEventCount}</span>
+        <span>error {projection.errorEventCount}</span>
+        <span>retry {projection.retryEventCount}</span>
+        <span>review {projection.reviewEventCount}</span>
+        <span>bottleneck {projection.bottleneckConnectionId ?? 'none'}</span>
+      </div>
+      <p className="muted">{projection.templateHistoryHint}</p>
+      <p className="muted">Next: {projection.nextAction}</p>
+    </section>
+  )
 }
 
 function EdgeReplayEvidencePanel({ evidence }: EdgeReplayEvidencePanelProps) {

@@ -1,4 +1,4 @@
-import type { HudSignal, HudSnapshot } from './cognitiveHud'
+import { buildFlowPressureProjection, type HudSignal, type HudSnapshot } from './cognitiveHud'
 import type {
   BriefingConnectorSummary,
   BriefingHudSummary,
@@ -485,6 +485,7 @@ export function collectBriefingInput(args: CollectBriefingInputArgs): BriefingIn
   })
   const runDetail = summarizeRunDetail(runTrace, args.mode)
   const runtimeTimeline = buildRunDetailRuntimeTimelineView({ trace: runTrace, limit: 6 })
+  const flowPressure = buildFlowPressureProjection({ runTrace })
   const severity = determineSeverity(
     args.workflow.status,
     workflowSummary,
@@ -561,6 +562,13 @@ export function collectBriefingInput(args: CollectBriefingInputArgs): BriefingIn
       reviewEventCount: runtimeTimeline.reviewEventCount,
       warningEventCount: runtimeTimeline.warningEventCount,
       errorEventCount: runtimeTimeline.errorEventCount,
+      retryEventCount: flowPressure.retryEventCount,
+      flowPressureLevel: flowPressure.level,
+      flowPressureLabel: flowPressure.label,
+      flowPressureSummary:
+        sanitizeBriefingText(flowPressure.summary) ?? 'flow pressure summary なし',
+      templateHistoryHint:
+        sanitizeBriefingText(flowPressure.templateHistoryHint) ?? 'template/history hint なし',
       latestSummary: sanitizeBriefingText(runtimeTimeline.latestSummary),
       replayHint: sanitizeBriefingText(runtimeTimeline.replayHint) ?? 'runtime replay cue なし',
     },
