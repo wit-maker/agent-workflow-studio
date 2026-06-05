@@ -1,4 +1,10 @@
-import { buildFlowPressureProjection, type HudSignal, type HudSnapshot } from './cognitiveHud'
+import {
+  buildFlowPressureProjection,
+  buildScratchConnectorFeedbackProjection,
+  type ConnectionValidationSummary,
+  type HudSignal,
+  type HudSnapshot,
+} from './cognitiveHud'
 import type {
   BriefingConnectorSummary,
   BriefingHudSummary,
@@ -23,6 +29,7 @@ type CollectBriefingInputArgs = {
   workflow: Workflow
   executionGraph: ExecutionGraph | null
   connectorJobs: readonly ConnectorJob[]
+  connectionValidation?: readonly ConnectionValidationSummary[]
   hudSnapshot: HudSnapshot
   runHistoryRecords: readonly WorkflowRunRecord[]
   mode: BriefingInputMode
@@ -276,6 +283,7 @@ function summarizeConnectors(
   executionGraph: ExecutionGraph | null,
   runHistoryRecords: readonly WorkflowRunRecord[],
   mode: BriefingInputMode,
+  connectionValidation: readonly ConnectionValidationSummary[],
 ): BriefingConnectorSummary {
   const activeRunId = selectActiveRunId(workflow, executionGraph, runHistoryRecords)
   const scopedJobs =
@@ -302,6 +310,11 @@ function summarizeConnectors(
       return sanitizeBriefingText(message)
     })
     .filter((entry): entry is string => entry !== null)
+  const scratchFeedback = buildScratchConnectorFeedbackProjection({
+    workflow,
+    connectionValidation,
+    connectorJobs: scopedJobs,
+  })
 
   return {
     total: scopedJobs.length,
@@ -309,6 +322,16 @@ function summarizeConnectors(
     reviewRequired: scopedJobs.filter((job) => job.status === 'review_required').length,
     running: scopedJobs.filter((job) => job.status === 'running').length,
     queued: scopedJobs.filter((job) => job.status === 'queued').length,
+    invalidConnections: scratchFeedback.invalidConnectionCount,
+    retryReady: scratchFeedback.retryReadyJobCount,
+    rateLimitPlaceholder: scratchFeedback.rateLimitPlaceholderCount,
+    railSummary: sanitizeBriefingText(scratchFeedback.railSummary) ?? 'scratch connector rail なし',
+    reviewGateHint:
+      sanitizeBriefingText(scratchFeedback.reviewGateHint) ?? 'human review gate hint なし',
+    rateLimitHint:
+      sanitizeBriefingText(scratchFeedback.rateLimitHint) ?? 'rate limit placeholder hint なし',
+    templateHistoryHint:
+      sanitizeBriefingText(scratchFeedback.templateHistoryHint) ?? 'template/history hint なし',
     selectedEntries,
   }
 }
@@ -453,6 +476,7 @@ function determineSeverity(
     workflowSummary.statusCounts.reviewRequired > 0 ||
     workflowSummary.statusCounts.blocked > 0 ||
     connectors.reviewRequired > 0 ||
+    connectors.invalidConnections > 0 ||
     execution.retryCandidates.length > 0 ||
     execution.reviewSteps.length > 0 ||
     (hud.priority !== 'normal' &&
@@ -474,6 +498,7 @@ export function collectBriefingInput(args: CollectBriefingInputArgs): BriefingIn
     args.executionGraph,
     args.runHistoryRecords,
     args.mode,
+    args.connectionValidation ?? [],
   )
   const hud = summarizeHud(args.hudSnapshot, args.mode)
   const runHistory = summarizeRunHistory(args.runHistoryRecords, args.mode)

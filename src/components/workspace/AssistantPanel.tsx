@@ -1,6 +1,6 @@
 import { MockBriefingAdapter } from '../../adapters/briefing/MockBriefingAdapter'
 import { useBriefingGenerator } from '../../hooks/useBriefingGenerator'
-import type { HudSnapshot } from '../../domain/cognitiveHud'
+import type { ConnectionValidationSummary, HudSnapshot } from '../../domain/cognitiveHud'
 import type { ConnectorJob } from '../../domain/connectorQueue'
 import type { ExecutionGraph } from '../../domain/executionGraph'
 import type { WorkflowRunRecord } from '../../domain/runHistory'
@@ -26,6 +26,7 @@ type AssistantPanelProps = {
   workflow: Workflow
   executionGraph: ExecutionGraph | null
   connectorJobs: ConnectorJob[]
+  connectionValidation: ConnectionValidationSummary[]
   hudSnapshot: HudSnapshot
   runHistoryRecords: WorkflowRunRecord[]
 }
@@ -34,6 +35,7 @@ export function AssistantPanel({
   workflow,
   executionGraph,
   connectorJobs,
+  connectionValidation,
   hudSnapshot,
   runHistoryRecords,
 }: AssistantPanelProps) {
@@ -41,6 +43,7 @@ export function AssistantPanel({
     workflow,
     executionGraph,
     connectorJobs,
+    connectionValidation,
     hudSnapshot,
     runHistoryRecords,
     adapter: briefingAdapter,

@@ -4,6 +4,7 @@ import type {
   HudDensityView,
   HudNotificationBundleView,
   HudSnapshot,
+  ScratchConnectorFeedbackProjection,
   ZoomHudView,
 } from '../../domain/cognitiveHud'
 import { hudPriorityLabels } from '../../domain/cognitiveHud'
@@ -25,6 +26,7 @@ type CanvasCommandHudProps = {
   runHistoryCount: number
   hudDensity: HudDensityView
   flowPressure: FlowPressureProjection
+  scratchConnectorFeedback: ScratchConnectorFeedbackProjection
   notificationBundle: HudNotificationBundleView
   zoomHud: ZoomHudView
   paletteOpen: boolean
@@ -67,6 +69,7 @@ export function CanvasCommandHud({
   runHistoryCount,
   hudDensity,
   flowPressure,
+  scratchConnectorFeedback,
   notificationBundle,
   zoomHud,
   paletteOpen,
@@ -132,6 +135,12 @@ export function CanvasCommandHud({
         </span>
         <span className={`mini-hud-chip mini-hud-chip-flow-${flowPressure.level}`} title={flowPressure.summary}>
           flow {flowPressure.label}
+        </span>
+        <span
+          className={`mini-hud-chip mini-hud-chip-scratch-${scratchConnectorFeedback.level}`}
+          title={scratchConnectorFeedback.railSummary}
+        >
+          scratch {scratchConnectorFeedback.label}
         </span>
         <span className="mini-hud-chip" title={hudDensity.description}>
           HUD {hudDensity.label}

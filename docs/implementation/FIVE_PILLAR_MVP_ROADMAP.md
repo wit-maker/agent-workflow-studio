@@ -66,9 +66,9 @@ Every implementation slice must prove the following before commit/PR:
 
 ## Recently Implemented Slice
 
-**UI shell replay / flow-pressure attention slice**
+**Scratch connection feedback / mock connector state slice**
 
-Result: safe runtime events now derive one shared flow-pressure projection for Canvas HUD chips, central HUD overlay, HUD Feed history hints, Run Detail, and 4D Text Briefing MVP.
+Result: shared connection validation and mock connector jobs now derive one safe Scratch/connector rail projection for Canvas HUD signals/chips, HUD Feed, Run Detail, and 4D Text Briefing MVP.
 
 Boundaries:
 
@@ -76,15 +76,15 @@ Boundaries:
 - No raw prompt, raw payload, raw config, artifact body, credential, token, password, or API key display.
 - No expression evaluation.
 - No real API behavior.
-- Flow pressure is a safe derived view model, not durable telemetry.
+- Scratch/connector rail state is a safe derived view model, not real connector telemetry.
 
 ## Next Slice Candidate
 
-After the flow-pressure slice, the preferred next implementation slice is:
+After the Scratch/connector feedback slice, the preferred next implementation slice is:
 
-**Scratch connection feedback / mock connector state slice**
+**Scratch interaction hardening / connector rail QA slice**
 
-Goal: make add/connect/select/delete feedback and fixed mock connector states visibly feed the same safe HUD / Run Detail / 4D briefing path.
+Goal: harden add/connect/select/delete interactions and verify that mock Trigger / Action / Adapter / Retry / Error Route / Human Review / Rate Limit placeholder cues stay visible across Canvas HUD, Run Detail, and 4D briefing.
 
 Boundaries:
 
@@ -93,3 +93,4 @@ Boundaries:
 - Keep invalid connection feedback in shared selector/domain logic.
 - Keep connector behavior mock-only.
 - Write-like mock actions still require Human Review Gate.
+- Do not add real telemetry, credentials, dependencies, or storage keys.

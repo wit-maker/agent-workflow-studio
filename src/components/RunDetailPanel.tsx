@@ -23,8 +23,15 @@ import {
 import type { WorkflowRunRecord } from '../domain/runHistory'
 import type { EvidenceSeverity } from '../domain/runStepEvidence'
 import type { RunTrace } from '../domain/runTrace'
-import type { WorkflowConnection } from '../domain/workflow'
-import { buildFlowPressureProjection, type FlowPressureProjection } from '../domain/cognitiveHud'
+import type { ConnectorJob } from '../domain/connectorQueue'
+import type { Workflow, WorkflowConnection } from '../domain/workflow'
+import {
+  buildFlowPressureProjection,
+  buildScratchConnectorFeedbackProjection,
+  type FlowPressureProjection,
+  type ScratchConnectorFeedbackProjection,
+} from '../domain/cognitiveHud'
+import type { ConnectionValidationResult } from '../state/workflowSelectors'
 
 const modeLabels: Record<RunDetailMode, string> = {
   all: '全証拠',
@@ -41,7 +48,10 @@ const severityLabels: Record<EvidenceSeverity, string> = {
 type RunDetailPanelProps = {
   runTrace: RunTrace | null
   runHistoryRecords: WorkflowRunRecord[]
+  workflow: Workflow
   connections: WorkflowConnection[]
+  connectionValidation: ConnectionValidationResult[]
+  connectorJobs: ConnectorJob[]
   selectedRunId: string | null
   focusedNodeId?: string | null
   focusedConnectionId?: string | null
@@ -53,7 +63,10 @@ type RunDetailPanelProps = {
 export function RunDetailPanel({
   runTrace,
   runHistoryRecords,
+  workflow,
   connections,
+  connectionValidation,
+  connectorJobs,
   selectedRunId,
   focusedNodeId,
   focusedConnectionId,
@@ -116,6 +129,15 @@ export function RunDetailPanel({
   const flowPressure = useMemo(
     () => buildFlowPressureProjection({ runTrace: replay.selectedTrace }),
     [replay.selectedTrace],
+  )
+  const scratchConnectorFeedback = useMemo(
+    () =>
+      buildScratchConnectorFeedbackProjection({
+        workflow,
+        connectionValidation,
+        connectorJobs,
+      }),
+    [connectionValidation, connectorJobs, workflow],
   )
   const edgeReplayEvidence = useMemo(
     () =>
@@ -201,6 +223,7 @@ export function RunDetailPanel({
 
       <RuntimeTimelinePanel timeline={runtimeTimeline} />
       <FlowPressurePanel projection={flowPressure} />
+      <ScratchConnectorFeedbackPanel projection={scratchConnectorFeedback} />
       <EdgeReplayEvidencePanel evidence={edgeReplayEvidence} />
       <ReplayCandidatePanel
         replay={replayCandidate}
@@ -289,6 +312,41 @@ function FlowPressurePanel({ projection }: { projection: FlowPressureProjection 
         <span>review {projection.reviewEventCount}</span>
         <span>bottleneck {projection.bottleneckConnectionId ?? 'none'}</span>
       </div>
+      <p className="muted">{projection.templateHistoryHint}</p>
+      <p className="muted">Next: {projection.nextAction}</p>
+    </section>
+  )
+}
+
+function ScratchConnectorFeedbackPanel({
+  projection,
+}: {
+  projection: ScratchConnectorFeedbackProjection
+}) {
+  return (
+    <section className="run-detail-flow-pressure" aria-label="Scratch connector feedback">
+      <div className="run-detail-step-diff-heading">
+        <div>
+          <span className="run-detail-comparison-kicker">safe scratch / mock connector rail</span>
+          <strong>{projection.label}</strong>
+        </div>
+        <span>
+          invalid {projection.invalidConnectionCount} / jobs {projection.connectorJobCount}
+        </span>
+      </div>
+      <p>{projection.railSummary}</p>
+      <div className="run-detail-runtime-stats">
+        <span>valid {projection.validConnectionCount}</span>
+        <span>warning {projection.warningConnectionCount}</span>
+        <span>queued {projection.queuedJobCount}</span>
+        <span>running {projection.runningJobCount}</span>
+        <span>failed {projection.failedJobCount}</span>
+        <span>review {projection.reviewRequiredJobCount}</span>
+        <span>retry-ready {projection.retryReadyJobCount}</span>
+        <span>rate-limit {projection.rateLimitPlaceholderCount}</span>
+      </div>
+      <p className="muted">{projection.reviewGateHint}</p>
+      <p className="muted">{projection.rateLimitHint}</p>
       <p className="muted">{projection.templateHistoryHint}</p>
       <p className="muted">Next: {projection.nextAction}</p>
     </section>

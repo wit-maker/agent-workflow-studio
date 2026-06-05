@@ -88,6 +88,13 @@ export type BriefingConnectorSummary = {
   reviewRequired: number
   running: number
   queued: number
+  invalidConnections: number
+  retryReady: number
+  rateLimitPlaceholder: number
+  railSummary: string
+  reviewGateHint: string
+  rateLimitHint: string
+  templateHistoryHint: string
   selectedEntries: string[]
 }
 

@@ -66,6 +66,7 @@ export type HudSignalKind =
   | 'review_required'
   | 'bottleneck'
   | 'flow_pressure'
+  | 'connection_feedback'
   | 'queue_pressure'
   | 'connector_attention'
   | 'storage_notice'
@@ -113,6 +114,7 @@ export type HudInput = {
   workflow: Workflow
   executionGraph: ExecutionGraph | null
   connectorJobs: readonly ConnectorJob[]
+  connectionValidation?: readonly ConnectionValidationSummary[]
   runHistoryCount: number
 }
 
@@ -327,6 +329,34 @@ export type FlowPressureProjection = {
   safeCopySummary: string
 }
 
+export type ScratchConnectorFeedbackLevel = 'stable' | 'draft-warning' | 'mock-running' | 'review-gate' | 'error-route'
+
+export type ScratchConnectorFeedbackProjection = {
+  level: ScratchConnectorFeedbackLevel
+  label: string
+  priority: HudPriority
+  alertLevel: HudAlertLevel
+  connectionCount: number
+  validConnectionCount: number
+  invalidConnectionCount: number
+  warningConnectionCount: number
+  connectorJobCount: number
+  queuedJobCount: number
+  runningJobCount: number
+  failedJobCount: number
+  reviewRequiredJobCount: number
+  retryReadyJobCount: number
+  rateLimitPlaceholderCount: number
+  railSummary: string
+  connectionSummary: string
+  connectorSummary: string
+  reviewGateHint: string
+  rateLimitHint: string
+  templateHistoryHint: string
+  nextAction: string
+  safeCopySummary: string
+}
+
 export type CentralHudView = {
   variant: CentralHudVariant
   priority: HudPriority
@@ -403,6 +433,7 @@ export type HudNotificationBundleView = {
   headline: string
   statusLine: string
   flowPressure: FlowPressureProjection
+  scratchConnectorFeedback: ScratchConnectorFeedbackProjection
   notificationItems: HudNotificationItem[]
   hiddenNotificationCount: number
   unreadNotificationCount: number
@@ -453,6 +484,7 @@ export const hudSignalKindLabels: Record<HudSignalKind, string> = {
   review_required: '人間確認待ち',
   bottleneck: 'ボトルネック',
   flow_pressure: 'Flow pressure',
+  connection_feedback: 'Scratch接続',
   queue_pressure: 'キュー滞留',
   connector_attention: 'コネクター',
   storage_notice: 'ストレージ',
@@ -1456,6 +1488,156 @@ export function buildFlowPressureProjection(options: {
   }
 }
 
+export function buildScratchConnectorFeedbackProjection(options: {
+  workflow: Workflow
+  connectionValidation?: readonly ConnectionValidationSummary[]
+  connectorJobs?: readonly ConnectorJob[]
+}): ScratchConnectorFeedbackProjection {
+  const { workflow, connectionValidation = [], connectorJobs = [] } = options
+  const invalidConnections = connectionValidation.filter((item) => item.connectionId && !item.valid)
+  const warningConnectionCount = invalidConnections.filter((item) => item.severity !== 'error').length
+  const invalidConnectionCount = invalidConnections.length
+  const validConnectionCount = Math.max(workflow.connections.length - invalidConnectionCount, 0)
+  const failedJobs = connectorJobs.filter((job) => job.status === 'failed')
+  const reviewJobs = connectorJobs.filter((job) => job.status === 'review_required')
+  const queuedJobCount = connectorJobs.filter((job) => job.status === 'queued').length
+  const runningJobCount = connectorJobs.filter((job) => job.status === 'running').length
+  const retryReadyJobCount = failedJobs.filter((job) => canRetry(job.retryCount)).length
+  const rateLimitPlaceholderCount = connectorJobs.filter(
+    (job) => job.status === 'running' && job.retryCount > 0,
+  ).length
+  const level: ScratchConnectorFeedbackLevel =
+    failedJobs.length > 0
+      ? 'error-route'
+      : reviewJobs.length > 0
+        ? 'review-gate'
+        : invalidConnectionCount > 0
+          ? 'draft-warning'
+          : runningJobCount > 0 || queuedJobCount > 0
+            ? 'mock-running'
+            : 'stable'
+  const alertLevel: HudAlertLevel =
+    level === 'error-route'
+      ? 3
+      : level === 'review-gate'
+        ? 3
+        : level === 'draft-warning'
+          ? invalidConnections.some((item) => item.severity === 'error') ? 3 : 2
+          : level === 'mock-running'
+            ? 1
+            : 0
+  const label =
+    level === 'error-route'
+      ? 'Error route'
+      : level === 'review-gate'
+        ? 'Human review'
+        : level === 'draft-warning'
+          ? 'Connection warning'
+          : level === 'mock-running'
+            ? 'Mock connector'
+            : 'Scratch ready'
+  const priority = mapAlertLevelToPriority(alertLevel)
+  const firstInvalidReason = invalidConnections[0]?.reason ?? null
+  const connectionSummary =
+    invalidConnectionCount > 0
+      ? `Scratch connection feedback: invalid ${invalidConnectionCount} / valid ${validConnectionCount}. ${truncateText(firstInvalidReason ?? 'port or data type mismatch', PREVIEW_MAX_LENGTH)}`
+      : `Scratch connection feedback: ${validConnectionCount} connections are valid.`
+  const connectorSummary =
+    connectorJobs.length > 0
+      ? `mock connector rail: queued ${queuedJobCount} / running ${runningJobCount} / failed ${failedJobs.length} / review ${reviewJobs.length} / retry-ready ${retryReadyJobCount}`
+      : 'mock connector rail: Run 後に Trigger / Action / Adapter の safe status を表示します。'
+  const railSummary = `${connectionSummary} ${connectorSummary}`
+  const reviewGateHint =
+    reviewJobs.length > 0
+      ? 'Write-like mock action は Human Review Gate で止まり、承認判断後にのみ成功扱いになります。'
+      : 'Write-like mock action は Human Review Gate を通す前提で扱います。credential値は表示しません。'
+  const rateLimitHint =
+    rateLimitPlaceholderCount > 0
+      ? 'Rate Limit placeholder: retry済みrunning job を詰まり候補として扱います。外部 telemetry は使いません。'
+      : 'Rate Limit placeholder は safe metadata のみで将来表示する枠です。外部 telemetry は使いません。'
+  const templateHistoryHint =
+    failedJobs.length > 0 || invalidConnectionCount > 0
+      ? 'failure pattern は既存history/template境界に safe summary と next-action hint だけを残す候補です。'
+      : '成功 path は既存template/history境界で再利用候補にできます。load時はIDを再生成します。'
+  const nextAction =
+    failedJobs.length > 0
+      ? 'Error Route と Retry 候補を確認して、再試行または人間確認に切り替えてください。'
+      : reviewJobs.length > 0
+        ? 'Human Review Gate で承認、差し戻し、スキップを判断してください。'
+        : invalidConnectionCount > 0
+          ? '不正接続の edge を選択し、互換ポートへつなぎ直してください。'
+          : runningJobCount > 0 || queuedJobCount > 0
+            ? 'mock connector queue の進行を見て、Run Detail の safe trace と照合してください。'
+            : 'PartsPalette からノードを置き、互換ポートを接続してから Validate / Run を実行できます。'
+
+  return {
+    level,
+    label,
+    priority,
+    alertLevel,
+    connectionCount: workflow.connections.length,
+    validConnectionCount,
+    invalidConnectionCount,
+    warningConnectionCount,
+    connectorJobCount: connectorJobs.length,
+    queuedJobCount,
+    runningJobCount,
+    failedJobCount: failedJobs.length,
+    reviewRequiredJobCount: reviewJobs.length,
+    retryReadyJobCount,
+    rateLimitPlaceholderCount,
+    railSummary,
+    connectionSummary,
+    connectorSummary,
+    reviewGateHint,
+    rateLimitHint,
+    templateHistoryHint,
+    nextAction,
+    safeCopySummary: [
+      `scratch connector: ${label}`,
+      `connections: ${workflow.connections.length}`,
+      `valid: ${validConnectionCount}`,
+      `invalid: ${invalidConnectionCount}`,
+      `jobs: ${connectorJobs.length}`,
+      `queued: ${queuedJobCount}`,
+      `running: ${runningJobCount}`,
+      `failed: ${failedJobs.length}`,
+      `review: ${reviewJobs.length}`,
+      `retry-ready: ${retryReadyJobCount}`,
+      `rate-limit-placeholder: ${rateLimitPlaceholderCount}`,
+      `next: ${nextAction}`,
+    ].join('\n'),
+  }
+}
+
+function createEmptyScratchConnectorFeedbackProjection(): ScratchConnectorFeedbackProjection {
+  return {
+    level: 'stable',
+    label: 'Scratch ready',
+    priority: 'normal',
+    alertLevel: 0,
+    connectionCount: 0,
+    validConnectionCount: 0,
+    invalidConnectionCount: 0,
+    warningConnectionCount: 0,
+    connectorJobCount: 0,
+    queuedJobCount: 0,
+    runningJobCount: 0,
+    failedJobCount: 0,
+    reviewRequiredJobCount: 0,
+    retryReadyJobCount: 0,
+    rateLimitPlaceholderCount: 0,
+    railSummary: 'Scratch connection feedback and mock connector rail are idle.',
+    connectionSummary: 'Scratch connection feedback: no connections yet.',
+    connectorSummary: 'mock connector rail: no jobs yet.',
+    reviewGateHint: 'Write-like mock action は Human Review Gate を通す前提で扱います。',
+    rateLimitHint: 'Rate Limit placeholder は safe metadata のみで将来表示する枠です。',
+    templateHistoryHint: 'template/history hint は Run 後の safe summary から生成します。',
+    nextAction: 'PartsPalette からノードを置き、互換ポートを接続してから Validate / Run を実行できます。',
+    safeCopySummary: 'scratch connector: Scratch ready\nconnections: 0\njobs: 0',
+  }
+}
+
 export function buildCentralHudView(options: {
   hudSnapshot: HudSnapshot
   semanticFocusPath: SemanticFocusPathView | null
@@ -1552,6 +1734,7 @@ export function buildHudNotificationBundle(options: {
   runTrace?: RunTrace | null
   runHistoryRecords?: readonly WorkflowRunRecord[]
   flowPressure?: FlowPressureProjection | null
+  scratchConnectorFeedback?: ScratchConnectorFeedbackProjection | null
   densityMode?: HudDensityMode
   notificationSessionState?: HudNotificationSessionState
 }): HudNotificationBundleView {
@@ -1561,11 +1744,13 @@ export function buildHudNotificationBundle(options: {
     runTrace = null,
     runHistoryRecords = [],
     flowPressure = null,
+    scratchConnectorFeedback = null,
     densityMode = 'balanced',
     notificationSessionState = {},
   } = options
   const density = buildHudDensityView(densityMode)
   const pressure = flowPressure ?? buildFlowPressureProjection({ runTrace })
+  const scratchFeedback = scratchConnectorFeedback ?? createEmptyScratchConnectorFeedbackProjection()
   const centralItem = centralHudView
     ? [{
         id: `central:${centralHudView.variant}:${centralHudView.headline}`,
@@ -1630,11 +1815,29 @@ export function buildHudNotificationBundle(options: {
         pinned: false,
         statusLabel: 'unread',
       } satisfies HudNotificationItem]
+  const scratchConnectorItems = scratchFeedback.priority === 'normal'
+    ? []
+    : [{
+        id: `scratch-connector:${scratchFeedback.level}:${scratchFeedback.invalidConnectionCount}:${scratchFeedback.connectorJobCount}`,
+        tone: scratchFeedback.priority,
+        alertLevel: scratchFeedback.alertLevel,
+        title: scratchFeedback.label,
+        detail: sanitizeHudText(scratchFeedback.railSummary) ?? scratchFeedback.label,
+        sourceLabel: 'Scratch / mock connector',
+        targetType: 'workflow' as HudFocusTargetType,
+        targetId: runTrace?.workflowId ?? null,
+        targetLabel: 'scratch connector rail',
+        read: false,
+        acknowledged: false,
+        pinned: false,
+        statusLabel: 'unread',
+      } satisfies HudNotificationItem]
   const allNotifications = uniqueHudNotifications([
     ...centralItem,
     ...signalItems,
     ...safetyItems,
     ...flowPressureItems,
+    ...scratchConnectorItems,
   ])
   const statefulNotifications = applyHudNotificationSessionState(allNotifications, notificationSessionState)
   const pinnedNotifications = statefulNotifications.filter((item) => item.pinned)
@@ -1670,6 +1873,7 @@ export function buildHudNotificationBundle(options: {
     `ack ${acknowledgedNotificationCount}`,
     `pin ${pinnedNotificationCount}`,
     `flow ${pressure.label}`,
+    `scratch ${scratchFeedback.label}`,
     evidenceSummary,
   ].join(' / ')
 
@@ -1678,6 +1882,7 @@ export function buildHudNotificationBundle(options: {
     headline,
     statusLine,
     flowPressure: pressure,
+    scratchConnectorFeedback: scratchFeedback,
     notificationItems,
     hiddenNotificationCount: Math.max(0, statefulNotifications.length - notificationItems.length),
     unreadNotificationCount,
@@ -1695,6 +1900,7 @@ export function buildHudNotificationBundle(options: {
       `collapse policy: ${density.collapsePolicy}`,
       `latest run: ${latestRunSummary}`,
       pressure.safeCopySummary,
+      scratchFeedback.safeCopySummary,
       `notification state: unread ${unreadNotificationCount} / ack ${acknowledgedNotificationCount} / pinned ${pinnedNotificationCount}`,
       ...notificationItems.map((item) => `signal: ${item.statusLabel} / L${item.alertLevel} ${item.title} - ${item.detail}`),
       ...historyEntries.map((entry) => `history: ${entry.runId} ${entry.statusLabel} ${entry.summary}`),
@@ -2158,7 +2364,13 @@ function countNodesByStatus(workflow: Workflow): NodeStatusCounts {
 }
 
 function collectSignals(input: HudInput): HudSignal[] {
-  const { workflow, executionGraph, connectorJobs, runHistoryCount } = input
+  const {
+    workflow,
+    executionGraph,
+    connectorJobs,
+    connectionValidation = [],
+    runHistoryCount,
+  } = input
   const signals: HudSignal[] = []
 
   // ---- Level 5: workflow failed / failed node exists ----
@@ -2322,6 +2534,31 @@ function collectSignals(input: HudInput): HudSignal[] {
         targetLabel: step.nodeTitle,
       })
     }
+  }
+
+  const invalidConnections = connectionValidation.filter((item) => item.connectionId && !item.valid)
+  for (const validation of invalidConnections) {
+    const connection = workflow.connections.find((item) => item.id === validation.connectionId)
+    const sourceNode = workflow.nodes.find((node) => node.id === connection?.sourceNodeId)
+    const targetNode = workflow.nodes.find((node) => node.id === connection?.targetNodeId)
+    const severity = validation.severity === 'error' ? 3 : 2
+    signals.push({
+      id: `connection-validation:${validation.connectionId}`,
+      kind: 'connection_feedback',
+      alertLevel: severity,
+      priority: mapAlertLevelToPriority(severity),
+      title: 'Scratch接続の確認が必要です',
+      detail: truncateText(
+        validation.reason ?? 'ポートまたはデータ型の互換性を確認してください。',
+        PREVIEW_MAX_LENGTH,
+      ),
+      targetType: 'workflow',
+      targetId: workflow.id,
+      targetLabel:
+        sourceNode && targetNode
+          ? `${sourceNode.title} -> ${targetNode.title}`
+          : validation.connectionId ?? workflow.name,
+    })
   }
 
   // ---- Level 2: running / queued / elevated retry ----
@@ -2488,6 +2725,11 @@ function summarizeSnapshot(
       return {
         summary: topSignal.title,
         recommendedAction: 'Run Detail の replay-ready timeline と edge evidence を確認してください。',
+      }
+    case 'connection_feedback':
+      return {
+        summary: topSignal.title,
+        recommendedAction: '不正接続の edge を選択し、互換ポートへつなぎ直してください。',
       }
     case 'queue_pressure':
       return {
