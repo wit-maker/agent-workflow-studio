@@ -110,6 +110,12 @@ export function HudNotificationBundle({
       {tab === 'history' ? (
         <section className="hud-notification-panel" aria-label="HUD履歴">
           <p className="hud-notification-summary">{view.latestRunSummary}</p>
+          <p className="hud-notification-summary">
+            Flow: {view.flowPressure.summary}
+          </p>
+          <p className="hud-notification-summary">
+            Template/history hint: {view.flowPressure.templateHistoryHint}
+          </p>
           {view.historyEntries.length > 0 ? (
             <ul className="hud-history-list">
               {view.historyEntries.map((entry) => (

@@ -159,20 +159,20 @@ function buildReplayCue(input: BriefingInput): string {
 
   if (replay.reviewEventCount > 0) {
     return truncateSentence(
-      `review route を含む runtime event が ${replay.reviewEventCount} 件あります。Human Review と Run Detail timeline を並べて確認してください。`,
+      `review route を含む runtime event が ${replay.reviewEventCount} 件あります。${replay.flowPressureLabel} として Human Review と Run Detail timeline を並べて確認してください。`,
       180,
     )
   }
 
   if (replay.errorEventCount > 0 || replay.warningEventCount > 0) {
     return truncateSentence(
-      `runtime event は ${replay.eventCount} 件、warn ${replay.warningEventCount} / error ${replay.errorEventCount} です。edge と route の safe metadata を先に見てください。`,
+      `runtime event は ${replay.eventCount} 件、warn ${replay.warningEventCount} / error ${replay.errorEventCount} / retry ${replay.retryEventCount} です。${replay.flowPressureSummary}`,
       180,
     )
   }
 
   return truncateSentence(
-    `runtime event は ${replay.eventCount} 件です。最新イベント: ${replay.latestSummary ?? replay.replayHint}`,
+    `runtime event は ${replay.eventCount} 件です。${replay.flowPressureSummary} ${replay.templateHistoryHint}`,
     180,
   )
 }

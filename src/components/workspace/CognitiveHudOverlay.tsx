@@ -48,6 +48,13 @@ export function CognitiveHudOverlay({
             Attention path: {pathText} / evidence {centralHudView.signalCount}
           </span>
         ) : null}
+        {centralHudView.flowPressure?.replayReady ? (
+          <span className={`cognitive-hud-flow-pressure cognitive-hud-flow-${centralHudView.flowPressure.level}`}>
+            <strong>{centralHudView.flowPressure.label}</strong>
+            <span>{centralHudView.flowPressure.summary}</span>
+            <span>{centralHudView.flowPressure.templateHistoryHint}</span>
+          </span>
+        ) : null}
         {centralHudView.stateCue ? (
           <span className={`cognitive-hud-state-cue cognitive-hud-state-cue-${centralHudView.stateCue.state}`}>
             <strong>{centralHudView.stateCue.label}</strong>

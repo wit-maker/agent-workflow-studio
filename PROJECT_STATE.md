@@ -4,6 +4,74 @@ Last updated: 2026-06-05
 
 ---
 
+## Phase UI Shell Replay / Flow-Pressure Attention Slice
+
+- Branch: `codex/five-pillar-ui-shell-replay-flow-pressure`
+- Date: 2026-06-05
+- Model gate: ユーザー明示の `5.5highdです` を `gpt-5.5 high` 相当の確認として扱って再開した。`ALLOW_XHIGH` はないため `xhigh` は使わない。
+- Scope: Five-Pillar MVP Roadmap の次sliceとして、safe runtime events / edge replay metadata から flow-pressure projection を導出し、Canvas First HUD、Run Detail、4D Text Briefing MVP、template/history hint へ同じ safe projection を接続する。新 localStorage key、backend/API、credential storage、dependency、Tauri/SQLite/Zustand、`docs/source-specs/**`、GitHub issue state は変更しない。
+
+### Implemented
+
+- `src/domain/cognitiveHud.ts` に `FlowPressureProjection` と `buildFlowPressureProjection(...)` を追加した。
+  - 入力は `RunTrace.runtimeEvents` の safe metadata のみ。
+  - event kind / route kind / severity / edge id / source-target node id だけを集計する。
+  - raw config / prompt / payload / artifact body / credential / token / password / API key は扱わない。
+- `GameHudShell` で flow-pressure projection を1回だけ導出し、Canvas command HUD、central HUD overlay、HUD Feed へ渡すようにした。
+- Canvas command HUD に `flow <label>` chip を追加した。
+- central HUD overlay に replay-ready flow-pressure summary と template/history hint を追加した。
+- HUD Feed の履歴タブに flow summary と template/history hint を追加した。
+- `RunDetailPanel` に `safe flow pressure` section を追加し、route / edge / warn / error / retry / review / bottleneck edge を safe metadata として表示するようにした。
+- `BriefingRuntimeReplaySummary` に flow-pressure fields を追加し、`collectBriefingInput(...)` と `MockBriefingAdapter` の Replay cue へ接続した。
+- `qa:direct` に safe flow-pressure projection、HUD Feed接続、4D briefing input接続の検証を追加した。
+- `ACTIVE_PLAN.md` と `FIVE_PILLAR_MVP_ROADMAP.md` を更新し、今回のsliceを完了候補として記録し、次slice候補を Scratch connection feedback / mock connector state に進めた。
+
+### Concept checklist classification
+
+- Classification: safe projection / canvas attention behavior / detail-history surface / MVP briefing input.
+- Cognitive HUD claim: flow pressure は attention-allocation layer の safe projection。Cognitive HUD 全体完成、永続HUD設定、外部telemetryではない。
+- Run Detail claim: flow-pressure section は detail/debug surface。Run Detail は認知HUD本体ではない。
+- Situation Assistant claim: 4D Text Briefing MVP に safe flow-pressure summary と template/history hint を渡す。音声/アバター/動画生成はしない。
+- Template/history claim: hint は表示・説明用のsafe derived summary。template schema、run-history schema、新storage keyは変更しない。
+- Runtime Audit claim: existing `RunTrace.runtimeEvents` と `traceAudit.edgeReplayRecords` のsafe metadataを読む。raw replay、expression evaluation、payload reconstructionではない。
+
+### Validation
+
+- Pre-branch `git pull --ff-only origin main`: already up to date.
+- Pre-branch `npm.cmd run typecheck`: pass.
+- Pre-branch `npm.cmd run lint`: pass.
+- Pre-branch `npm.cmd run build`: pass, with existing Vite chunk-size warning.
+- Mid-edit `npm.cmd run typecheck`: pass.
+- Mid-edit `npm.cmd run lint`: pass.
+- Mid-edit `npm.cmd run build`: pass, with existing Vite chunk-size warning.
+- `npm.cmd run qa:direct`: pass.
+- Final `npm.cmd run typecheck`: pass.
+- Final `npm.cmd run lint`: pass.
+- Final `npm.cmd run build`: pass, with existing Vite chunk-size warning.
+- Final `npm.cmd run qa:direct`: pass.
+
+### Browser QA
+
+- Preview: `http://127.0.0.1:4178/`
+- Browser: Microsoft Edge via Playwright Core channel.
+- Initial render: app title, Cognitive Workflow Canvas, command HUD, 12 React Flow nodes, 13 React Flow edges.
+- Run: `Run` 実行後に `flow Critical pressure` chip、central flow-pressure cue、runtime edge projection 13件を確認した。
+- HUD Feed: `N` -> `履歴` で Flow summary、Template/history hint、Replay button を確認した。
+- Run Detail: `T` で Run Detail を開き、`safe flow pressure`、`Replay-ready timeline`、`durable safe edge replay` を確認した。
+- 4D Text Briefing MVP: `4D説明` で mock briefing を生成し、What / Why / How / Next、Replay cue、flow-pressure wording を確認した。
+- Safety: Browser text に `sk-live-direct-qa-secret` / `RAW_PROMPT_SENTINEL` / `RAW_PAYLOAD_SENTINEL` / `CREDENTIAL_SENTINEL` / `PASSWORD_SENTINEL` / `BEARER_SENTINEL` は出なかった。
+- Console errors: 0。
+- Page errors: 0。
+- External script/link/image/API requests: 0。
+
+### Remaining gaps
+
+- Browser QA is still required for the touched UI surfaces before PR.
+- Stop/Resume/Replay runtime behavior, Scratch add/connect/delete hardening, broader mock connector state expansion, full Observation Layer, visual route reconstruction, and persisted HUD preferences remain future slices.
+- Broad epics #31 / #34 / #37 / #46 remain open product epics.
+
+---
+
 ## Phase Five-Pillar Roadmap Plan Selection
 
 - Branch: `codex/five-pillar-roadmap-plan`

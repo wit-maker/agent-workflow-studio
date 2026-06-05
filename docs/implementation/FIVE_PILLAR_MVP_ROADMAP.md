@@ -64,17 +64,32 @@ Every implementation slice must prove the following before commit/PR:
 - Browser QA runs for touched UI surfaces, covering initial render, canvas render, palette/drawer/console toggles, Validate, Run modes, selected node/edge HUD, Run Detail, replay cue, Situation Assistant output sections, and template save/load availability as applicable.
 - Safety QA confirms no raw config, prompt, payload, artifact body, credential, token, password, or API key appears in HUD, Run Detail, audit, briefing, template summary, or copy text.
 
-## Next Slice Candidate
-
-After this guardrail PR, the preferred first implementation slice is:
+## Recently Implemented Slice
 
 **UI shell replay / flow-pressure attention slice**
 
-Goal: make replay-ready route evidence and flow-pressure state visible on the Canvas First surface using safe audit-derived metadata, then feed the same safe projection into Run Detail, 4D Text Briefing MVP, and template/history hints.
+Result: safe runtime events now derive one shared flow-pressure projection for Canvas HUD chips, central HUD overlay, HUD Feed history hints, Run Detail, and 4D Text Briefing MVP.
 
 Boundaries:
 
-- Add derived view-model helpers before UI wiring.
+- No new storage key.
+- No raw prompt, raw payload, raw config, artifact body, credential, token, password, or API key display.
+- No expression evaluation.
+- No real API behavior.
+- Flow pressure is a safe derived view model, not durable telemetry.
+
+## Next Slice Candidate
+
+After the flow-pressure slice, the preferred next implementation slice is:
+
+**Scratch connection feedback / mock connector state slice**
+
+Goal: make add/connect/select/delete feedback and fixed mock connector states visibly feed the same safe HUD / Run Detail / 4D briefing path.
+
+Boundaries:
+
 - Reuse current reducer/runtime/audit structures.
-- Keep all metrics and replay evidence metadata-only.
-- Keep HUD preferences session-only unless a separate storage-boundary plan is selected.
+- Preserve Japanese labels and English identifiers.
+- Keep invalid connection feedback in shared selector/domain logic.
+- Keep connector behavior mock-only.
+- Write-like mock actions still require Human Review Gate.

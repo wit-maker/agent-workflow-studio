@@ -3108,6 +3108,7 @@ button:disabled {
 .run-detail-scoped-diff,
 .run-detail-route-metadata-diff,
 .run-detail-edge-replay-evidence,
+.run-detail-flow-pressure,
 .run-detail-replay-candidate,
 .run-detail-runtime-timeline {
   display: grid;
@@ -3122,6 +3123,7 @@ button:disabled {
 .game-hud-workspace .run-detail-scoped-diff,
 .game-hud-workspace .run-detail-route-metadata-diff,
 .game-hud-workspace .run-detail-edge-replay-evidence,
+.game-hud-workspace .run-detail-flow-pressure,
 .game-hud-workspace .run-detail-replay-candidate,
 .game-hud-workspace .run-detail-runtime-timeline {
   border-color: rgba(34, 211, 238, 0.18);
@@ -4086,6 +4088,33 @@ button:disabled {
   font-weight: 800;
 }
 
+.cognitive-hud-flow-pressure {
+  display: grid;
+  gap: 3px;
+  border: 1px solid rgba(103, 232, 249, 0.3);
+  border-radius: 8px;
+  background: rgba(8, 47, 73, 0.28);
+  color: #cffafe;
+  padding: 6px 7px;
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.cognitive-hud-flow-pressure > strong {
+  font-size: 11px;
+}
+
+.cognitive-hud-flow-pressure > span:last-child {
+  color: rgba(207, 250, 254, 0.74);
+}
+
+.cognitive-hud-flow-critical,
+.cognitive-hud-flow-bottleneck {
+  border-color: rgba(251, 191, 36, 0.42);
+  background: rgba(120, 53, 15, 0.3);
+  color: #fef3c7;
+}
+
 .cognitive-hud-state-cue {
   display: grid;
   grid-template-columns: auto auto;
@@ -4672,6 +4701,20 @@ body:has(.game-hud-workspace) #root {
   border-color: rgba(103, 232, 249, 0.34);
   color: #cffafe;
   background: rgba(8, 47, 73, 0.46);
+}
+
+.mini-hud-chip-flow-critical,
+.mini-hud-chip-flow-bottleneck {
+  border-color: rgba(251, 191, 36, 0.46);
+  color: #fef3c7;
+  background: rgba(120, 53, 15, 0.42);
+}
+
+.mini-hud-chip-flow-stable,
+.mini-hud-chip-flow-watch {
+  border-color: rgba(34, 211, 238, 0.36);
+  color: #cffafe;
+  background: rgba(8, 47, 73, 0.42);
 }
 
 .hud-icon-button,

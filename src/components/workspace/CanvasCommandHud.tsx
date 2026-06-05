@@ -1,5 +1,6 @@
 import type {
   CentralHudView,
+  FlowPressureProjection,
   HudDensityView,
   HudNotificationBundleView,
   HudSnapshot,
@@ -23,6 +24,7 @@ type CanvasCommandHudProps = {
   runTrace: RunTrace | null
   runHistoryCount: number
   hudDensity: HudDensityView
+  flowPressure: FlowPressureProjection
   notificationBundle: HudNotificationBundleView
   zoomHud: ZoomHudView
   paletteOpen: boolean
@@ -64,6 +66,7 @@ export function CanvasCommandHud({
   runTrace,
   runHistoryCount,
   hudDensity,
+  flowPressure,
   notificationBundle,
   zoomHud,
   paletteOpen,
@@ -126,6 +129,9 @@ export function CanvasCommandHud({
           title={runTrace?.source === 'run-history' ? '最新の durable audit snapshot を参照中' : '現在の runtime trace を参照中'}
         >
           {runTrace?.source === 'run-history' ? 'audit' : 'trace'} {runTrace?.auditEventCount ?? 0}
+        </span>
+        <span className={`mini-hud-chip mini-hud-chip-flow-${flowPressure.level}`} title={flowPressure.summary}>
+          flow {flowPressure.label}
         </span>
         <span className="mini-hud-chip" title={hudDensity.description}>
           HUD {hudDensity.label}

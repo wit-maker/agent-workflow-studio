@@ -65,6 +65,7 @@ export type HudSignalKind =
   | 'node_failure'
   | 'review_required'
   | 'bottleneck'
+  | 'flow_pressure'
   | 'queue_pressure'
   | 'connector_attention'
   | 'storage_notice'
@@ -303,6 +304,29 @@ export type CentralHudStateCue = {
   guardrail: string
 }
 
+export type FlowPressureLevel = 'idle' | 'stable' | 'watch' | 'bottleneck' | 'critical'
+
+export type FlowPressureProjection = {
+  level: FlowPressureLevel
+  label: string
+  priority: HudPriority
+  alertLevel: HudAlertLevel
+  replayReady: boolean
+  eventCount: number
+  routeEventCount: number
+  edgeEventCount: number
+  warningEventCount: number
+  errorEventCount: number
+  retryEventCount: number
+  reviewEventCount: number
+  bottleneckConnectionId: string | null
+  bottleneckNodeId: string | null
+  summary: string
+  nextAction: string
+  templateHistoryHint: string
+  safeCopySummary: string
+}
+
 export type CentralHudView = {
   variant: CentralHudVariant
   priority: HudPriority
@@ -314,6 +338,7 @@ export type CentralHudView = {
   sourceLabel: string
   signalCount: number
   stateCue: CentralHudStateCue | null
+  flowPressure: FlowPressureProjection | null
 }
 
 export type HudDensityMode = 'quiet' | 'balanced' | 'deep'
@@ -377,6 +402,7 @@ export type HudNotificationBundleView = {
   density: HudDensityView
   headline: string
   statusLine: string
+  flowPressure: FlowPressureProjection
   notificationItems: HudNotificationItem[]
   hiddenNotificationCount: number
   unreadNotificationCount: number
@@ -426,6 +452,7 @@ export const hudSignalKindLabels: Record<HudSignalKind, string> = {
   node_failure: 'ノード失敗',
   review_required: '人間確認待ち',
   bottleneck: 'ボトルネック',
+  flow_pressure: 'Flow pressure',
   queue_pressure: 'キュー滞留',
   connector_attention: 'コネクター',
   storage_notice: 'ストレージ',
@@ -1294,33 +1321,174 @@ export function buildSemanticFocusPathView(options: {
   return null
 }
 
+export function buildFlowPressureProjection(options: {
+  runTrace?: RunTrace | null
+}): FlowPressureProjection {
+  const events = options.runTrace?.runtimeEvents ?? []
+  const routeEventCount = events.filter((event) => event.kind === 'route_observed').length
+  const edgeEvents = events.filter((event) => event.connectionId && event.sourceNodeId && event.targetNodeId)
+  const warningEventCount = events.filter((event) => event.severity === 'warn').length
+  const errorEventCount = events.filter((event) => event.severity === 'error').length
+  const retryEventCount = events.filter(
+    (event) => event.kind === 'edge_retry' || event.routeKind === 'retry',
+  ).length
+  const reviewEventCount = events.filter((event) => event.routeKind === 'review').length
+  const connectionPressure = new Map<string, {
+    connectionId: string
+    sourceNodeId: string | null
+    targetNodeId: string | null
+    score: number
+    count: number
+  }>()
+
+  for (const event of edgeEvents) {
+    const connectionId = event.connectionId
+    if (!connectionId) continue
+    const current = connectionPressure.get(connectionId) ?? {
+      connectionId,
+      sourceNodeId: event.sourceNodeId ?? null,
+      targetNodeId: event.targetNodeId ?? null,
+      score: 0,
+      count: 0,
+    }
+    const severityWeight = event.severity === 'error' ? 4 : event.severity === 'warn' ? 2 : 1
+    const routeWeight = event.routeKind === 'error' ? 3 : event.routeKind === 'retry' || event.routeKind === 'review' ? 2 : 0
+    current.score += severityWeight + routeWeight
+    current.count += 1
+    if (!current.sourceNodeId && event.sourceNodeId) current.sourceNodeId = event.sourceNodeId
+    if (!current.targetNodeId && event.targetNodeId) current.targetNodeId = event.targetNodeId
+    connectionPressure.set(connectionId, current)
+  }
+
+  const bottleneck = Array.from(connectionPressure.values()).sort((left, right) => {
+    if (right.score !== left.score) return right.score - left.score
+    if (right.count !== left.count) return right.count - left.count
+    return left.connectionId.localeCompare(right.connectionId)
+  })[0] ?? null
+
+  const eventCount = events.length
+  const edgeEventCount = edgeEvents.length
+  const replayReady = eventCount > 0
+  const bottleneckConnectionId = bottleneck?.connectionId ?? null
+  const bottleneckNodeId = bottleneck?.targetNodeId ?? bottleneck?.sourceNodeId ?? null
+  const level: FlowPressureLevel =
+    errorEventCount > 0
+      ? 'critical'
+      : warningEventCount > 0 || retryEventCount > 0 || reviewEventCount > 0
+        ? 'bottleneck'
+        : edgeEventCount >= 8
+          ? 'watch'
+          : eventCount > 0
+            ? 'stable'
+            : 'idle'
+  const alertLevel: HudAlertLevel =
+    level === 'critical'
+      ? 4
+      : level === 'bottleneck'
+        ? 3
+        : level === 'watch'
+          ? 2
+          : level === 'stable'
+            ? 1
+            : 0
+  const priority = mapAlertLevelToPriority(alertLevel)
+  const label =
+    level === 'critical'
+      ? 'Critical pressure'
+      : level === 'bottleneck'
+        ? 'Bottleneck pressure'
+        : level === 'watch'
+          ? 'Flow watch'
+          : level === 'stable'
+            ? 'Replay ready'
+            : 'No replay yet'
+  const summary =
+    level === 'idle'
+      ? 'flow pressure はまだ未観測です。Run 後に safe runtime metadata を表示します。'
+      : `flow pressure ${label}: events ${eventCount} / edge ${edgeEventCount} / warn ${warningEventCount} / error ${errorEventCount}`
+  const nextAction =
+    level === 'critical'
+      ? 'Run Detail で error route と edge replay evidence を確認してください。'
+      : level === 'bottleneck'
+        ? '詰まり候補の edge と review/retry route を Run Detail で確認してください。'
+        : level === 'watch'
+          ? 'Canvas 上の route evidence と Run Detail timeline を見比べてください。'
+          : level === 'stable'
+            ? '成功経路を template/history hint として確認できます。'
+            : 'Run または Dry Run を実行して replay-ready metadata を収集してください。'
+  const templateHistoryHint =
+    level === 'critical' || level === 'bottleneck'
+      ? '履歴には failure/retry/review pattern のsafe summaryだけを残し、次アクション候補として扱います。'
+      : level === 'stable' || level === 'watch'
+        ? '成功経路は既存template/history境界で再利用候補として扱えます。IDはload時に再生成します。'
+        : 'template/history hint は Run 後のsafe audit summaryから生成します。'
+
+  return {
+    level,
+    label,
+    priority,
+    alertLevel,
+    replayReady,
+    eventCount,
+    routeEventCount,
+    edgeEventCount,
+    warningEventCount,
+    errorEventCount,
+    retryEventCount,
+    reviewEventCount,
+    bottleneckConnectionId,
+    bottleneckNodeId,
+    summary,
+    nextAction,
+    templateHistoryHint,
+    safeCopySummary: [
+      `flow pressure: ${label}`,
+      `events: ${eventCount}`,
+      `route events: ${routeEventCount}`,
+      `edge events: ${edgeEventCount}`,
+      `warn: ${warningEventCount}`,
+      `error: ${errorEventCount}`,
+      `retry: ${retryEventCount}`,
+      `review: ${reviewEventCount}`,
+      `bottleneck edge: ${bottleneckConnectionId ?? 'none'}`,
+      `hint: ${templateHistoryHint}`,
+    ].join('\n'),
+  }
+}
+
 export function buildCentralHudView(options: {
   hudSnapshot: HudSnapshot
   semanticFocusPath: SemanticFocusPathView | null
+  flowPressure?: FlowPressureProjection | null
 }): CentralHudView | null {
-  const { hudSnapshot, semanticFocusPath } = options
+  const { hudSnapshot, semanticFocusPath, flowPressure = null } = options
 
-  if (hudSnapshot.priority === 'normal' && !semanticFocusPath) {
+  if (hudSnapshot.priority === 'normal' && !semanticFocusPath && (!flowPressure || flowPressure.priority === 'normal')) {
     return null
   }
 
-  const variant = resolveCentralHudVariant(hudSnapshot, semanticFocusPath)
-  const sourceLabel = semanticFocusPath ? semanticFocusSourceLabels[semanticFocusPath.source] : 'HUD signal'
+  const variant = resolveCentralHudVariant(hudSnapshot, semanticFocusPath, flowPressure)
+  const sourceLabel = semanticFocusPath
+    ? semanticFocusSourceLabels[semanticFocusPath.source]
+    : flowPressure && hudSnapshot.priority === 'normal'
+      ? 'Flow pressure'
+      : 'HUD signal'
   const semanticFocusLabel = semanticFocusPath
     ? semanticFocusPath.title.replace(/^[^:]+:\s*/, '') || semanticFocusPath.primaryNodeId
     : null
 
   return {
     variant,
-    priority: semanticFocusPath?.priority ?? hudSnapshot.priority,
-    alertLevel: semanticFocusPath?.alertLevel ?? hudSnapshot.alertLevel,
-    headline: semanticFocusPath?.title ?? hudSnapshot.summary,
-    detail: semanticFocusPath?.summary ?? hudSnapshot.signals[0]?.detail ?? hudSnapshot.summary,
-    nextAction: semanticFocusPath?.nextAction ?? hudSnapshot.recommendedAction,
-    focusLabel: semanticFocusLabel ?? hudSnapshot.focusTargetLabel,
+    priority: semanticFocusPath?.priority ?? (hudSnapshot.priority === 'normal' ? flowPressure?.priority : hudSnapshot.priority) ?? hudSnapshot.priority,
+    alertLevel: semanticFocusPath?.alertLevel ?? (hudSnapshot.alertLevel === 0 ? flowPressure?.alertLevel : hudSnapshot.alertLevel) ?? hudSnapshot.alertLevel,
+    headline: semanticFocusPath?.title ?? (hudSnapshot.priority === 'normal' ? flowPressure?.summary : hudSnapshot.summary) ?? hudSnapshot.summary,
+    detail: semanticFocusPath?.summary ?? flowPressure?.summary ?? hudSnapshot.signals[0]?.detail ?? hudSnapshot.summary,
+    nextAction: semanticFocusPath?.nextAction ?? flowPressure?.nextAction ?? hudSnapshot.recommendedAction,
+    focusLabel: semanticFocusLabel ?? hudSnapshot.focusTargetLabel ?? flowPressure?.bottleneckConnectionId ?? null,
     sourceLabel,
-    signalCount: semanticFocusPath?.evidenceCount ?? hudSnapshot.signals.length,
+    signalCount: semanticFocusPath?.evidenceCount ?? hudSnapshot.signals.length + (flowPressure?.replayReady ? 1 : 0),
     stateCue: buildCentralHudStateCue(variant, semanticFocusPath),
+    flowPressure,
   }
 }
 
@@ -1383,6 +1551,7 @@ export function buildHudNotificationBundle(options: {
   centralHudView: CentralHudView | null
   runTrace?: RunTrace | null
   runHistoryRecords?: readonly WorkflowRunRecord[]
+  flowPressure?: FlowPressureProjection | null
   densityMode?: HudDensityMode
   notificationSessionState?: HudNotificationSessionState
 }): HudNotificationBundleView {
@@ -1391,10 +1560,12 @@ export function buildHudNotificationBundle(options: {
     centralHudView,
     runTrace = null,
     runHistoryRecords = [],
+    flowPressure = null,
     densityMode = 'balanced',
     notificationSessionState = {},
   } = options
   const density = buildHudDensityView(densityMode)
+  const pressure = flowPressure ?? buildFlowPressureProjection({ runTrace })
   const centralItem = centralHudView
     ? [{
         id: `central:${centralHudView.variant}:${centralHudView.headline}`,
@@ -1442,10 +1613,28 @@ export function buildHudNotificationBundle(options: {
     pinned: false,
     statusLabel: 'unread',
   } satisfies HudNotificationItem))
+  const flowPressureItems = pressure.priority === 'normal'
+    ? []
+    : [{
+        id: `flow-pressure:${pressure.level}:${pressure.eventCount}:${pressure.bottleneckConnectionId ?? 'workflow'}`,
+        tone: pressure.priority,
+        alertLevel: pressure.alertLevel,
+        title: pressure.label,
+        detail: sanitizeHudText(pressure.summary) ?? pressure.label,
+        sourceLabel: 'Flow pressure',
+        targetType: pressure.bottleneckNodeId ? ('node' as HudFocusTargetType) : ('workflow' as HudFocusTargetType),
+        targetId: pressure.bottleneckNodeId ?? runTrace?.workflowId ?? null,
+        targetLabel: sanitizeOptionalHudText(pressure.bottleneckConnectionId ?? pressure.bottleneckNodeId ?? 'workflow'),
+        read: false,
+        acknowledged: false,
+        pinned: false,
+        statusLabel: 'unread',
+      } satisfies HudNotificationItem]
   const allNotifications = uniqueHudNotifications([
     ...centralItem,
     ...signalItems,
     ...safetyItems,
+    ...flowPressureItems,
   ])
   const statefulNotifications = applyHudNotificationSessionState(allNotifications, notificationSessionState)
   const pinnedNotifications = statefulNotifications.filter((item) => item.pinned)
@@ -1480,6 +1669,7 @@ export function buildHudNotificationBundle(options: {
     `unread ${unreadNotificationCount}`,
     `ack ${acknowledgedNotificationCount}`,
     `pin ${pinnedNotificationCount}`,
+    `flow ${pressure.label}`,
     evidenceSummary,
   ].join(' / ')
 
@@ -1487,6 +1677,7 @@ export function buildHudNotificationBundle(options: {
     density,
     headline,
     statusLine,
+    flowPressure: pressure,
     notificationItems,
     hiddenNotificationCount: Math.max(0, statefulNotifications.length - notificationItems.length),
     unreadNotificationCount,
@@ -1503,6 +1694,7 @@ export function buildHudNotificationBundle(options: {
       `danger visibility: ${density.dangerVisibilityLabel}`,
       `collapse policy: ${density.collapsePolicy}`,
       `latest run: ${latestRunSummary}`,
+      pressure.safeCopySummary,
       `notification state: unread ${unreadNotificationCount} / ack ${acknowledgedNotificationCount} / pinned ${pinnedNotificationCount}`,
       ...notificationItems.map((item) => `signal: ${item.statusLabel} / L${item.alertLevel} ${item.title} - ${item.detail}`),
       ...historyEntries.map((entry) => `history: ${entry.runId} ${entry.statusLabel} ${entry.summary}`),
@@ -1525,12 +1717,15 @@ const semanticFocusSourceLabels: Record<SemanticFocusSource, string> = {
 function resolveCentralHudVariant(
   hudSnapshot: HudSnapshot,
   semanticFocusPath: SemanticFocusPathView | null,
+  flowPressure: FlowPressureProjection | null,
 ): CentralHudVariant {
   if (semanticFocusPath?.source === 'failure') return 'failure'
   if (semanticFocusPath?.source === 'approval') return 'approval'
   if (semanticFocusPath?.source === 'validation') return 'validation'
   if (hudSnapshot.signals[0]?.kind === 'node_failure') return 'failure'
   if (hudSnapshot.signals[0]?.kind === 'review_required') return 'approval'
+  if (hudSnapshot.priority === 'normal' && flowPressure?.level === 'critical') return 'danger'
+  if (hudSnapshot.priority === 'normal' && flowPressure?.level === 'bottleneck') return 'danger'
   if (hudSnapshot.priority === 'critical') return 'danger'
   return 'watch'
 }
@@ -2288,6 +2483,11 @@ function summarizeSnapshot(
       return {
         summary: `ボトルネック候補: ${topSignal.targetLabel ?? '不明'}`,
         recommendedAction: '当該ノードの設定やリトライ条件を見直してください。',
+      }
+    case 'flow_pressure':
+      return {
+        summary: topSignal.title,
+        recommendedAction: 'Run Detail の replay-ready timeline と edge evidence を確認してください。',
       }
     case 'queue_pressure':
       return {

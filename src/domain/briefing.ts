@@ -111,6 +111,11 @@ export type BriefingRuntimeReplaySummary = {
   reviewEventCount: number
   warningEventCount: number
   errorEventCount: number
+  retryEventCount: number
+  flowPressureLevel: string
+  flowPressureLabel: string
+  flowPressureSummary: string
+  templateHistoryHint: string
   latestSummary: string | null
   replayHint: string
 }
