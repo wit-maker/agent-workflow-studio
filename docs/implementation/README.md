@@ -11,6 +11,7 @@ Use `docs/project/ACTIVE_PLAN.md` first when deciding the next implementation sl
 | File type | Role |
 |---|---|
 | `*_MVP.md` | Historical MVP design notes and implemented-slice context. |
+| `FIVE_PILLAR_MVP_ROADMAP.md` | Selected five-pillar roadmap detail, subordinate to `docs/project/ACTIVE_PLAN.md`. |
 | `runtime-audit-next-phase.md` | Runtime Audit detail backlog, subordinate to `docs/project/ACTIVE_PLAN.md`. |
 | `runtime-audit-integration-plan.md` | Historical worktree integration plan for the landed Runtime Audit phase. |
 | `SCREEN_SPEC_ALIGNMENT.md` | Screen/spec mapping reference. |

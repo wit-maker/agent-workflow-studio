@@ -32,22 +32,39 @@ Runtime Audit remains a detail backlog in `docs/implementation/runtime-audit-nex
 
 ## Current Recommended Order
 
-The previously selected issue-roadmap slices and the follow-up candidates below are complete. There is no active implementation slice selected in this file right now. The next implementation should be chosen as a new small vertical slice against #31 / #34 / #37 / #46, with the concept checklist applied before coding.
+The selected active roadmap is **Five-Pillar MVP Roadmap**. The detail document is `docs/implementation/FIVE_PILLAR_MVP_ROADMAP.md`.
 
-Next broad candidates, not yet selected:
+Current slice:
 
-1. **HUD notification durability plan**
-   - Issue alignment: #34, #37.
-   - Goal: decide whether read/ack/pin state should ever persist, and if so which existing storage boundary owns safe metadata.
-   - Constraint: do not add a new localStorage key without an explicit updated plan.
-2. **Concept naming cleanup continuation**
-   - Issue alignment: #31.
-   - Goal: continue reducing names that imply MVP panels are full concept layers.
-   - Constraint: visible labels/docs first; component renames only when low-risk.
-3. **Edge replay visual reconstruction candidate**
-   - Issue alignment: #37, #46.
-   - Goal: use the safe edge replay records as input for a visual route replay candidate without adding raw payloads or expression evaluation.
-   - Constraint: metadata-only first; no animated engine until Browser QA coverage is updated.
+1. **Plan Selection / Guardrail Slice**
+   - Issue alignment: #31, #34, #37, #46.
+   - Goal: make the all-phase five-pillar roadmap the selected next plan and record the implementation boundaries.
+   - Scope: documentation and planning only. Do not touch `docs/source-specs/**`, product code, storage keys, dependencies, API behavior, credentials, or GitHub issue state.
+   - Concept checklist: classify current surfaces as MVP surfaces, safe projections, or detail-history surfaces. Do not describe them as the full Cognitive HUD or full Situation Assistant.
+
+Next implementation slice after this guardrail PR:
+
+2. **UI shell replay / flow-pressure attention slice**
+   - Issue alignment: #34, #37, #46.
+   - Goal: strengthen Canvas First route evidence with replay-ready and flow-pressure cues using safe audit-derived metadata.
+   - Expected path: Scratch operation -> mock connector/runtime -> safe runtime trace -> HUD focus -> Run Detail replay -> 4D briefing -> template/history hint.
+   - Constraint: metadata/view-model helpers first; no new persistence boundary, no raw payloads, no expression evaluation, no real API behavior.
+
+Phase roadmap order:
+
+| Phase | Focus | Implementation boundary |
+|---|---|---|
+| 1 | Plan Selection / Guardrail | Select this roadmap, update implementation docs, apply `CONCEPT_CHECKLIST.md`, no product code required. |
+| 2 | UI Shell Recomposition | Keep Canvas First primary; demote monitor-style surfaces to detail drawers; add failure/review/validation/replay/bottleneck attention states. |
+| 3 | Five-Pillar Vertical Slice Thickening | Keep one connected mock path across parts, connector/runtime, safe audit, HUD focus, Run Detail, 4D briefing, template/history. |
+| 4 | Scratch Layer | Harden `PartsPalette` and React Flow add/connect/select/delete flows while preserving Japanese labels and English identifiers. |
+| 5 | n8n-like Mock Connector Layer | Expand fixed mock Trigger/Action/Adapter/Retry/Error Route/Human Review/Rate Limit states; write-like mock actions require Human Review Gate. |
+| 6 | Workflow Runtime Layer | Preserve Run All / Run Selected / Run From Selected / Dry Run / Validate; add Stop/Resume/Replay only as safe mock runtime events. |
+| 7 | Cognitive HUD Layer | Treat HUD as attention allocation: node/edge badges, path dimming, central cards, replay cues, bottleneck/flow pressure, session-only preferences unless planned. |
+| 8 | Situation Narration Layer | Add pure mock timeline, summary, cause, future-risk, script, and decision-prompt helpers; no audio/avatar/video generation. |
+| 9 | Observation Layer | Represent latency, cost, retry, queue, success/failure rate, and bottleneck state through safe derived metrics only. |
+| 10 | Edge Replay / Audit Layer | Continue using `traceAudit.edgeReplayRecords` and safe runtime events; add visual reconstruction candidates from safe metadata only. |
+| 11 | Templates / Recipes / Failure Patterns | Extend template/history surfaces with allowlisted success path, failure pattern, and next-action summaries through existing boundaries. |
 
 ## Completed Plan Slices
 
@@ -67,6 +84,7 @@ Next broad candidates, not yet selected:
 | HUD notification read/ack/pin session behavior | `HudNotificationBundle` now supports session-only read, acknowledge, and pin state. Acknowledged unpinned notifications leave the active list; pinned notifications stay visible without creating storage. |
 | Concept naming cleanup | User-facing labels now describe the current text explanation surface as `4D Text Briefing MVP` / `4D説明`, reducing the chance that the MVP panel is mistaken for the full Situation Assistant. |
 | Edge-level durable replay record | `traceAudit.edgeReplayRecords` now stores safe edge-level replay summaries derived from safe runtime events inside existing run history records. `RunDetailPanel`, `SelectedEdgeHud`, and React Flow edge runtime classes can surface selected-edge replay evidence without raw payloads or new storage keys. |
+| Five-pillar roadmap selection | `docs/implementation/FIVE_PILLAR_MVP_ROADMAP.md` now makes the all-phase roadmap the selected planning spine while preserving small vertical-slice delivery and the existing safety boundaries. |
 
 ## Plan Document Roles
 
@@ -84,6 +102,7 @@ Next broad candidates, not yet selected:
 | `docs/audit/technical-debt.md` | Known implementation and naming debt. |
 | `docs/implementation/runtime-audit-next-phase.md` | Runtime Audit detail backlog; subordinate to this file and only active when #37 or #46 selects a runtime-audit slice. |
 | `docs/implementation/runtime-audit-integration-plan.md` | Historical worktree integration plan for the landed Runtime Audit phase. |
+| `docs/implementation/FIVE_PILLAR_MVP_ROADMAP.md` | Selected five-pillar delivery roadmap; subordinate to this file for current slice order and guardrails. |
 | `docs/tasks/**` | Historical task prompts and completed or partial slice records. |
 
 ## Safety Boundary
