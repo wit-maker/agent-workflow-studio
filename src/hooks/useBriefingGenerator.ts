@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import type { BriefingAdapter } from '../adapters/briefing/BriefingAdapter'
-import type { HudSnapshot } from '../domain/cognitiveHud'
+import type { ConnectionValidationSummary, HudSnapshot } from '../domain/cognitiveHud'
 import type {
   BriefingInputMode,
   BriefingResult,
@@ -18,6 +18,7 @@ type UseBriefingGeneratorArgs = {
   workflow: Workflow
   executionGraph: ExecutionGraph | null
   connectorJobs: readonly ConnectorJob[]
+  connectionValidation?: readonly ConnectionValidationSummary[]
   hudSnapshot: HudSnapshot
   runHistoryRecords: readonly WorkflowRunRecord[]
   adapter: BriefingAdapter
@@ -49,6 +50,7 @@ export function useBriefingGenerator(args: UseBriefingGeneratorArgs) {
         workflow: args.workflow,
         executionGraph: args.executionGraph,
         connectorJobs: args.connectorJobs,
+        connectionValidation: args.connectionValidation,
         hudSnapshot: args.hudSnapshot,
         runHistoryRecords: args.runHistoryRecords,
         mode: state.inputMode,

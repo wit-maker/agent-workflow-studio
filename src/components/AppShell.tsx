@@ -315,9 +315,10 @@ export function AppShell() {
         workflow,
         executionGraph,
         connectorJobs,
+        connectionValidation,
         runHistoryCount: runHistory.records.length,
       }),
-    [workflow, executionGraph, connectorJobs, runHistory.records.length],
+    [workflow, executionGraph, connectorJobs, connectionValidation, runHistory.records.length],
   )
   const runTrace = useMemo(
     () =>
@@ -1754,6 +1755,7 @@ export function AppShell() {
       workflow={workflow}
       executionGraph={executionGraph}
       connectorJobs={connectorJobs}
+      connectionValidation={connectionValidation}
       onRetryConnectorJob={handleRetryConnectorJob}
       onMarkConnectorJobReviewed={handleMarkConnectorJobReviewed}
       onSkipConnectorJob={handleSkipConnectorJob}

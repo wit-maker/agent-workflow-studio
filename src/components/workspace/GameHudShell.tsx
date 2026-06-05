@@ -4,6 +4,7 @@ import {
   buildFlowPressureProjection,
   buildHudDensityView,
   buildHudNotificationBundle,
+  buildScratchConnectorFeedbackProjection,
   buildSemanticFocusPathView,
   buildZoomHudView,
   getNextHudDensityMode,
@@ -15,6 +16,7 @@ import {
   type HudNotificationSessionState,
   type HudSnapshot,
   type SemanticFocusPathView,
+  type ScratchConnectorFeedbackProjection,
   type ZoomHudView,
 } from '../../domain/cognitiveHud'
 import type { ConnectorJob } from '../../domain/connectorQueue'
@@ -140,6 +142,15 @@ export function GameHudShell(props: GameHudShellProps) {
     () => buildFlowPressureProjection({ runTrace: props.runTrace }),
     [props.runTrace],
   )
+  const scratchConnectorFeedback = useMemo<ScratchConnectorFeedbackProjection>(
+    () =>
+      buildScratchConnectorFeedbackProjection({
+        workflow: props.workflow,
+        connectionValidation: props.connectionValidation,
+        connectorJobs: props.connectorJobs,
+      }),
+    [props.connectionValidation, props.connectorJobs, props.workflow],
+  )
 
   const handleZoomChange = useCallback((next: ZoomHudView) => {
     setZoomHud((current) =>
@@ -248,6 +259,7 @@ export function GameHudShell(props: GameHudShellProps) {
         runTrace: props.runTrace,
         runHistoryRecords: props.runHistoryRecords,
         flowPressure,
+        scratchConnectorFeedback,
         densityMode: hudDensityMode,
         notificationSessionState,
       }),
@@ -256,6 +268,7 @@ export function GameHudShell(props: GameHudShellProps) {
       flowPressure,
       hudDensityMode,
       notificationSessionState,
+      scratchConnectorFeedback,
       props.hudSnapshot,
       props.runHistoryRecords,
       props.runTrace,
@@ -317,6 +330,7 @@ export function GameHudShell(props: GameHudShellProps) {
           runHistoryCount={props.runHistoryCount}
           hudDensity={hudDensity}
           flowPressure={flowPressure}
+          scratchConnectorFeedback={scratchConnectorFeedback}
           notificationBundle={notificationBundle}
           zoomHud={zoomHud}
           paletteOpen={paletteOpen}

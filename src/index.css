@@ -4717,6 +4717,20 @@ body:has(.game-hud-workspace) #root {
   background: rgba(8, 47, 73, 0.42);
 }
 
+.mini-hud-chip-scratch-draft-warning,
+.mini-hud-chip-scratch-review-gate,
+.mini-hud-chip-scratch-error-route {
+  border-color: rgba(251, 191, 36, 0.46);
+  color: #fef3c7;
+  background: rgba(120, 53, 15, 0.42);
+}
+
+.mini-hud-chip-scratch-mock-running {
+  border-color: rgba(34, 211, 238, 0.36);
+  color: #cffafe;
+  background: rgba(8, 47, 73, 0.42);
+}
+
 .hud-icon-button,
 .hud-file-action {
   display: inline-flex;

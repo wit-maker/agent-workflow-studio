@@ -110,7 +110,14 @@ function buildHow(input: BriefingInput): string {
     input.connectors.reviewRequired > 0
   ) {
     return truncateSentence(
-      '確認待ちの判断を先に行い、承認、差し戻し、スキップのどれで進めるかを決めてください。',
+      `確認待ちの判断を先に行い、承認、差し戻し、スキップのどれで進めるかを決めてください。${input.connectors.reviewGateHint}`,
+    )
+  }
+
+  if (input.connectors.invalidConnections > 0) {
+    return truncateSentence(
+      `Scratch接続の不整合を先に直してください。${input.connectors.railSummary}`,
+      180,
     )
   }
 
@@ -141,6 +148,10 @@ function buildNext(input: BriefingInput): string {
   }
 
   if (input.severity === 'warn') {
+    if (input.connectors.invalidConnections > 0) {
+      return truncateSentence('最優先は不正接続の edge を選び、互換ポートへつなぎ直すことです。')
+    }
+
     if (input.execution.reviewSteps[0]) {
       return truncateSentence(`最優先は ${input.execution.reviewSteps[0]} の確認待ち対応です。`)
     }
@@ -159,7 +170,7 @@ function buildReplayCue(input: BriefingInput): string {
 
   if (replay.reviewEventCount > 0) {
     return truncateSentence(
-      `review route を含む runtime event が ${replay.reviewEventCount} 件あります。${replay.flowPressureLabel} として Human Review と Run Detail timeline を並べて確認してください。`,
+      `review route を含む runtime event が ${replay.reviewEventCount} 件あります。${replay.flowPressureLabel} として Human Review と Run Detail timeline を並べて確認してください。${input.connectors.reviewGateHint}`,
       180,
     )
   }
@@ -172,7 +183,7 @@ function buildReplayCue(input: BriefingInput): string {
   }
 
   return truncateSentence(
-    `runtime event は ${replay.eventCount} 件です。${replay.flowPressureSummary} ${replay.templateHistoryHint}`,
+    `runtime event は ${replay.eventCount} 件です。${replay.flowPressureSummary} ${input.connectors.railSummary} ${replay.templateHistoryHint}`,
     180,
   )
 }

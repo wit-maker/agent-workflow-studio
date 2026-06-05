@@ -1,6 +1,7 @@
 import {
   buildFlowPressureProjection,
   buildHudNotificationBundle,
+  buildScratchConnectorFeedbackProjection,
   buildSelectedEdgeHudView,
   buildWorkflowEdgeRuntimeMap,
   type HudSnapshot,
@@ -539,12 +540,68 @@ export async function runDirectQaValidation(): Promise<DirectQaValidationResult>
       runHistoryCount: 2,
     },
   }
+  const connectionValidation = [
+    {
+      connectionId: 'edge-input-normalize',
+      valid: false,
+      reason: 'Text -> Context requires normalize confirmation.',
+      severity: 'warn',
+    },
+  ] as const
+  const connectorJobs = [
+    {
+      id: 'cjob-run-left-node-normalize-safe',
+      runId: 'run-left',
+      nodeId: 'node-normalize',
+      nodeTitle: 'Normalize text',
+      connectorId: 'mock-action',
+      connectorLabel: 'Mock Action',
+      status: 'failed',
+      inputSummary: 'Normalize text -> Mock Action (mock)',
+      error: 'Safe error route summary.',
+      retryCount: 0,
+      createdAt: '2026-06-03T00:00:03.000Z',
+      finishedAt: '2026-06-03T00:00:05.000Z',
+    },
+    {
+      id: 'cjob-run-left-node-output-safe',
+      runId: 'run-left',
+      nodeId: 'node-output',
+      nodeTitle: 'Publish result',
+      connectorId: 'mock-review',
+      connectorLabel: 'Human Review Gate',
+      status: 'review_required',
+      inputSummary: 'Publish result -> Human Review Gate (mock)',
+      retryCount: 0,
+      createdAt: '2026-06-03T00:00:04.000Z',
+    },
+  ] as const
+  const scratchConnectorFeedback = buildScratchConnectorFeedbackProjection({
+    workflow,
+    connectionValidation,
+    connectorJobs,
+  })
+  assert(
+    scratchConnectorFeedback.invalidConnectionCount === 1,
+    'scratch connector feedback should count invalid connections',
+  )
+  assert(
+    scratchConnectorFeedback.failedJobCount === 1 && scratchConnectorFeedback.reviewRequiredJobCount === 1,
+    'scratch connector feedback should expose mock connector rail counts',
+  )
+  assert(
+    scratchConnectorFeedback.retryReadyJobCount === 1,
+    'scratch connector feedback should mark failed retryable mock connector jobs',
+  )
+  assertNoForbiddenSentinels(scratchConnectorFeedback, 'safe scratch connector feedback projection')
+  checked.push('safe scratch connector feedback projection')
   const pinnedNotificationView = buildHudNotificationBundle({
     hudSnapshot,
     centralHudView: null,
     runTrace: currentTrace,
     runHistoryRecords: [leftRecord, rightRecord],
     flowPressure,
+    scratchConnectorFeedback,
     notificationSessionState: {
       'signal-normalize-review': { read: true, pinned: true },
     },
@@ -559,6 +616,10 @@ export async function runDirectQaValidation(): Promise<DirectQaValidationResult>
   assert(
     pinnedNotificationView.flowPressure.bottleneckConnectionId === 'edge-input-normalize',
     'HUD notification bundle should carry flow pressure projection',
+  )
+  assert(
+    pinnedNotificationView.scratchConnectorFeedback.level === 'error-route',
+    'HUD notification bundle should carry scratch connector feedback projection',
   )
   assert(
     pinnedNotificationView.unreadNotificationCount >= 1,
@@ -585,7 +646,8 @@ export async function runDirectQaValidation(): Promise<DirectQaValidationResult>
   const briefingInput = collectBriefingInput({
     workflow,
     executionGraph: graph('run-left', 'failed'),
-    connectorJobs: [],
+    connectorJobs,
+    connectionValidation,
     hudSnapshot,
     runHistoryRecords: [leftRecord, rightRecord],
     mode: 'latest-run',
@@ -598,7 +660,14 @@ export async function runDirectQaValidation(): Promise<DirectQaValidationResult>
     briefingInput.runtimeReplay.templateHistoryHint.length > 0,
     'briefing input should include safe template/history hint',
   )
+  assert(
+    briefingInput.connectors.invalidConnections === 1 &&
+      briefingInput.connectors.retryReady === 1 &&
+      briefingInput.connectors.railSummary.includes('mock connector rail'),
+    'briefing input should include safe scratch connector rail metadata',
+  )
   assertNoForbiddenSentinels(briefingInput.runtimeReplay, 'briefing runtime replay flow pressure input')
+  assertNoForbiddenSentinels(briefingInput.connectors, 'briefing scratch connector rail input')
   checked.push('4D briefing flow-pressure input')
 
   const normalizedOldHistory = normalizeRunHistory({

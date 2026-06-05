@@ -15,7 +15,11 @@ import type { RunTrace } from '../domain/runTrace'
 import type { AppSettings } from '../storage/localAppSettings'
 import type { SavedWorkflowTemplate } from '../storage/localTemplates'
 import type { SavedWorkflowSnapshot } from '../storage/localWorkflowHistory'
-import { selectActiveQueueNodes, selectBottleneckNode } from '../state/workflowSelectors'
+import {
+  selectActiveQueueNodes,
+  selectBottleneckNode,
+  type ConnectionValidationResult,
+} from '../state/workflowSelectors'
 import { RunDetailPanel } from './RunDetailPanel'
 import { AgentConnectorPanel } from './AgentConnectorPanel'
 import { ArtifactVersionHistory } from './ArtifactVersionHistory'
@@ -38,6 +42,7 @@ type BottomMonitorProps = {
   workflow: Workflow
   executionGraph: ExecutionGraph | null
   connectorJobs: ConnectorJob[]
+  connectionValidation: ConnectionValidationResult[]
   onRetryConnectorJob: (jobId: string) => void
   onMarkConnectorJobReviewed: (jobId: string) => void
   onSkipConnectorJob: (jobId: string) => void
@@ -132,6 +137,7 @@ export function BottomMonitor({
   workflow,
   executionGraph,
   connectorJobs,
+  connectionValidation,
   onRetryConnectorJob,
   onMarkConnectorJobReviewed,
   onSkipConnectorJob,
@@ -182,6 +188,7 @@ export function BottomMonitor({
     workflow,
     executionGraph,
     connectorJobs,
+    connectionValidation,
     hudSnapshot,
     runHistoryRecords,
     adapter: briefingAdapter,
@@ -493,7 +500,10 @@ export function BottomMonitor({
             <RunDetailPanel
               runTrace={runTrace}
               runHistoryRecords={runHistoryRecords}
+              workflow={workflow}
               connections={workflow.connections}
+              connectionValidation={connectionValidation}
+              connectorJobs={connectorJobs}
               selectedRunId={selectedRunDetailRunId}
               focusedNodeId={selectedNodeId}
               focusedConnectionId={selectedConnectionId}

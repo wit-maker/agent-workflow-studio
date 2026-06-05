@@ -4,6 +4,72 @@ Last updated: 2026-06-05
 
 ---
 
+## Phase Scratch Connection Feedback / Mock Connector State Slice
+
+- Branch: `codex/five-pillar-scratch-mock-connector-feedback`
+- Date: 2026-06-05
+- Model gate: ユーザー明示の `5.5highdです` を `gpt-5.5 high` 相当の確認として扱った。`ALLOW_XHIGH` はないため `xhigh` は使わない。
+- Scope: Five-Pillar MVP Roadmap の次sliceとして、shared connection validation と mock connector jobs から Scratch/connector rail の safe projection を導出し、Canvas command HUD、HUD Feed、Run Detail、4D Text Briefing MVP、template/history hint に接続する。新 localStorage key、backend/API、credential storage、dependency、Tauri/SQLite/Zustand、`docs/source-specs/**`、GitHub issue state は変更しない。
+
+### Implemented
+
+- `src/domain/cognitiveHud.ts` に `ScratchConnectorFeedbackProjection` と `buildScratchConnectorFeedbackProjection(...)` を追加した。
+  - 入力は `Workflow.connections`、shared `connectionValidation`、mock `ConnectorJob` の safe metadata のみ。
+  - valid/invalid connection count、queued/running/failed/review/retry-ready job count、Rate Limit placeholder count、Human Review Gate hint、template/history hint を導出する。
+  - raw config / prompt / payload / artifact body / credential / token / password / API key は扱わない。
+- `deriveHudSnapshot(...)` に `connectionValidation` を任意入力として渡せるようにし、不正接続を `connection_feedback` HUD signal として扱うようにした。
+- Canvas command HUD に `scratch <label>` chip を追加した。
+- HUD Feed の履歴タブに Scratch/connector rail summary、Human Review Gate hint、Rate Limit placeholder hint を追加した。
+- `RunDetailPanel` に `safe scratch / mock connector rail` section を追加し、connection/job counts と next-action hint を safe metadata として表示するようにした。
+- `BriefingConnectorSummary` に Scratch/connector rail fields を追加し、`collectBriefingInput(...)`、`briefingPromptBuilder`、`MockBriefingAdapter` の How / Next / Replay cue へ接続した。
+- `qa:direct` に safe Scratch/connector feedback projection、HUD Feed接続、4D briefing input接続の検証を追加した。
+- `ACTIVE_PLAN.md` と `FIVE_PILLAR_MVP_ROADMAP.md` を更新し、今回のsliceを現在sliceとして記録し、次候補を Scratch interaction hardening / connector rail QA に進めた。
+
+### Concept checklist classification
+
+- Classification: safe projection / canvas attention behavior / detail-history surface / MVP briefing input.
+- Scratch claim: invalid connection feedback は shared selector/domain validation を HUD signal として投影する。Scratch layer 全完成、drag/connect/delete完全実装ではない。
+- Mock connector claim: Trigger / Action / Adapter / Retry / Error Route / Human Review / Rate Limit placeholder は mock job state の view-model。実API接続、credential保存、外部telemetryではない。
+- Cognitive HUD claim: Scratch/connector rail は attention-allocation layer の safe projection。Cognitive HUD 全体完成、永続HUD設定ではない。
+- Run Detail claim: `safe scratch / mock connector rail` section は detail/debug surface。Run Detail は認知HUD本体ではない。
+- Situation Assistant claim: 4D Text Briefing MVP に safe rail summary と next-action hint を渡す。音声/アバター/動画生成はしない。
+- Template/history claim: hint は表示・説明用の safe derived summary。template schema、run-history schema、新storage keyは変更しない。
+
+### Validation
+
+- Pre-branch `git pull --ff-only origin main`: already up to date.
+- Pre-branch `npm.cmd run typecheck`: pass.
+- Pre-branch `npm.cmd run lint`: pass.
+- Pre-branch `npm.cmd run build`: pass, with existing Vite chunk-size warning.
+- Mid-edit `npm.cmd run typecheck`: pass.
+- Mid-edit `npm.cmd run lint`: pass.
+- Mid-edit `npm.cmd run build`: pass, with existing Vite chunk-size warning.
+- Mid-edit `npm.cmd run qa:direct`: pass.
+
+### Browser QA
+
+- Preview: `http://127.0.0.1:4178/`
+- Browser: in-app Browser plugin was attempted first, but the runtime exposed no usable `tabs` API in this session; fallback used Microsoft Edge via Playwright Core channel.
+- Initial render: app title, Cognitive Workflow Canvas, command HUD, 12 React Flow nodes, 13 React Flow edges, `scratch Scratch ready` chip.
+- Validate: `Val` 実行後に `scratch Mock connector` chip を確認した。
+- Run: `Run` 実行後に `flow Replay ready` chip と Run Detail の replay-ready surfaces を確認した。
+- HUD Feed: scoped `HUD Feed` -> `履歴` で Scratch/connector summary、Review gate hint、Rate Limit placeholder hint を確認した。
+- Run Detail: `T` で Run Detail を開き、`safe scratch / mock connector rail`、`safe flow pressure`、`Replay-ready timeline`、`retry-ready` / `rate-limit` stats を確認した。
+- 4D Text Briefing MVP: `補佐官` で mock briefing を生成し、What / Why / How / Next、Replay cue、mock connector rail / Scratch wording を確認した。
+- Safety: Browser text に `sk-live-direct-qa-secret` / `RAW_PROMPT_SENTINEL` / `RAW_PAYLOAD_SENTINEL` / `CREDENTIAL_SENTINEL` / `PASSWORD_SENTINEL` / `BEARER_SENTINEL` は出なかった。
+- Console errors: 0。
+- Page errors: 0。
+- External script/link/image/API requests: 0。
+
+### Remaining gaps
+
+- Scratch add/connect/delete interaction hardening and visual invalid-connection authoring UX remain future slices.
+- Broader mock connector policy rail behavior is still mock-only and view-model based; no real connector states or credentials are introduced.
+- Stop/Resume/Replay runtime behavior, full Observation Layer, visual route reconstruction, and persisted HUD preferences remain future slices.
+- Broad epics #31 / #34 / #37 / #46 remain open product epics.
+
+---
+
 ## Phase UI Shell Replay / Flow-Pressure Attention Slice
 
 - Branch: `codex/five-pillar-ui-shell-replay-flow-pressure`

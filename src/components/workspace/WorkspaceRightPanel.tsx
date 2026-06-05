@@ -190,6 +190,7 @@ export function WorkspaceRightPanel({
             workflow={workflow}
             executionGraph={executionGraph}
             connectorJobs={connectorJobs}
+            connectionValidation={connectionValidation}
             hudSnapshot={hudSnapshot}
             runHistoryRecords={runHistoryRecords}
           />

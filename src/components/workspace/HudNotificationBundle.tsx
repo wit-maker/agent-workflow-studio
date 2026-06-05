@@ -116,6 +116,15 @@ export function HudNotificationBundle({
           <p className="hud-notification-summary">
             Template/history hint: {view.flowPressure.templateHistoryHint}
           </p>
+          <p className="hud-notification-summary">
+            Scratch/connector: {view.scratchConnectorFeedback.railSummary}
+          </p>
+          <p className="hud-notification-summary">
+            Review gate: {view.scratchConnectorFeedback.reviewGateHint}
+          </p>
+          <p className="hud-notification-summary">
+            Rate limit placeholder: {view.scratchConnectorFeedback.rateLimitHint}
+          </p>
           {view.historyEntries.length > 0 ? (
             <ul className="hud-history-list">
               {view.historyEntries.map((entry) => (
