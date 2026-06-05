@@ -4,6 +4,66 @@ Last updated: 2026-06-05
 
 ---
 
+## Phase Scratch Interaction Hardening / Connector Rail QA Slice
+
+- Branch: `codex/five-pillar-scratch-interaction-hardening`
+- Date: 2026-06-05
+- Model gate: ユーザー明示の `5.5highdです` を `gpt-5.5 high` 相当の確認として扱った。`ALLOW_XHIGH` はないため `xhigh` は使わない。
+- Scope: Five-Pillar MVP Roadmap の次sliceとして、PartsPalette の select/add 操作と React Flow canvas の connect/delete feedback を session-only UI として硬化する。新 localStorage key、backend/API、credential storage、dependency、Tauri/SQLite/Zustand、`docs/source-specs/**`、GitHub issue state は変更しない。
+
+### Implemented
+
+- `PartsPalette` のカード構造を、カード選択用の `article role="button"` と Add node 用の実 `button` に分けた。
+- Add node 後に session-only の `role="status"` operation notice を表示し、互換ポート接続と Validate / Run へ誘導するようにした。
+- React Flow canvas の接続状態 HUD に、select / add / connect / delete が session-only 操作であることと、mock connector 状態は safe metadata として HUD / Run Detail へ渡すことを明示した。
+- shared `connectionValidation` 由来の最初の invalid connection reason を canvas status HUD に表示するようにした。
+- `ACTIVE_PLAN.md` と `FIVE_PILLAR_MVP_ROADMAP.md` を更新し、今回のsliceを現在sliceとして記録し、次候補を Mock connector policy rail / review gate に進めた。
+
+### Concept checklist classification
+
+- Classification: MVP Scratch operation surface / safe projection / canvas attention behavior.
+- Scratch claim: PartsPalette と React Flow の操作フィードバックを硬化した。Scratch layer 全完成、全 drag/connect/delete 操作完成ではない。
+- Mock connector claim: connector rail は説明対象として維持するが、実 connector behavior は追加しない。
+- Cognitive HUD claim: canvas status HUD は attention surface の補助表示。Cognitive HUD 全体完成、永続HUD設定ではない。
+- Situation Assistant claim: このsliceでは briefing engine 自体は変更しない。前sliceの safe rail input を UI 操作から見つけやすくする。
+- Template/history claim: operation notice は session-only。template schema、run-history schema、新storage keyは変更しない。
+
+### Validation
+
+- Pre-branch `git pull --ff-only origin main`: already up to date.
+- Pre-branch `npm.cmd run typecheck`: pass.
+- Pre-branch `npm.cmd run lint`: pass.
+- Pre-branch `npm.cmd run build`: pass, with existing Vite chunk-size warning.
+- Mid-edit `npm.cmd run typecheck`: pass.
+- Mid-edit `npm.cmd run lint`: pass.
+- Mid-edit `npm.cmd run build`: pass, with existing Vite chunk-size warning.
+- Final `npm.cmd run typecheck`: pass.
+- Final `npm.cmd run lint`: pass.
+- Final `npm.cmd run build`: pass, with existing Vite chunk-size warning.
+
+### Browser QA
+
+- Preview: `http://127.0.0.1:4178/`
+- Browser: Microsoft Edge via Playwright Core channel fallback.
+- Initial render: app title, Cognitive Workflow Canvas, command HUD, 12 React Flow nodes, 13 React Flow edges, 12 semantic part cards, 12 Add node buttons.
+- PartsPalette: Add node command added one node, showed `role="status"` operation notice, and kept the canvas rail visible.
+- React Flow canvas: status rail text was visible and named select / add / connect / delete as session-only operations.
+- Validate: `scratch Mock connector` chip and connection HUD text were visible.
+- Run Detail: `safe scratch / mock connector rail`, `Replay-ready timeline`, and `safe flow pressure` were visible.
+- 4D Text Briefing MVP: mock briefing generated What / Why / How / Next and Replay output.
+- Safety: Browser text に `sk-live-direct-qa-secret` / `RAW_PROMPT_SENTINEL` / `RAW_PAYLOAD_SENTINEL` / `CREDENTIAL_SENTINEL` / `PASSWORD_SENTINEL` / `BEARER_SENTINEL` は出なかった。
+- Console errors: 0。
+- Page errors: 0。
+- External script/link/image/API requests: 0。
+
+### Remaining gaps
+
+- Drag-connect visual rejection and delete confirmation Browser coverage remains hard to automate and should get a future focused QA pass.
+- Broader mock connector policy rail behavior remains a future slice.
+- Broad epics #31 / #34 / #37 / #46 remain open product epics.
+
+---
+
 ## Phase Scratch Connection Feedback / Mock Connector State Slice
 
 - Branch: `codex/five-pillar-scratch-mock-connector-feedback`

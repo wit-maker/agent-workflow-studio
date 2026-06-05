@@ -602,6 +602,7 @@ export function ReactFlowCanvas({
   onMoveNode,
 }: ReactFlowCanvasProps) {
   const invalidConnections = connectionValidation.filter((result) => !result.valid)
+  const firstInvalidConnectionReason = invalidConnections[0]?.reason ?? null
   const initialFocusPath = buildFocusPathState(
     workflow,
     selectedNodeId,
@@ -1195,6 +1196,14 @@ export function ReactFlowCanvas({
               </p>
             ) : null}
             {deleteNotice ? <p className="warning-text">{deleteNotice}</p> : null}
+            <p className="canvas-status-rail">
+              Scratch rail: select / add / connect / delete は session-only 操作です。mock connector 状態は safe metadata だけを HUD と Run Detail に渡します。
+            </p>
+            {firstInvalidConnectionReason ? (
+              <p className="canvas-status-rail warning-text">
+                Invalid connection: {firstInvalidConnectionReason}
+              </p>
+            ) : null}
           </section>
         </div>
       </div>
