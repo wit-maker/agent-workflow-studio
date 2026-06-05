@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { agentRoleLabels, formatDataTypeLabel, nodeCategoryLabels } from '../domain/displayLabels'
 import type { NodeCategory, WorkflowNode } from '../domain/workflow'
 
@@ -23,6 +23,7 @@ export function PartsPalette({
 }: PartsPaletteProps) {
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState(ALL_LABEL)
+  const [operationNotice, setOperationNotice] = useState<string | null>(null)
 
   const categories = useMemo(
     () => [ALL_LABEL, ...Array.from(new Set(parts.map((part) => part.category)))],
@@ -37,6 +38,22 @@ export function PartsPalette({
       text.includes(query.trim().toLowerCase())
     )
   })
+
+  useEffect(() => {
+    if (!operationNotice) return
+
+    const timer = window.setTimeout(() => setOperationNotice(null), 4000)
+    return () => window.clearTimeout(timer)
+  }, [operationNotice])
+
+  function handleSelectPart(partId: string): void {
+    onSelectNode(partId)
+  }
+
+  function handleAddPart(part: WorkflowNode): void {
+    onAddNode(part)
+    setOperationNotice(`追加しました: ${part.title}。互換ポートを接続して Validate / Run で確認できます。`)
+  }
 
   return (
     <aside className="parts-palette" aria-label="MVP部品パレット">
@@ -66,11 +83,21 @@ export function PartsPalette({
       </div>
       <div className="part-list">
         {filteredParts.map((part) => (
-          <button
+          <article
             key={part.id}
-            type="button"
+            role="button"
+            tabIndex={0}
             className={`part-card ${part.id === selectedNodeId ? 'selected' : ''}`}
-            onClick={() => onSelectNode(part.id)}
+            aria-label={`${part.title} を選択`}
+            onClick={() => handleSelectPart(part.id)}
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter' && event.key !== ' ') {
+                return
+              }
+
+              event.preventDefault()
+              handleSelectPart(part.id)
+            }}
           >
             <span className="part-title">{part.title}</span>
             <span className="part-meta">
@@ -81,30 +108,26 @@ export function PartsPalette({
               {part.outputTypes.map(formatDataTypeLabel).join(', ')}
             </span>
             <span className="part-card-actions">
-              <span
-                role="button"
-                tabIndex={0}
+              <button
+                type="button"
                 className="inline-mini-button"
+                aria-label={`${part.title} をキャンバスに追加`}
                 onClick={(event) => {
                   event.stopPropagation()
-                  onAddNode(part)
-                }}
-                onKeyDown={(event) => {
-                  if (event.key !== 'Enter' && event.key !== ' ') {
-                    return
-                  }
-
-                  event.preventDefault()
-                  event.stopPropagation()
-                  onAddNode(part)
+                  handleAddPart(part)
                 }}
               >
                 Add node
-              </span>
+              </button>
             </span>
-          </button>
+          </article>
         ))}
       </div>
+      {operationNotice ? (
+        <p className="parts-operation-notice" role="status">
+          {operationNotice}
+        </p>
+      ) : null}
     </aside>
   )
 }

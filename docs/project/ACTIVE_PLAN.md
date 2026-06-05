@@ -36,19 +36,19 @@ The selected active roadmap is **Five-Pillar MVP Roadmap**. The detail document 
 
 Current slice:
 
-3. **Scratch connection feedback / mock connector state slice**
+4. **Scratch interaction hardening / connector rail QA slice**
    - Issue alignment: #34, #37, #46.
-   - Goal: make valid/invalid React Flow connection feedback and fixed mock connector states visibly feed the same safe HUD / Run Detail / 4D briefing path.
-   - Expected path: PartsPalette operation -> valid/invalid React Flow connection -> mock connector state -> safe HUD signal -> Run Detail / 4D explanation -> template/history hint.
-   - Constraint: keep reducer architecture, Japanese labels, English identifiers, shared selector/domain validation, and mock-only connector behavior.
+   - Goal: harden add/connect/select/delete interactions and verify that mock Trigger / Action / Adapter / Retry / Error Route / Human Review / Rate Limit placeholder cues remain visible without becoming real connector behavior.
+   - Expected path: PartsPalette operation -> connect/delete feedback -> mock connector rail -> HUD/Run Detail verification -> 4D explanation.
+   - Constraint: no reducer replacement, no credential values, no real API calls, no new storage key, and invalid connection feedback stays in shared selector/domain logic.
 
 Next implementation slice after this PR:
 
-4. **Scratch interaction hardening / connector rail QA slice**
+5. **Mock connector policy rail / review gate slice**
    - Issue alignment: #34, #37, #46.
-   - Goal: harden add/connect/select/delete interactions and validate that mock Trigger / Action / Adapter / Retry / Error Route / Human Review / Rate Limit placeholder cues remain visible without becoming real connector behavior.
-   - Expected path: PartsPalette operation -> connect/delete feedback -> mock connector rail -> HUD/Run Detail verification -> 4D explanation.
-   - Constraint: no reducer replacement, no credential values, no real API calls, no new storage key, and invalid connection feedback stays in shared selector/domain logic.
+   - Goal: make fixed mock connector policy states more explicit for Trigger / Action / Adapter / Retry / Error Route / Human Review / Rate Limit placeholder while keeping write-like behavior behind Human Review Gate.
+   - Expected path: mock connector action -> review/error/retry rail -> safe runtime trace -> HUD/Run Detail/4D explanation -> template/history hint.
+   - Constraint: mock-only behavior, no real network calls, no credentials, no raw payloads, no arbitrary expression evaluation.
 
 Phase roadmap order:
 
@@ -87,6 +87,7 @@ Phase roadmap order:
 | Five-pillar roadmap selection | `docs/implementation/FIVE_PILLAR_MVP_ROADMAP.md` now makes the all-phase roadmap the selected planning spine while preserving small vertical-slice delivery and the existing safety boundaries. |
 | UI shell replay / flow-pressure attention | `RunTrace.runtimeEvents` now drives a safe flow-pressure projection shared by Canvas HUD chips, central HUD overlay, HUD Feed history hints, Run Detail, and 4D Text Briefing MVP without new storage or raw payload display. |
 | Scratch connection feedback / mock connector state | Shared connection validation and current mock connector jobs now drive a safe Scratch/connector rail projection for HUD signals, Canvas command chips, HUD Feed, Run Detail, and 4D Text Briefing MVP without changing reducer/runtime/storage behavior. |
+| Scratch interaction hardening / connector rail QA | PartsPalette now separates card selection from the Add node command with semantic controls and session-only operation feedback. React Flow canvas status now names the safe Scratch operation rail and shows shared invalid-connection reasons without changing reducer/runtime/storage behavior. |
 
 ## Plan Document Roles
 

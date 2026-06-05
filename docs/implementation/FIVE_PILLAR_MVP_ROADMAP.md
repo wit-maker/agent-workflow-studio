@@ -66,9 +66,9 @@ Every implementation slice must prove the following before commit/PR:
 
 ## Recently Implemented Slice
 
-**Scratch connection feedback / mock connector state slice**
+**Scratch interaction hardening / connector rail QA slice**
 
-Result: shared connection validation and mock connector jobs now derive one safe Scratch/connector rail projection for Canvas HUD signals/chips, HUD Feed, Run Detail, and 4D Text Briefing MVP.
+Result: PartsPalette selection and Add node are separated into semantic controls with session-only operation feedback, and React Flow canvas status now names the safe Scratch operation rail and shared invalid-connection reason.
 
 Boundaries:
 
@@ -76,15 +76,16 @@ Boundaries:
 - No raw prompt, raw payload, raw config, artifact body, credential, token, password, or API key display.
 - No expression evaluation.
 - No real API behavior.
-- Scratch/connector rail state is a safe derived view model, not real connector telemetry.
+- Reducer/runtime behavior is unchanged.
+- Scratch operation feedback is session-only UI state.
 
 ## Next Slice Candidate
 
-After the Scratch/connector feedback slice, the preferred next implementation slice is:
+After the Scratch interaction hardening slice, the preferred next implementation slice is:
 
-**Scratch interaction hardening / connector rail QA slice**
+**Mock connector policy rail / review gate slice**
 
-Goal: harden add/connect/select/delete interactions and verify that mock Trigger / Action / Adapter / Retry / Error Route / Human Review / Rate Limit placeholder cues stay visible across Canvas HUD, Run Detail, and 4D briefing.
+Goal: make fixed mock connector policy states more explicit for Trigger / Action / Adapter / Retry / Error Route / Human Review / Rate Limit placeholder while keeping write-like behavior behind Human Review Gate.
 
 Boundaries:
 
@@ -94,3 +95,4 @@ Boundaries:
 - Keep connector behavior mock-only.
 - Write-like mock actions still require Human Review Gate.
 - Do not add real telemetry, credentials, dependencies, or storage keys.
+- Do not evaluate arbitrary expressions or raw payloads.
