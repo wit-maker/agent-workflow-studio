@@ -7,6 +7,7 @@ import {
   type HudSnapshot,
 } from '../src/domain/cognitiveHud'
 import { collectBriefingInput } from '../src/domain/briefingInputCollector'
+import { buildConnectorPolicyRailProjection } from '../src/domain/connectorPolicyRail'
 import {
   normalizeConnectionRuntimePolicy,
   resolveConnectionRuntimePolicyRoute,
@@ -595,6 +596,46 @@ export async function runDirectQaValidation(): Promise<DirectQaValidationResult>
   )
   assertNoForbiddenSentinels(scratchConnectorFeedback, 'safe scratch connector feedback projection')
   checked.push('safe scratch connector feedback projection')
+
+  const connectorPolicyRail = buildConnectorPolicyRailProjection({
+    workflow,
+    connectorJobs,
+  })
+  assert(
+    connectorPolicyRail.entries.length === 7,
+    'connector policy rail should expose the seven fixed policy entries',
+  )
+  assert(
+    connectorPolicyRail.entries.map((entry) => entry.kind).join(',') ===
+      'trigger,action,adapter,retry,error_route,human_review,rate_limit',
+    'connector policy rail should keep the fixed policy order',
+  )
+  const humanReviewEntry = connectorPolicyRail.entries.find((entry) => entry.kind === 'human_review')
+  assert(
+    humanReviewEntry?.state === 'gated' && humanReviewEntry.count === 1,
+    'human review policy entry should gate the review_required mock job',
+  )
+  assert(
+    connectorPolicyRail.reviewGateState === 'waiting',
+    'connector policy rail review gate should wait on review_required jobs',
+  )
+  const retryEntry = connectorPolicyRail.entries.find((entry) => entry.kind === 'retry')
+  assert(
+    retryEntry?.state === 'attention' && retryEntry.count === 1,
+    'retry policy entry should mark the retry-ready failed mock job',
+  )
+  const actionEntry = connectorPolicyRail.entries.find((entry) => entry.kind === 'action')
+  assert(
+    actionEntry?.writeGateRequired === true,
+    'action policy entry should require the write gate when write-like nodes exist',
+  )
+  const errorRouteEntry = connectorPolicyRail.entries.find((entry) => entry.kind === 'error_route')
+  assert(
+    errorRouteEntry?.state === 'attention' && errorRouteEntry.count === 1,
+    'error route policy entry should surface failed mock jobs as safe metadata',
+  )
+  assertNoForbiddenSentinels(connectorPolicyRail, 'fixed mock connector policy rail projection')
+  checked.push('fixed mock connector policy rail projection')
   const pinnedNotificationView = buildHudNotificationBundle({
     hudSnapshot,
     centralHudView: null,
@@ -602,6 +643,7 @@ export async function runDirectQaValidation(): Promise<DirectQaValidationResult>
     runHistoryRecords: [leftRecord, rightRecord],
     flowPressure,
     scratchConnectorFeedback,
+    connectorPolicyRail,
     notificationSessionState: {
       'signal-normalize-review': { read: true, pinned: true },
     },
@@ -620,6 +662,10 @@ export async function runDirectQaValidation(): Promise<DirectQaValidationResult>
   assert(
     pinnedNotificationView.scratchConnectorFeedback.level === 'error-route',
     'HUD notification bundle should carry scratch connector feedback projection',
+  )
+  assert(
+    pinnedNotificationView.connectorPolicyRail.reviewGateState === 'waiting',
+    'HUD notification bundle should carry the connector policy rail projection',
   )
   assert(
     pinnedNotificationView.unreadNotificationCount >= 1,
@@ -665,6 +711,14 @@ export async function runDirectQaValidation(): Promise<DirectQaValidationResult>
       briefingInput.connectors.retryReady === 1 &&
       briefingInput.connectors.railSummary.includes('mock connector rail'),
     'briefing input should include safe scratch connector rail metadata',
+  )
+  assert(
+    briefingInput.connectors.policyRailSummary.includes('mock connector policy rail'),
+    'briefing input should include the fixed mock connector policy rail summary',
+  )
+  assert(
+    briefingInput.connectors.policyGateHint.includes('Human Review Gate'),
+    'briefing input should include the write gate hint',
   )
   assertNoForbiddenSentinels(briefingInput.runtimeReplay, 'briefing runtime replay flow pressure input')
   assertNoForbiddenSentinels(briefingInput.connectors, 'briefing scratch connector rail input')

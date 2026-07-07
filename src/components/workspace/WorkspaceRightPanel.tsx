@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { HudSnapshot } from '../../domain/cognitiveHud'
+import { buildConnectorPolicyRailProjection } from '../../domain/connectorPolicyRail'
 import type { ConnectorJob } from '../../domain/connectorQueue'
 import type {
   EvaluationResult,
@@ -105,6 +106,15 @@ export function WorkspaceRightPanel({
   const [mode, setMode] = useState<RightPanelMode>('situation')
   const previousSelectedNodeIdRef = useRef<string | null>(null)
   const previousReviewPendingRef = useRef(false)
+  const connectorPolicyRail = useMemo(
+    () =>
+      buildConnectorPolicyRailProjection({
+        workflow,
+        connectorJobs,
+        humanReview,
+      }),
+    [connectorJobs, humanReview, workflow],
+  )
 
   const reviewPending = humanReview
     ? humanReview.decision === 'pending'
@@ -200,6 +210,7 @@ export function WorkspaceRightPanel({
             <HumanReviewPanel
               evaluation={evaluation}
               humanReview={humanReview}
+              policyRail={connectorPolicyRail}
               onDecide={onHumanReviewDecide}
               onRequestRebuild={onRequestRebuild}
             />

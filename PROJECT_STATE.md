@@ -4,6 +4,65 @@ Last updated: 2026-07-07
 
 ---
 
+## Phase Mock Connector Policy Rail / Review Gate Slice
+
+- Branch: `claude/charming-sinoussi-a79c6e`
+- Date: 2026-07-07
+- Scope: Five-Pillar MVP Roadmap の現在sliceとして、Trigger / Action / Adapter / Retry / Error Route / Human Review / Rate Limit placeholder の固定 mock connector policy 状態を明示化し、write 系 mock action を Human Review Gate の背後に留める。新 localStorage key、backend/API、credential storage、dependency、`docs/source-specs/**`、GitHub issue state は変更しない。
+
+### Implemented
+
+- `src/domain/connectorPolicyRail.ts` を追加し、`buildConnectorPolicyRailProjection(...)` を実装した。
+  - 入力は `Workflow` の node type / connection runtimePolicy、`ConnectorJob` の safe status、`HumanReviewState.decision` のみ。
+  - Trigger / Action / Adapter / Retry / Error Route / Human Review / Rate Limit placeholder の7固定 entry(固定 policy 文 + 状態 + count + writeGateRequired)を導出する。
+  - write 系 node (`output` / `template-save` / `run-log`) は Human Review Gate 必須として扱う。
+  - review gate state(idle / waiting / decided)、railSummary、reviewGateHint、nextAction、templateHistoryHint、safeCopySummary を返す。
+  - raw config / prompt / payload / artifact body / credential / token / password / API key は扱わない。
+- `buildHudNotificationBundle(...)` に `connectorPolicyRail` を接続した。HUD Feed の statusLine、safe copy summary、履歴タブの Policy rail / Policy gate / Policy template-history hint 行、priority が normal でないときの通知 item に反映される。
+- `GameHudShell` で projection を1回導出し、HUD Feed へ渡すようにした。
+- `RunDetailPanel` に `fixed mock connector policy rail` section を追加し、7 entry の状態・count・gate必須表示と reviewGateHint / templateHistoryHint / nextAction を表示するようにした。
+- `HumanReviewPanel` に Write gate 境界ブロックを追加した(gate 状態、fixed policy、write 系 node 件数、gate 停止中 write 系 job 件数)。`WorkspaceRightPanel` が workflow / connectorJobs / humanReview から projection を渡す。
+- `BriefingConnectorSummary` に `policyRailSummary` / `policyGateHint` を追加し、`collectBriefingInput(...)`、`briefingPromptBuilder`、`MockBriefingAdapter` の How / Replay cue へ接続した。
+- `qa:direct` に fixed mock connector policy rail projection の検証(7固定entry・順序、review gate waiting、retry attention、write gate required、error route attention、HUD bundle 伝搬、briefing input 伝搬、sentinel 非漏洩)を追加した。
+- `ACTIVE_PLAN.md` と `FIVE_PILLAR_MVP_ROADMAP.md` を更新し、今回sliceを完了として記録し、次slice候補を Scratch snap-guidance / drag-time connection prevention に進めた。
+
+### Concept checklist classification
+
+- Classification: safe projection / MVP surface / detail-history surface / MVP briefing input。
+- Mock connector claim: policy rail は固定 mock policy の view-model projection。実 connector behavior、実API、credential は追加していない。
+- Cognitive HUD claim: policy rail は注意配分入力の safe projection であり、HUD完成ゴールへの一歩。Cognitive HUD 全体完成ではない。
+- Human Review claim: Write gate 表示は境界説明。durable approval record は未実装のまま。
+- Situation Assistant claim: 4D Text Briefing MVP へ safe summary を渡すのみ。音声/アバター/動画生成はしない。
+- Safety: raw config / prompt / payload / artifact body / credential / token / password / API key は表示・保存・copy しない。sentinel 検証済み。
+- Persistence/API: 新 localStorage key、backend/API、credential storage、dependency は追加していない。
+
+### Validation
+
+- `npm run typecheck`: pass
+- `npm run lint`: pass
+- `npm run build`: pass, with existing Vite chunk-size warning.
+- `npm run qa:direct`: pass(`fixed mock connector policy rail projection` を含む18チェック)
+- 実行環境: Node v22.20.0(デフォルト v16 では eslint/vite が動作しないため)
+
+### Browser QA
+
+- Preview: `http://localhost:5199/`(Claude Preview 経由)
+- Initial render: app title、React Flow 12ノード、接続状態HUD、command HUD を確認した。
+- Run: `Run` 実行後、Run Detail に `fixed mock connector policy rail` section が表示され、7 entry(Trigger 準備完了 / Action Review gate・gate必須 / Adapter 準備完了 / Retry 待機 / Error Route 待機 / Human Review Review gate / Rate Limit 待機)と `gate 判断待ち` を確認した。
+- HUD Feed: `N4` -> `履歴` で `Policy rail:` / `Policy gate:` / `Policy template/history hint:` 行を確認した。
+- Human Review: `D` -> `レビュー` で `Write gate` ブロック(gate 判断待ち、fixed policy、write 系 node 3 件)を確認した。文言不整合(確認待ち job と write 系 job の混同)を QA 中に検出し、`確認待ち mock job を N 件(うち write 系 M 件)` へ修正した。
+- 4D Text Briefing MVP: `4D説明` で mock briefing を生成し、How に policy gate hint が入ることを確認した。
+- Safety: Browser text に `sk-live-direct-qa-secret` / `RAW_PROMPT_SENTINEL` / `RAW_PAYLOAD_SENTINEL` / `CREDENTIAL_SENTINEL` / `PASSWORD_SENTINEL` / `BEARER_SENTINEL` は出なかった。
+- Console errors: 0。External script/link/image asset: localhost 以外 0。
+
+### Remaining gaps
+
+- policy rail は隣接する固定 mock policy の説明・投影であり、実 enforcement の拡張(例: write 系 job を gate 未通過時に実際へ止める mock run loop 接続)は今後のslice候補。
+- 認知HUD完成条件チェックリスト、Scratch統合原則の残ギャップは未達のまま(ロードマップ参照)。
+- Broad epics #31 / #34 / #37 / #46 は open のまま。
+
+---
+
 ## Phase MVP Goal Correction: 認知HUD完成ゴール / Scratch統合原則の明文化
 
 - Branch: `claude/charming-sinoussi-a79c6e`

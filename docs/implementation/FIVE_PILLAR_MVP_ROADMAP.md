@@ -148,9 +148,9 @@ Every implementation slice must prove the following before commit/PR:
 
 ## Recently Implemented Slice
 
-**Scratch interaction hardening / connector rail QA slice**
+**Mock connector policy rail / review gate slice**
 
-Result: PartsPalette selection and Add node are separated into semantic controls with session-only operation feedback, and React Flow canvas status now names the safe Scratch operation rail and shared invalid-connection reason.
+Result: `src/domain/connectorPolicyRail.ts` の pure helper が、Trigger / Action / Adapter / Retry / Error Route / Human Review / Rate Limit placeholder の7固定 mock policy entry を safe metadata のみから導出する。write 系 mock action (`output` / `template-save` / `run-log`) は Human Review Gate を必須とし、同じ projection を HUD Feed(履歴タブ・通知item・statusLine・safe copy)、Run Detail の `fixed mock connector policy rail` section、Human Review パネルの Write gate 境界表示、4D Text Briefing MVP(How / policyRail / policyGate)へ接続した。
 
 Boundaries:
 
@@ -159,22 +159,20 @@ Boundaries:
 - No expression evaluation.
 - No real API behavior.
 - Reducer/runtime behavior is unchanged.
-- Scratch operation feedback is session-only UI state.
+- Policy rail is a fixed mock policy projection; it does not become real connector behavior.
 
 ## Next Slice Candidate
 
-After the Scratch interaction hardening slice, the preferred next implementation slice is:
+After the mock connector policy rail slice, the preferred next implementation slice is:
 
-**Mock connector policy rail / review gate slice**
+**Scratch snap-guidance / drag-time connection prevention slice**
 
-Goal: make fixed mock connector policy states more explicit for Trigger / Action / Adapter / Retry / Error Route / Human Review / Rate Limit placeholder while keeping write-like behavior behind Human Review Gate.
+Goal: 接続ドラッグ中に互換ポートを強調し非互換ポートを減光する snap 誘導を追加し、非互換接続を「作ってから警告」ではなく「ドラッグ時点で嵌まらない」方向へ寄せる(Scratch統合原則の第1・第2原則、認知HUDの強調・減光チャネルとの統合点)。
 
 Boundaries:
 
-- Reuse current reducer/runtime/audit structures.
+- Reuse current reducer/runtime/audit structures and shared `connectionValidation`.
 - Preserve Japanese labels and English identifiers.
-- Keep invalid connection feedback in shared selector/domain logic.
-- Keep connector behavior mock-only.
-- Write-like mock actions still require Human Review Gate.
+- Keep compatibility decisions in shared selector/domain logic.
 - Do not add real telemetry, credentials, dependencies, or storage keys.
 - Do not evaluate arbitrary expressions or raw payloads.

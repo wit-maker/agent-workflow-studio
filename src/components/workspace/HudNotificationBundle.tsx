@@ -125,6 +125,15 @@ export function HudNotificationBundle({
           <p className="hud-notification-summary">
             Rate limit placeholder: {view.scratchConnectorFeedback.rateLimitHint}
           </p>
+          <p className="hud-notification-summary">
+            Policy rail: {view.connectorPolicyRail.railSummary}
+          </p>
+          <p className="hud-notification-summary">
+            Policy gate: {view.connectorPolicyRail.reviewGateHint}
+          </p>
+          <p className="hud-notification-summary">
+            Policy template/history hint: {view.connectorPolicyRail.templateHistoryHint}
+          </p>
           {view.historyEntries.length > 0 ? (
             <ul className="hud-history-list">
               {view.historyEntries.map((entry) => (

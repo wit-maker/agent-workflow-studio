@@ -31,6 +31,10 @@ import {
   type FlowPressureProjection,
   type ScratchConnectorFeedbackProjection,
 } from '../domain/cognitiveHud'
+import {
+  buildConnectorPolicyRailProjection,
+  type ConnectorPolicyRailProjection,
+} from '../domain/connectorPolicyRail'
 import type { ConnectionValidationResult } from '../state/workflowSelectors'
 
 const modeLabels: Record<RunDetailMode, string> = {
@@ -139,6 +143,14 @@ export function RunDetailPanel({
       }),
     [connectionValidation, connectorJobs, workflow],
   )
+  const connectorPolicyRail = useMemo(
+    () =>
+      buildConnectorPolicyRailProjection({
+        workflow,
+        connectorJobs,
+      }),
+    [connectorJobs, workflow],
+  )
   const edgeReplayEvidence = useMemo(
     () =>
       buildRunDetailEdgeReplayEvidenceView({
@@ -224,6 +236,7 @@ export function RunDetailPanel({
       <RuntimeTimelinePanel timeline={runtimeTimeline} />
       <FlowPressurePanel projection={flowPressure} />
       <ScratchConnectorFeedbackPanel projection={scratchConnectorFeedback} />
+      <ConnectorPolicyRailPanel projection={connectorPolicyRail} />
       <EdgeReplayEvidencePanel evidence={edgeReplayEvidence} />
       <ReplayCandidatePanel
         replay={replayCandidate}
@@ -347,6 +360,36 @@ function ScratchConnectorFeedbackPanel({
       </div>
       <p className="muted">{projection.reviewGateHint}</p>
       <p className="muted">{projection.rateLimitHint}</p>
+      <p className="muted">{projection.templateHistoryHint}</p>
+      <p className="muted">Next: {projection.nextAction}</p>
+    </section>
+  )
+}
+
+function ConnectorPolicyRailPanel({
+  projection,
+}: {
+  projection: ConnectorPolicyRailProjection
+}) {
+  return (
+    <section className="run-detail-flow-pressure" aria-label="Mock connector policy rail">
+      <div className="run-detail-step-diff-heading">
+        <div>
+          <span className="run-detail-comparison-kicker">fixed mock connector policy rail</span>
+          <strong>{projection.label}</strong>
+        </div>
+        <span>{projection.reviewGateLabel}</span>
+      </div>
+      <p>{projection.railSummary}</p>
+      <div className="run-detail-runtime-stats">
+        {projection.entries.map((entry) => (
+          <span key={entry.kind} title={entry.fixedPolicy}>
+            {entry.label} {entry.stateLabel} ({entry.count})
+            {entry.writeGateRequired ? ' / gate必須' : ''}
+          </span>
+        ))}
+      </div>
+      <p className="muted">{projection.reviewGateHint}</p>
       <p className="muted">{projection.templateHistoryHint}</p>
       <p className="muted">Next: {projection.nextAction}</p>
     </section>
