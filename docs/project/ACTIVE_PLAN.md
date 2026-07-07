@@ -1,6 +1,6 @@
 # Active Plan
 
-Last updated: 2026-06-05
+Last updated: 2026-07-07
 
 ## Purpose
 
@@ -30,25 +30,30 @@ GitHub currently has four open broad product epics. They are source inputs for p
 
 Runtime Audit remains a detail backlog in `docs/implementation/runtime-audit-next-phase.md`. It becomes active only when this file selects a slice that advances #37 or #46 through Runtime Audit work.
 
+## MVP Goal (2026-07-07 ゴール訂正)
+
+このロードマップの到達点は、**MVPに認知HUD(注意配分編集レイヤー)を完成状態で載せること**である。
+
+- 完成状態とは、選別・圧縮・強調・通知・介入が L0〜L5 の状態駆動で、Canvas / Inspector / Console / モーダル / 通知を含む全画面に分散して機能する状態を指す。完成条件の詳細チェックリストは `docs/implementation/FIVE_PILLAR_MVP_ROADMAP.md` の「認知HUD完成条件チェックリスト」を参照する。
+- これまでの safe projection / MVP surface は、この完成状態へ向かう中間足場であり、最終到達点ではない。
+- ただし各スライスの classification 慣行(`CONCEPT_CHECKLIST.md`)は維持する。「個々のスライスは HUD 完成を主張しない」ことと「ロードマップの到達点は HUD 完成」は両立する。
+- Scratch の設計思想(文法エラーレス操作 / 即時フィードバック / low floor・high ceiling / tinkering & remix)は操作レイヤーの設計原理として組み込み、認知HUDと表現チャネルを共有する。詳細は同 roadmap doc の「Scratch統合原則」を参照する。
+- Safety Boundary(raw config / prompt / payload / credential 等の禁止)は完成状態でも不変である。
+
 ## Current Recommended Order
 
 The selected active roadmap is **Five-Pillar MVP Roadmap**. The detail document is `docs/implementation/FIVE_PILLAR_MVP_ROADMAP.md`.
 
 Current slice:
 
-4. **Scratch interaction hardening / connector rail QA slice**
-   - Issue alignment: #34, #37, #46.
-   - Goal: harden add/connect/select/delete interactions and verify that mock Trigger / Action / Adapter / Retry / Error Route / Human Review / Rate Limit placeholder cues remain visible without becoming real connector behavior.
-   - Expected path: PartsPalette operation -> connect/delete feedback -> mock connector rail -> HUD/Run Detail verification -> 4D explanation.
-   - Constraint: no reducer replacement, no credential values, no real API calls, no new storage key, and invalid connection feedback stays in shared selector/domain logic.
-
-Next implementation slice after this PR:
-
 5. **Mock connector policy rail / review gate slice**
    - Issue alignment: #34, #37, #46.
    - Goal: make fixed mock connector policy states more explicit for Trigger / Action / Adapter / Retry / Error Route / Human Review / Rate Limit placeholder while keeping write-like behavior behind Human Review Gate.
    - Expected path: mock connector action -> review/error/retry rail -> safe runtime trace -> HUD/Run Detail/4D explanation -> template/history hint.
    - Constraint: mock-only behavior, no real network calls, no credentials, no raw payloads, no arbitrary expression evaluation.
+   - MVP Goal positioning: このsliceは policy rail という注意配分入力を HUD / Run Detail / 4D説明へ投影する、認知HUD完成ゴールへ向かう一歩である。slice 単体で HUD 完成を主張しない。
+
+Slice 4 (Scratch interaction hardening / connector rail QA) は完了済みで、Completed Plan Slices に記録されている。
 
 Phase roadmap order:
 
@@ -57,10 +62,10 @@ Phase roadmap order:
 | 1 | Plan Selection / Guardrail | Select this roadmap, update implementation docs, apply `CONCEPT_CHECKLIST.md`, no product code required. |
 | 2 | UI Shell Recomposition | Keep Canvas First primary; demote monitor-style surfaces to detail drawers; add failure/review/validation/replay/bottleneck attention states. |
 | 3 | Five-Pillar Vertical Slice Thickening | Keep one connected mock path across parts, connector/runtime, safe audit, HUD focus, Run Detail, 4D briefing, template/history. |
-| 4 | Scratch Layer | Harden `PartsPalette` and React Flow add/connect/select/delete flows while preserving Japanese labels and English identifiers. |
+| 4 | Scratch Layer | Harden `PartsPalette` and React Flow add/connect/select/delete flows while preserving Japanese labels and English identifiers. 到達点は「Scratch統合原則」(roadmap doc) の4原則を満たす操作レイヤー。 |
 | 5 | n8n-like Mock Connector Layer | Expand fixed mock Trigger/Action/Adapter/Retry/Error Route/Human Review/Rate Limit states; write-like mock actions require Human Review Gate. |
 | 6 | Workflow Runtime Layer | Preserve Run All / Run Selected / Run From Selected / Dry Run / Validate; add Stop/Resume/Replay only as safe mock runtime events. |
-| 7 | Cognitive HUD Layer | Treat HUD as attention allocation: node/edge badges, path dimming, central cards, replay cues, bottleneck/flow pressure, session-only preferences unless planned. |
+| 7 | Cognitive HUD Layer | Treat HUD as attention allocation: node/edge badges, path dimming, central cards, replay cues, bottleneck/flow pressure. 到達点は「認知HUD完成条件チェックリスト」(roadmap doc) の達成。永続HUD設定は storage-boundary slice を本ファイルで選択してから実装する。 |
 | 8 | Situation Narration Layer | Add pure mock timeline, summary, cause, future-risk, script, and decision-prompt helpers; no audio/avatar/video generation. |
 | 9 | Observation Layer | Represent latency, cost, retry, queue, success/failure rate, and bottleneck state through safe derived metrics only. |
 | 10 | Edge Replay / Audit Layer | Continue using `traceAudit.edgeReplayRecords` and safe runtime events; add visual reconstruction candidates from safe metadata only. |

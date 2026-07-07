@@ -1,6 +1,50 @@
 # Project State
 
-Last updated: 2026-06-05
+Last updated: 2026-07-07
+
+---
+
+## Phase MVP Goal Correction: 認知HUD完成ゴール / Scratch統合原則の明文化
+
+- Branch: `claude/charming-sinoussi-a79c6e`
+- Date: 2026-07-07
+- Scope: ユーザーからのゴール訂正を受けた docs-only slice。`ACTIVE_PLAN.md` と `FIVE_PILLAR_MVP_ROADMAP.md` に「MVPに認知HUDを完成状態で載せる」を到達点として明文化し、認知HUD完成条件チェックリストと Scratch統合原則を追加する。product code の挙動、storage key、backend/API、credential storage、dependency、`docs/source-specs/**`、GitHub issue state は変更しない。
+
+### Implemented
+
+- `ACTIVE_PLAN.md` に「MVP Goal (2026-07-07 ゴール訂正)」セクションを追加した。
+  - 到達点は認知HUD(注意配分編集レイヤー)の完成状態。選別・圧縮・強調・通知・介入が L0〜L5 状態駆動で全画面に分散して機能する状態。
+  - safe projection / MVP surface は中間足場であり最終到達点ではない。
+  - `CONCEPT_CHECKLIST.md` の classification 慣行(未完成のものを完成と呼ばない)は維持する。
+- `ACTIVE_PLAN.md` の Current slice を完了済み slice 4 から slice 5 (Mock connector policy rail / review gate) へ繰り上げ、HUD完成ゴールへの位置づけを追記した。
+- `FIVE_PILLAR_MVP_ROADMAP.md` に「認知HUD完成条件チェックリスト」を追加した。
+  - L0〜L5 状態駆動の変換動作、PriorityScore、16表示要素(Focus Lens〜HUD History)、cross-surface orchestration、永続HUD設定の境界、完成状態でも不変の安全境界を記録した。
+- `FIVE_PILLAR_MVP_ROADMAP.md` に「Scratch統合原則」を追加した。
+  - 4原則(文法エラーレス / 即時フィードバック / low floor・high ceiling / tinkering & remix)、仕様書 §5.1 の要素対応表、認知HUDとの統合点、残ギャップ(スナップ誘導、無効接続の事前防止、部品の自己記述性、即時ステージ応答、remix完成)を記録した。
+- Phase 4 (Scratch Layer) と Phase 7 (Cognitive HUD Layer) の到達点記述を両ファイルで新セクション参照つきに強化した。
+- 補足: 次slice (Mock connector policy rail) の作業途中コードが working tree にあり、typecheck を通すため `buildHudNotificationBundle` の戻り値へ `connectorPolicyRail` を追加する最小補完のみ行った。slice 本体(UI/briefing/qa:direct 接続)は未コミットの継続作業。
+
+### Concept checklist classification
+
+- Classification: planning guardrail / goal correction / docs-only。
+- Cognitive HUD claim: 認知HUD完成を「ロードマップの到達点」として宣言した。現時点の実装が完成したという主張ではない。
+- Scratch claim: Scratch は操作原理(4原則)として組み込む方針を記録した。現実装は add/connect/select/delete の硬化まで。
+- Situation Assistant claim: 変更なし。
+- Safety: raw config / prompt / payload / artifact body / credential / token / password / API key の禁止境界は完成状態でも不変であることを明記した。
+- Persistence/API: 新 localStorage key、backend/API、credential storage、dependency は追加していない。
+
+### Validation
+
+- `npm run typecheck`: pass
+- `npm run lint`: pass
+- `npm run build`: pass, with existing Vite chunk-size warning.
+- Browser QA: docs-only のため対象外。
+
+### Remaining gaps
+
+- 認知HUD完成条件チェックリストの大部分(常時HUDバッジ、Focus Overlay、Path Dim、Approval Pending HUD、Failure Cause Card、Critical短音、HUD History、PriorityScore、永続HUD設定)は未実装であり、今後の slice で埋める。
+- Scratch統合原則の残ギャップ(スナップ誘導、無効接続の事前防止など)は今後の slice 候補。
+- Broad epics #31 / #34 / #37 / #46 は open のまま。
 
 ---
 
