@@ -7,7 +7,9 @@ import {
   type HudSnapshot,
 } from '../src/domain/cognitiveHud'
 import { collectBriefingInput } from '../src/domain/briefingInputCollector'
+import { buildConnectionSnapGuidance } from '../src/domain/connectionSnapGuidance'
 import { buildConnectorPolicyRailProjection } from '../src/domain/connectorPolicyRail'
+import { explainConnectionAttempt } from '../src/state/workflowSelectors'
 import {
   normalizeConnectionRuntimePolicy,
   resolveConnectionRuntimePolicyRoute,
@@ -636,6 +638,61 @@ export async function runDirectQaValidation(): Promise<DirectQaValidationResult>
   )
   assertNoForbiddenSentinels(connectorPolicyRail, 'fixed mock connector policy rail projection')
   checked.push('fixed mock connector policy rail projection')
+
+  const snapGuidance = buildConnectionSnapGuidance({
+    workflow,
+    source: { nodeId: 'node-normalize', portId: 'Context-out', handleType: 'source' },
+    validateAttempt: (attempt) => explainConnectionAttempt(workflow, attempt),
+  })
+  assert(snapGuidance !== null, 'snap guidance should be available for a valid source port')
+  assert(
+    snapGuidance.nodeRoles['node-normalize'] === 'source',
+    'snap guidance should mark the drag source node',
+  )
+  assert(
+    snapGuidance.nodeRoles['node-output'] === 'compatible',
+    'snap guidance should mark compatible target nodes',
+  )
+  assert(
+    snapGuidance.nodeRoles['node-input'] === 'incompatible',
+    'snap guidance should mark incompatible target nodes',
+  )
+  assert(
+    snapGuidance.portStates['node-output']?.['Context-in']?.compatible === true,
+    'snap guidance should mark the compatible target port',
+  )
+  assert(
+    snapGuidance.compatiblePortCount === 1 && snapGuidance.incompatibleNodeCount === 1,
+    'snap guidance should count compatible ports and incompatible nodes',
+  )
+  assert(
+    snapGuidance.firstReason !== null && snapGuidance.firstReason.includes('接続できません'),
+    'snap guidance should surface a shared invalid-connection reason',
+  )
+  assert(
+    snapGuidance.hudSummary.includes('snap誘導'),
+    'snap guidance should expose a HUD summary line',
+  )
+  const reverseSnapGuidance = buildConnectionSnapGuidance({
+    workflow,
+    source: { nodeId: 'node-output', portId: 'Context-in', handleType: 'target' },
+    validateAttempt: (attempt) => explainConnectionAttempt(workflow, attempt),
+  })
+  assert(
+    reverseSnapGuidance !== null &&
+      reverseSnapGuidance.nodeRoles['node-output'] === 'source' &&
+      reverseSnapGuidance.compatibleNodeCount >= 1,
+    'snap guidance should also work when dragging from a target handle',
+  )
+  const missingPortGuidance = buildConnectionSnapGuidance({
+    workflow,
+    source: { nodeId: 'node-normalize', portId: null, handleType: 'source' },
+    validateAttempt: (attempt) => explainConnectionAttempt(workflow, attempt),
+  })
+  assert(missingPortGuidance === null, 'snap guidance should be null without a source port')
+  assertNoForbiddenSentinels(snapGuidance, 'connection snap guidance projection')
+  assertNoForbiddenSentinels(reverseSnapGuidance, 'reverse connection snap guidance projection')
+  checked.push('connection snap guidance projection')
   const pinnedNotificationView = buildHudNotificationBundle({
     hudSnapshot,
     centralHudView: null,

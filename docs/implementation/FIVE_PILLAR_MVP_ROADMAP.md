@@ -128,8 +128,7 @@ Scratch操作の即時フィードバックは、認知HUDの表現チャネル(
 
 ### 残ギャップ(今後のslice候補)
 
-- ドラッグ中のスナップ誘導: 互換ポートだけ発光、非互換ポートを減光。
-- 無効接続の事前防止: 非互換ターゲットに「嵌まらない」インタラクション。
+- ~~ドラッグ中のスナップ誘導: 互換ポートだけ発光、非互換ポートを減光。~~ 実装済み(Scratch snap-guidance slice)。ドラッグ中の非互換接続拒否は React Flow `isValidConnection` + shared validator で既に成立している。
 - 部品の自己記述性: 部品カード上の入出力型バッジ・役割色。
 - 置いた瞬間のステージ応答: Run 前でも部品追加・接続時に軽量チェックが即反映。
 - Remix完成: 成功パターン / 失敗パターンのレシピ化(Phase 11)。
@@ -148,9 +147,9 @@ Every implementation slice must prove the following before commit/PR:
 
 ## Recently Implemented Slice
 
-**Mock connector policy rail / review gate slice**
+**Scratch snap-guidance / drag-time connection prevention slice**
 
-Result: `src/domain/connectorPolicyRail.ts` の pure helper が、Trigger / Action / Adapter / Retry / Error Route / Human Review / Rate Limit placeholder の7固定 mock policy entry を safe metadata のみから導出する。write 系 mock action (`output` / `template-save` / `run-log`) は Human Review Gate を必須とし、同じ projection を HUD Feed(履歴タブ・通知item・statusLine・safe copy)、Run Detail の `fixed mock connector policy rail` section、Human Review パネルの Write gate 境界表示、4D Text Briefing MVP(How / policyRail / policyGate)へ接続した。
+Result: `src/domain/connectionSnapGuidance.ts` の pure helper が、接続ドラッグ開始時に shared validator(`explainConnectionAttempt` を注入)で全ノード×対象ポートの互換性を導出する。互換ノードは発光・互換ポートは `接続可` バッジ、非互換ノードは減光、canvas status HUD にドラッグ中のみ `snap誘導: 互換ポート N 件` の live cue を表示し、ドラッグ終了で session-only state ごと消える。ドラッグ時点の非互換接続拒否は既存の React Flow `isValidConnection` + shared validator が担う。
 
 Boundaries:
 
@@ -159,20 +158,19 @@ Boundaries:
 - No expression evaluation.
 - No real API behavior.
 - Reducer/runtime behavior is unchanged.
-- Policy rail is a fixed mock policy projection; it does not become real connector behavior.
+- Snap guidance is session-only drag feedback; validation logic itself stays in shared selector/domain code.
 
 ## Next Slice Candidate
 
-After the mock connector policy rail slice, the preferred next implementation slice is:
+After the snap-guidance slice, the preferred next implementation slice is:
 
-**Scratch snap-guidance / drag-time connection prevention slice**
+**部品の自己記述性 slice(Scratch統合原則 第3原則)**
 
-Goal: 接続ドラッグ中に互換ポートを強調し非互換ポートを減光する snap 誘導を追加し、非互換接続を「作ってから警告」ではなく「ドラッグ時点で嵌まらない」方向へ寄せる(Scratch統合原則の第1・第2原則、認知HUDの強調・減光チャネルとの統合点)。
+Goal: PartsPalette カードと React Flow ノードカード上で、部品を見れば入出力型・役割・現在状態が分かる自己記述表示(型バッジ・役割色・状態の一貫表現)を強化し、HUD バッジ表現系と一貫させる。
 
 Boundaries:
 
-- Reuse current reducer/runtime/audit structures and shared `connectionValidation`.
+- Reuse current port metadata (`portRules`) and display label conventions.
 - Preserve Japanese labels and English identifiers.
-- Keep compatibility decisions in shared selector/domain logic.
 - Do not add real telemetry, credentials, dependencies, or storage keys.
-- Do not evaluate arbitrary expressions or raw payloads.
+- Do not display raw config, prompts, payloads, or credential-like values.

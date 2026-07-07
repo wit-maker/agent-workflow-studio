@@ -46,14 +46,14 @@ The selected active roadmap is **Five-Pillar MVP Roadmap**. The detail document 
 
 Current slice:
 
-6. **Scratch snap-guidance / drag-time connection prevention slice**
+7. **部品の自己記述性 slice(Scratch統合原則 第3原則)**
    - Issue alignment: #34, #37, #46.
-   - Goal: 接続ドラッグ中に互換ポートを強調し非互換ポートを減光する snap 誘導を追加し、非互換接続を「作ってから警告」ではなく「ドラッグ時点で嵌まらない」方向へ寄せる(Scratch統合原則の第1・第2原則)。
-   - Expected path: PartsPalette / React Flow drag -> shared connectionValidation -> HUD 強調・減光チャネル -> canvas status HUD -> Run Detail / 4D説明の safe summary。
-   - Constraint: reducer/runtime 置き換えなし、判定は shared selector/domain logic に置く、新 storage key なし、raw payload / credential なし。
-   - MVP Goal positioning: Scratch操作の即時フィードバックを認知HUDの表現チャネルと統合する、HUD完成ゴールへ向かう一歩である。
+   - Goal: PartsPalette カードと React Flow ノードカード上で、部品を見れば入出力型・役割・現在状態が分かる自己記述表示を強化する(型バッジ・役割色・状態の一貫表現)。
+   - Expected path: PartsPalette / NodeCard 表示 -> 型付きポートの safe metadata -> HUD バッジ表現系との一貫化 -> Browser QA。
+   - Constraint: reducer/runtime 置き換えなし、新 storage key なし、raw config / payload / credential なし、日本語ラベルと英語 identifier を維持。
+   - MVP Goal positioning: Scratch統合原則の残ギャップを埋める一歩であり、slice 単体で Scratch層完成を主張しない。
 
-Slice 4 (Scratch interaction hardening / connector rail QA) と Slice 5 (Mock connector policy rail / review gate) は完了済みで、Completed Plan Slices に記録されている。
+Slice 4 (Scratch interaction hardening) / Slice 5 (Mock connector policy rail) / Slice 6 (Scratch snap-guidance) は完了済みで、Completed Plan Slices に記録されている。
 
 Phase roadmap order:
 
@@ -94,6 +94,7 @@ Phase roadmap order:
 | Scratch connection feedback / mock connector state | Shared connection validation and current mock connector jobs now drive a safe Scratch/connector rail projection for HUD signals, Canvas command chips, HUD Feed, Run Detail, and 4D Text Briefing MVP without changing reducer/runtime/storage behavior. |
 | Scratch interaction hardening / connector rail QA | PartsPalette now separates card selection from the Add node command with semantic controls and session-only operation feedback. React Flow canvas status now names the safe Scratch operation rail and shows shared invalid-connection reasons without changing reducer/runtime/storage behavior. |
 | Mock connector policy rail / review gate | `buildConnectorPolicyRailProjection(...)` now derives the seven fixed mock policy entries (Trigger / Action / Adapter / Retry / Error Route / Human Review / Rate Limit placeholder) from safe metadata only, keeps write-like mock actions behind the Human Review Gate, and feeds the same projection to HUD Feed, Run Detail, Human Review write-gate boundary, and 4D Text Briefing MVP without new storage keys or raw payloads. |
+| Scratch snap-guidance / drag-time connection prevention | `buildConnectionSnapGuidance(...)` now derives session-only snap guidance from the shared `explainConnectionAttempt` validator during connection drags: compatible nodes/ports glow with 接続可 badges, incompatible nodes dim, and the canvas status HUD shows a live snap誘導 cue that clears when the drag ends. No reducer/runtime/storage change. |
 
 ## Plan Document Roles
 

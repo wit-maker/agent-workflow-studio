@@ -4,6 +4,61 @@ Last updated: 2026-07-07
 
 ---
 
+## Phase Scratch Snap-Guidance / Drag-Time Connection Prevention Slice
+
+- Branch: `claude/charming-sinoussi-a79c6e`
+- Date: 2026-07-07
+- Scope: Five-Pillar MVP Roadmap の現在sliceとして、接続ドラッグ中の snap 誘導(互換ポート発光 / 非互換減光 / live HUD cue)を session-only UI として実装する。Scratch統合原則の第1・第2原則と、認知HUDの強調・減光チャネルの統合点。新 localStorage key、backend/API、credential storage、dependency、`docs/source-specs/**`、GitHub issue state は変更しない。
+
+### Implemented
+
+- `src/domain/connectionSnapGuidance.ts` を追加し、`buildConnectionSnapGuidance(...)` を実装した。
+  - 判定ロジックは複製せず、shared validator(`explainConnectionAttempt`)を呼び出し側から注入する。
+  - source / target どちらの handle からのドラッグにも対応し、nodeRoles(source / compatible / incompatible)、per-port の互換状態と理由、互換ポート数、代表非互換理由、HUD用1行サマリーを返す。
+  - port が未指定の場合は null を返す。raw config / prompt / payload / credential は扱わない。
+- `ReactFlowWorkflowNodeData` に `snapRole` / `snapPortStates` を追加した(既定 null)。
+- `ReactFlowCanvas` の `onConnectStart` で guidance を導出して session state に保持し、`onConnectEnd` でクリアするようにした。ノード class(`snap-node-*` / 内部 `snap-*`)と per-port class を `buildFlowNodes` 経由で反映する。
+- canvas status HUD(接続状態HUD)にドラッグ中のみ `snap誘導: 互換ポート N 件 / 互換ノード M / 非互換ノード K` の `role="status"` cue を表示し、互換 0 件時は shared validator の代表理由を併記する。
+- `ReactFlowNode` の入出力ポート行と Handle に `snap-port-compatible` / `snap-port-dimmed` class と `接続可` バッジを追加した。
+- `src/index.css` に snap 用スタイルを追加した。既存 semantic-focus / path-dim と同系トーンを再利用し、新しい色体系は導入しない。Handle への `transform` 上書きは React Flow の位置決めを壊すため使用しない。
+- `qa:direct` に snap guidance の直接検証(source/compatible/incompatible 分類、per-port 互換、逆方向ドラッグ、port 未指定時 null、sentinel 非漏洩)を追加した。
+- `ACTIVE_PLAN.md` と `FIVE_PILLAR_MVP_ROADMAP.md` を更新し、今回sliceを完了として記録し、次slice候補を部品の自己記述性 slice に進めた。
+
+### Concept checklist classification
+
+- Classification: MVP Scratch operation surface / canvas attention behavior / session-only feedback。
+- Scratch claim: 第1原則(文法エラーレス)は既存 `isValidConnection` + shared validator で拒否済みの上に、第2原則(即時フィードバック)として「嵌まる場所」を可視化した。Scratch層全体の完成ではない。
+- Cognitive HUD claim: snap 誘導は HUD の強調・減光チャネルを操作フィードバックへ転用する attention behavior。Cognitive HUD 全体完成ではない。
+- Safety: raw config / prompt / payload / artifact body / credential / token / password / API key は表示・保存・copy しない。sentinel 検証済み。
+- Persistence/API: 新 localStorage key、backend/API、credential storage、dependency は追加していない。guidance は session-only React state。
+
+### Validation
+
+- `npm run typecheck`: pass
+- `npm run lint`: pass
+- `npm run build`: pass, with existing Vite chunk-size warning.
+- `npm run qa:direct`: pass(`connection snap guidance projection` を含む19チェック)
+- 実行環境: Node v22.20.0(デフォルト v16 では eslint/vite が動作しない)
+
+### Browser QA
+
+- Preview: `http://localhost:5199/`(Claude Preview 経由)
+- Initial render: 12ノード、13エッジ、接続状態HUD を確認した。
+- Snap guidance: 正規化ノードの出力 handle からの接続ドラッグ開始をシミュレートし、`snap誘導: 互換ポート 4 件 / 互換ノード 3 / 非互換ノード 8` cue、互換3ノード(ルーティング / AI実行 / 外部コネクタ)の `snap-compatible`、非互換8ノードの `snap-incompatible` 減光、`接続可` バッジ4件、connection line 表示を確認した。
+- Drag end: mouseup で cue / snap class / バッジ / connection line がすべて消え、エッジ13本の描画が維持されることを確認した。
+- Note: React Flow の handle への合成 mousedown イベントは自動化環境で発火しないため、Handle の React props を直接呼び出す方式でドラッグ開始を再現した。素の drag 自動化が難しい制約は既知(過去QA記録どおり)。
+- Note: preview 環境で `window.location.reload()` 後に ResizeObserver が発火せずノード計測が止まりエッジが消える現象を検出した(タブ再作成で解消)。変更前コードでも再現するため本sliceの regression ではない。
+- Safety: Browser text に `sk-live-direct-qa-secret` / `RAW_PROMPT_SENTINEL` / `RAW_PAYLOAD_SENTINEL` / `CREDENTIAL_SENTINEL` / `PASSWORD_SENTINEL` / `BEARER_SENTINEL` は出なかった。
+- Console errors: 0。External script/link/image asset: localhost 以外 0。
+
+### Remaining gaps
+
+- 減光/発光の視覚チューニング(色覚多様性対応、ズームレベル別の見え方)は今後の視覚QA候補。
+- 部品の自己記述性、置いた瞬間のステージ応答、Remix完成は Scratch統合原則の残ギャップとして未実装。
+- Broad epics #31 / #34 / #37 / #46 は open のまま。
+
+---
+
 ## Phase Mock Connector Policy Rail / Review Gate Slice
 
 - Branch: `claude/charming-sinoussi-a79c6e`
