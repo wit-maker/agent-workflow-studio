@@ -1200,6 +1200,7 @@ export function ReactFlowCanvas({
             }}
             onPaneClick={() => {
               onSelectConnectionId(null)
+              onSelectNode('')
               focusCanvasPanel()
             }}
             isValidConnection={isValidConnection}
