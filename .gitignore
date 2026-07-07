@@ -10,6 +10,7 @@ lerna-debug.log*
 node_modules/
 dist/
 .vite/
+.vite-qa-cache/
 .env
 .env.*
 !.env.example

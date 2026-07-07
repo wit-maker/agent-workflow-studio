@@ -5,6 +5,7 @@ import {
   type InlinePreview,
 } from './cognitiveHud'
 import { canCarryToInput } from './connectionRules'
+import type { SnapNodeRole, SnapPortState } from './connectionSnapGuidance'
 import { connectionKindLabels, connectionStatusLabels, formatDataTypeLabel } from './displayLabels'
 import { summarizeConnectionRuntimePolicy } from './edgeRuntimePolicy'
 import { findPort, getInputPorts, getOutputPorts, getUnconnectedRequiredInputPorts } from './portRules'
@@ -29,6 +30,8 @@ export type ReactFlowWorkflowNodeData = {
   connectionCount: number
   inlinePreview: InlinePreview
   focusRole: ReactFlowFocusRole
+  snapRole: SnapNodeRole | null
+  snapPortStates: Record<string, SnapPortState> | null
 }
 
 export type ReactFlowWorkflowNode = Node<ReactFlowWorkflowNodeData, typeof reactFlowNodeType>
@@ -232,6 +235,8 @@ export function toReactFlowNodes(
         connectionCount: connectionCountByNodeId.get(node.id) ?? 0,
         inlinePreview: buildInlinePreview(node),
         focusRole: 'normal',
+        snapRole: null,
+        snapPortStates: null,
       },
     }
   })

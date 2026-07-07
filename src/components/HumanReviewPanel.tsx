@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import type { ConnectorPolicyRailProjection } from '../domain/connectorPolicyRail'
 import { reviewDecisionLabels } from '../domain/displayLabels'
 import type { EvaluationResult, HumanReviewState, ReviewDecision } from '../domain/evaluation'
 import { buildReviewDecisionAuditBoundaryView } from '../domain/reviewDecisionAudit'
@@ -6,6 +7,7 @@ import { buildReviewDecisionAuditBoundaryView } from '../domain/reviewDecisionAu
 type HumanReviewPanelProps = {
   evaluation: EvaluationResult | undefined
   humanReview: HumanReviewState | undefined
+  policyRail?: ConnectorPolicyRailProjection | null
   onDecide: (decision: ReviewDecision, note: string) => void
   onRequestRebuild: (reason: string, instruction: string) => void
 }
@@ -13,6 +15,7 @@ type HumanReviewPanelProps = {
 export function HumanReviewPanel({
   evaluation,
   humanReview,
+  policyRail = null,
   onDecide,
   onRequestRebuild,
 }: HumanReviewPanelProps) {
@@ -65,6 +68,29 @@ export function HumanReviewPanel({
           </div>
         </dl>
       </div>
+
+      {policyRail ? (
+        <div className="hr-audit-boundary" aria-label="Write 系 mock action の gate 境界">
+          <span className="eyebrow">Write gate</span>
+          <strong>{policyRail.reviewGateLabel}</strong>
+          <p>{policyRail.reviewGateHint}</p>
+          <dl>
+            <div>
+              <dt>Fixed policy</dt>
+              <dd>
+                {policyRail.entries.find((entry) => entry.kind === 'human_review')?.fixedPolicy}
+              </dd>
+            </div>
+            <div>
+              <dt>Gate 対象</dt>
+              <dd>
+                write 系 node {policyRail.writeLikeNodeCount} 件 / gate 停止中 job{' '}
+                {policyRail.gatedWriteLikeJobCount} 件
+              </dd>
+            </div>
+          </dl>
+        </div>
+      ) : null}
 
       {!evaluation ? (
         <p className="muted">評価を実行してからレビューしてください。</p>

@@ -95,6 +95,8 @@ export type BriefingConnectorSummary = {
   reviewGateHint: string
   rateLimitHint: string
   templateHistoryHint: string
+  policyRailSummary: string
+  policyGateHint: string
   selectedEntries: string[]
 }
 

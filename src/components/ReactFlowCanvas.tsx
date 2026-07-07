@@ -9,6 +9,7 @@ import {
   type FinalConnectionState,
   type Node,
   type NodeChange,
+  type OnConnectStartParams,
   type ReactFlowInstance,
   type Viewport,
   type XYPosition,
@@ -26,6 +27,10 @@ import {
   type WorkflowGroupView,
   type ZoomHudView,
 } from '../domain/cognitiveHud'
+import {
+  buildConnectionSnapGuidance,
+  type ConnectionSnapGuidance,
+} from '../domain/connectionSnapGuidance'
 import {
   scaleNodePosition,
   toReactFlowEdges,
@@ -166,16 +171,27 @@ function buildFlowNodes(
   savedPositions: SavedReactFlowPositions,
   selectedNodeId: string,
   focusPath: FocusPathState,
+  snapGuidance: ConnectionSnapGuidance | null = null,
 ): ReactFlowWorkflowNode[] {
-  return toReactFlowNodes(workflow, buildNodePositions(workflow, savedPositions)).map((node) => ({
-    ...node,
-    selected: node.id === selectedNodeId,
-    className: `focus-node-${focusPath.nodeRoles.get(node.id) ?? 'normal'}`,
-    data: {
-      ...node.data,
-      focusRole: focusPath.nodeRoles.get(node.id) ?? 'normal',
-    },
-  }))
+  return toReactFlowNodes(workflow, buildNodePositions(workflow, savedPositions)).map((node) => {
+    const snapRole = snapGuidance ? snapGuidance.nodeRoles[node.id] ?? 'incompatible' : null
+    return {
+      ...node,
+      selected: node.id === selectedNodeId,
+      className: [
+        `focus-node-${focusPath.nodeRoles.get(node.id) ?? 'normal'}`,
+        snapRole ? `snap-node-${snapRole}` : '',
+      ]
+        .filter(Boolean)
+        .join(' '),
+      data: {
+        ...node.data,
+        focusRole: focusPath.nodeRoles.get(node.id) ?? 'normal',
+        snapRole,
+        snapPortStates: snapGuidance ? snapGuidance.portStates[node.id] ?? null : null,
+      },
+    }
+  })
 }
 
 function buildFocusPathState(
@@ -614,6 +630,7 @@ export function ReactFlowCanvas({
   )
   const [connectionNotice, setConnectionNotice] = useState<CanvasNotice | null>(null)
   const [deleteNotice, setDeleteNotice] = useState<string | null>(null)
+  const [snapGuidance, setSnapGuidance] = useState<ConnectionSnapGuidance | null>(null)
   const panelRef = useRef<HTMLElement | null>(null)
   const flowInstanceRef = useRef<ReactFlowInstance<ReactFlowWorkflowNode, Edge> | null>(null)
   const nodesRef = useRef(nodes)
@@ -632,11 +649,11 @@ export function ReactFlowCanvas({
   )
 
   useEffect(() => {
-    const next = buildFlowNodes(workflow, {}, selectedNodeId, focusPath)
+    const next = buildFlowNodes(workflow, {}, selectedNodeId, focusPath, snapGuidance)
     nodesRef.current = next
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setNodes(next)
-  }, [focusPath, selectedNodeId, workflow])
+  }, [focusPath, selectedNodeId, snapGuidance, workflow])
 
   useEffect(() => {
     if (selectedConnectionId && !effectiveSelectedConnectionId) {
@@ -1046,13 +1063,32 @@ export function ReactFlowCanvas({
     [onCreateConnection, workflow],
   )
 
-  const handleConnectStart = useCallback(() => {
-    rejectedConnectionReasonRef.current = null
-    setConnectionNotice(null)
-  }, [])
+  const handleConnectStart = useCallback(
+    (_event: MouseEvent | TouchEvent, params: OnConnectStartParams) => {
+      rejectedConnectionReasonRef.current = null
+      setConnectionNotice(null)
+      if (!params.nodeId || !params.handleType) {
+        setSnapGuidance(null)
+        return
+      }
+      setSnapGuidance(
+        buildConnectionSnapGuidance({
+          workflow,
+          source: {
+            nodeId: params.nodeId,
+            portId: params.handleId,
+            handleType: params.handleType,
+          },
+          validateAttempt: (attempt) => explainConnectionAttempt(workflow, attempt),
+        }),
+      )
+    },
+    [workflow],
+  )
 
   const handleConnectEnd = useCallback(
     (_event: MouseEvent | TouchEvent, connectionState: FinalConnectionState) => {
+      setSnapGuidance(null)
       if (connectionState.isValid !== false) {
         return
       }
@@ -1164,6 +1200,7 @@ export function ReactFlowCanvas({
             }}
             onPaneClick={() => {
               onSelectConnectionId(null)
+              onSelectNode('')
               focusCanvasPanel()
             }}
             isValidConnection={isValidConnection}
@@ -1196,6 +1233,14 @@ export function ReactFlowCanvas({
               </p>
             ) : null}
             {deleteNotice ? <p className="warning-text">{deleteNotice}</p> : null}
+            {snapGuidance ? (
+              <p className="canvas-status-rail snap-guidance-cue" role="status">
+                {snapGuidance.hudSummary}
+                {snapGuidance.compatiblePortCount === 0 && snapGuidance.firstReason
+                  ? ` / ${snapGuidance.firstReason}`
+                  : ''}
+              </p>
+            ) : null}
             <p className="canvas-status-rail">
               Scratch rail: select / add / connect / delete は session-only 操作です。mock connector 状態は safe metadata だけを HUD と Run Detail に渡します。
             </p>

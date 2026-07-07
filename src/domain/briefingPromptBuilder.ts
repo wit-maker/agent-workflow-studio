@@ -78,6 +78,8 @@ export function buildBriefingPrompt(input: BriefingInput): string {
     `- reviewGateHint: ${input.connectors.reviewGateHint}`,
     `- rateLimitHint: ${input.connectors.rateLimitHint}`,
     `- templateHistoryHint: ${input.connectors.templateHistoryHint}`,
+    `- policyRail: ${input.connectors.policyRailSummary}`,
+    `- policyGate: ${input.connectors.policyGateHint}`,
     formatLines(input.connectors.selectedEntries, '対象ジョブなし'),
     '',
     '## Run History',

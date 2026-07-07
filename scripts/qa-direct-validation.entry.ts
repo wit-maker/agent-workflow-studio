@@ -7,6 +7,9 @@ import {
   type HudSnapshot,
 } from '../src/domain/cognitiveHud'
 import { collectBriefingInput } from '../src/domain/briefingInputCollector'
+import { buildConnectionSnapGuidance } from '../src/domain/connectionSnapGuidance'
+import { buildConnectorPolicyRailProjection } from '../src/domain/connectorPolicyRail'
+import { explainConnectionAttempt } from '../src/state/workflowSelectors'
 import {
   normalizeConnectionRuntimePolicy,
   resolveConnectionRuntimePolicyRoute,
@@ -595,6 +598,101 @@ export async function runDirectQaValidation(): Promise<DirectQaValidationResult>
   )
   assertNoForbiddenSentinels(scratchConnectorFeedback, 'safe scratch connector feedback projection')
   checked.push('safe scratch connector feedback projection')
+
+  const connectorPolicyRail = buildConnectorPolicyRailProjection({
+    workflow,
+    connectorJobs,
+  })
+  assert(
+    connectorPolicyRail.entries.length === 7,
+    'connector policy rail should expose the seven fixed policy entries',
+  )
+  assert(
+    connectorPolicyRail.entries.map((entry) => entry.kind).join(',') ===
+      'trigger,action,adapter,retry,error_route,human_review,rate_limit',
+    'connector policy rail should keep the fixed policy order',
+  )
+  const humanReviewEntry = connectorPolicyRail.entries.find((entry) => entry.kind === 'human_review')
+  assert(
+    humanReviewEntry?.state === 'gated' && humanReviewEntry.count === 1,
+    'human review policy entry should gate the review_required mock job',
+  )
+  assert(
+    connectorPolicyRail.reviewGateState === 'waiting',
+    'connector policy rail review gate should wait on review_required jobs',
+  )
+  const retryEntry = connectorPolicyRail.entries.find((entry) => entry.kind === 'retry')
+  assert(
+    retryEntry?.state === 'attention' && retryEntry.count === 1,
+    'retry policy entry should mark the retry-ready failed mock job',
+  )
+  const actionEntry = connectorPolicyRail.entries.find((entry) => entry.kind === 'action')
+  assert(
+    actionEntry?.writeGateRequired === true,
+    'action policy entry should require the write gate when write-like nodes exist',
+  )
+  const errorRouteEntry = connectorPolicyRail.entries.find((entry) => entry.kind === 'error_route')
+  assert(
+    errorRouteEntry?.state === 'attention' && errorRouteEntry.count === 1,
+    'error route policy entry should surface failed mock jobs as safe metadata',
+  )
+  assertNoForbiddenSentinels(connectorPolicyRail, 'fixed mock connector policy rail projection')
+  checked.push('fixed mock connector policy rail projection')
+
+  const snapGuidance = buildConnectionSnapGuidance({
+    workflow,
+    source: { nodeId: 'node-normalize', portId: 'Context-out', handleType: 'source' },
+    validateAttempt: (attempt) => explainConnectionAttempt(workflow, attempt),
+  })
+  assert(snapGuidance !== null, 'snap guidance should be available for a valid source port')
+  assert(
+    snapGuidance.nodeRoles['node-normalize'] === 'source',
+    'snap guidance should mark the drag source node',
+  )
+  assert(
+    snapGuidance.nodeRoles['node-output'] === 'compatible',
+    'snap guidance should mark compatible target nodes',
+  )
+  assert(
+    snapGuidance.nodeRoles['node-input'] === 'incompatible',
+    'snap guidance should mark incompatible target nodes',
+  )
+  assert(
+    snapGuidance.portStates['node-output']?.['Context-in']?.compatible === true,
+    'snap guidance should mark the compatible target port',
+  )
+  assert(
+    snapGuidance.compatiblePortCount === 1 && snapGuidance.incompatibleNodeCount === 1,
+    'snap guidance should count compatible ports and incompatible nodes',
+  )
+  assert(
+    snapGuidance.firstReason !== null && snapGuidance.firstReason.includes('接続できません'),
+    'snap guidance should surface a shared invalid-connection reason',
+  )
+  assert(
+    snapGuidance.hudSummary.includes('snap誘導'),
+    'snap guidance should expose a HUD summary line',
+  )
+  const reverseSnapGuidance = buildConnectionSnapGuidance({
+    workflow,
+    source: { nodeId: 'node-output', portId: 'Context-in', handleType: 'target' },
+    validateAttempt: (attempt) => explainConnectionAttempt(workflow, attempt),
+  })
+  assert(
+    reverseSnapGuidance !== null &&
+      reverseSnapGuidance.nodeRoles['node-output'] === 'source' &&
+      reverseSnapGuidance.compatibleNodeCount >= 1,
+    'snap guidance should also work when dragging from a target handle',
+  )
+  const missingPortGuidance = buildConnectionSnapGuidance({
+    workflow,
+    source: { nodeId: 'node-normalize', portId: null, handleType: 'source' },
+    validateAttempt: (attempt) => explainConnectionAttempt(workflow, attempt),
+  })
+  assert(missingPortGuidance === null, 'snap guidance should be null without a source port')
+  assertNoForbiddenSentinels(snapGuidance, 'connection snap guidance projection')
+  assertNoForbiddenSentinels(reverseSnapGuidance, 'reverse connection snap guidance projection')
+  checked.push('connection snap guidance projection')
   const pinnedNotificationView = buildHudNotificationBundle({
     hudSnapshot,
     centralHudView: null,
@@ -602,6 +700,7 @@ export async function runDirectQaValidation(): Promise<DirectQaValidationResult>
     runHistoryRecords: [leftRecord, rightRecord],
     flowPressure,
     scratchConnectorFeedback,
+    connectorPolicyRail,
     notificationSessionState: {
       'signal-normalize-review': { read: true, pinned: true },
     },
@@ -620,6 +719,10 @@ export async function runDirectQaValidation(): Promise<DirectQaValidationResult>
   assert(
     pinnedNotificationView.scratchConnectorFeedback.level === 'error-route',
     'HUD notification bundle should carry scratch connector feedback projection',
+  )
+  assert(
+    pinnedNotificationView.connectorPolicyRail.reviewGateState === 'waiting',
+    'HUD notification bundle should carry the connector policy rail projection',
   )
   assert(
     pinnedNotificationView.unreadNotificationCount >= 1,
@@ -665,6 +768,14 @@ export async function runDirectQaValidation(): Promise<DirectQaValidationResult>
       briefingInput.connectors.retryReady === 1 &&
       briefingInput.connectors.railSummary.includes('mock connector rail'),
     'briefing input should include safe scratch connector rail metadata',
+  )
+  assert(
+    briefingInput.connectors.policyRailSummary.includes('mock connector policy rail'),
+    'briefing input should include the fixed mock connector policy rail summary',
+  )
+  assert(
+    briefingInput.connectors.policyGateHint.includes('Human Review Gate'),
+    'briefing input should include the write gate hint',
   )
   assertNoForbiddenSentinels(briefingInput.runtimeReplay, 'briefing runtime replay flow pressure input')
   assertNoForbiddenSentinels(briefingInput.connectors, 'briefing scratch connector rail input')

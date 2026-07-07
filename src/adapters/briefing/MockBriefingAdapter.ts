@@ -110,7 +110,8 @@ function buildHow(input: BriefingInput): string {
     input.connectors.reviewRequired > 0
   ) {
     return truncateSentence(
-      `確認待ちの判断を先に行い、承認、差し戻し、スキップのどれで進めるかを決めてください。${input.connectors.reviewGateHint}`,
+      `確認待ちの判断を先に行い、承認、差し戻し、スキップのどれで進めるかを決めてください。${input.connectors.policyGateHint}`,
+      180,
     )
   }
 
@@ -183,8 +184,8 @@ function buildReplayCue(input: BriefingInput): string {
   }
 
   return truncateSentence(
-    `runtime event は ${replay.eventCount} 件です。${replay.flowPressureSummary} ${input.connectors.railSummary} ${replay.templateHistoryHint}`,
-    180,
+    `runtime event は ${replay.eventCount} 件です。${replay.flowPressureSummary} ${input.connectors.policyRailSummary} ${replay.templateHistoryHint}`,
+    200,
   )
 }
 

@@ -1,6 +1,164 @@
 # Project State
 
-Last updated: 2026-06-05
+Last updated: 2026-07-07
+
+---
+
+## Phase Scratch Snap-Guidance / Drag-Time Connection Prevention Slice
+
+- Branch: `claude/charming-sinoussi-a79c6e`
+- Date: 2026-07-07
+- Scope: Five-Pillar MVP Roadmap の現在sliceとして、接続ドラッグ中の snap 誘導(互換ポート発光 / 非互換減光 / live HUD cue)を session-only UI として実装する。Scratch統合原則の第1・第2原則と、認知HUDの強調・減光チャネルの統合点。新 localStorage key、backend/API、credential storage、dependency、`docs/source-specs/**`、GitHub issue state は変更しない。
+
+### Implemented
+
+- `src/domain/connectionSnapGuidance.ts` を追加し、`buildConnectionSnapGuidance(...)` を実装した。
+  - 判定ロジックは複製せず、shared validator(`explainConnectionAttempt`)を呼び出し側から注入する。
+  - source / target どちらの handle からのドラッグにも対応し、nodeRoles(source / compatible / incompatible)、per-port の互換状態と理由、互換ポート数、代表非互換理由、HUD用1行サマリーを返す。
+  - port が未指定の場合は null を返す。raw config / prompt / payload / credential は扱わない。
+- `ReactFlowWorkflowNodeData` に `snapRole` / `snapPortStates` を追加した(既定 null)。
+- `ReactFlowCanvas` の `onConnectStart` で guidance を導出して session state に保持し、`onConnectEnd` でクリアするようにした。ノード class(`snap-node-*` / 内部 `snap-*`)と per-port class を `buildFlowNodes` 経由で反映する。
+- canvas status HUD(接続状態HUD)にドラッグ中のみ `snap誘導: 互換ポート N 件 / 互換ノード M / 非互換ノード K` の `role="status"` cue を表示し、互換 0 件時は shared validator の代表理由を併記する。
+- `ReactFlowNode` の入出力ポート行と Handle に `snap-port-compatible` / `snap-port-dimmed` class と `接続可` バッジを追加した。
+- `src/index.css` に snap 用スタイルを追加した。既存 semantic-focus / path-dim と同系トーンを再利用し、新しい色体系は導入しない。Handle への `transform` 上書きは React Flow の位置決めを壊すため使用しない。
+- `qa:direct` に snap guidance の直接検証(source/compatible/incompatible 分類、per-port 互換、逆方向ドラッグ、port 未指定時 null、sentinel 非漏洩)を追加した。
+- `ACTIVE_PLAN.md` と `FIVE_PILLAR_MVP_ROADMAP.md` を更新し、今回sliceを完了として記録し、次slice候補を部品の自己記述性 slice に進めた。
+
+### Concept checklist classification
+
+- Classification: MVP Scratch operation surface / canvas attention behavior / session-only feedback。
+- Scratch claim: 第1原則(文法エラーレス)は既存 `isValidConnection` + shared validator で拒否済みの上に、第2原則(即時フィードバック)として「嵌まる場所」を可視化した。Scratch層全体の完成ではない。
+- Cognitive HUD claim: snap 誘導は HUD の強調・減光チャネルを操作フィードバックへ転用する attention behavior。Cognitive HUD 全体完成ではない。
+- Safety: raw config / prompt / payload / artifact body / credential / token / password / API key は表示・保存・copy しない。sentinel 検証済み。
+- Persistence/API: 新 localStorage key、backend/API、credential storage、dependency は追加していない。guidance は session-only React state。
+
+### Validation
+
+- `npm run typecheck`: pass
+- `npm run lint`: pass
+- `npm run build`: pass, with existing Vite chunk-size warning.
+- `npm run qa:direct`: pass(`connection snap guidance projection` を含む19チェック)
+- 実行環境: Node v22.20.0(デフォルト v16 では eslint/vite が動作しない)
+
+### Browser QA
+
+- Preview: `http://localhost:5199/`(Claude Preview 経由)
+- Initial render: 12ノード、13エッジ、接続状態HUD を確認した。
+- Snap guidance: 正規化ノードの出力 handle からの接続ドラッグ開始をシミュレートし、`snap誘導: 互換ポート 4 件 / 互換ノード 3 / 非互換ノード 8` cue、互換3ノード(ルーティング / AI実行 / 外部コネクタ)の `snap-compatible`、非互換8ノードの `snap-incompatible` 減光、`接続可` バッジ4件、connection line 表示を確認した。
+- Drag end: mouseup で cue / snap class / バッジ / connection line がすべて消え、エッジ13本の描画が維持されることを確認した。
+- Note: React Flow の handle への合成 mousedown イベントは自動化環境で発火しないため、Handle の React props を直接呼び出す方式でドラッグ開始を再現した。素の drag 自動化が難しい制約は既知(過去QA記録どおり)。
+- Note: preview 環境で `window.location.reload()` 後に ResizeObserver が発火せずノード計測が止まりエッジが消える現象を検出した(タブ再作成で解消)。変更前コードでも再現するため本sliceの regression ではない。
+- Safety: Browser text に `sk-live-direct-qa-secret` / `RAW_PROMPT_SENTINEL` / `RAW_PAYLOAD_SENTINEL` / `CREDENTIAL_SENTINEL` / `PASSWORD_SENTINEL` / `BEARER_SENTINEL` は出なかった。
+- Console errors: 0。External script/link/image asset: localhost 以外 0。
+
+### Remaining gaps
+
+- 減光/発光の視覚チューニング(色覚多様性対応、ズームレベル別の見え方)は今後の視覚QA候補。
+- 部品の自己記述性、置いた瞬間のステージ応答、Remix完成は Scratch統合原則の残ギャップとして未実装。
+- Broad epics #31 / #34 / #37 / #46 は open のまま。
+
+---
+
+## Phase Mock Connector Policy Rail / Review Gate Slice
+
+- Branch: `claude/charming-sinoussi-a79c6e`
+- Date: 2026-07-07
+- Scope: Five-Pillar MVP Roadmap の現在sliceとして、Trigger / Action / Adapter / Retry / Error Route / Human Review / Rate Limit placeholder の固定 mock connector policy 状態を明示化し、write 系 mock action を Human Review Gate の背後に留める。新 localStorage key、backend/API、credential storage、dependency、`docs/source-specs/**`、GitHub issue state は変更しない。
+
+### Implemented
+
+- `src/domain/connectorPolicyRail.ts` を追加し、`buildConnectorPolicyRailProjection(...)` を実装した。
+  - 入力は `Workflow` の node type / connection runtimePolicy、`ConnectorJob` の safe status、`HumanReviewState.decision` のみ。
+  - Trigger / Action / Adapter / Retry / Error Route / Human Review / Rate Limit placeholder の7固定 entry(固定 policy 文 + 状態 + count + writeGateRequired)を導出する。
+  - write 系 node (`output` / `template-save` / `run-log`) は Human Review Gate 必須として扱う。
+  - review gate state(idle / waiting / decided)、railSummary、reviewGateHint、nextAction、templateHistoryHint、safeCopySummary を返す。
+  - raw config / prompt / payload / artifact body / credential / token / password / API key は扱わない。
+- `buildHudNotificationBundle(...)` に `connectorPolicyRail` を接続した。HUD Feed の statusLine、safe copy summary、履歴タブの Policy rail / Policy gate / Policy template-history hint 行、priority が normal でないときの通知 item に反映される。
+- `GameHudShell` で projection を1回導出し、HUD Feed へ渡すようにした。
+- `RunDetailPanel` に `fixed mock connector policy rail` section を追加し、7 entry の状態・count・gate必須表示と reviewGateHint / templateHistoryHint / nextAction を表示するようにした。
+- `HumanReviewPanel` に Write gate 境界ブロックを追加した(gate 状態、fixed policy、write 系 node 件数、gate 停止中 write 系 job 件数)。`WorkspaceRightPanel` が workflow / connectorJobs / humanReview から projection を渡す。
+- `BriefingConnectorSummary` に `policyRailSummary` / `policyGateHint` を追加し、`collectBriefingInput(...)`、`briefingPromptBuilder`、`MockBriefingAdapter` の How / Replay cue へ接続した。
+- `qa:direct` に fixed mock connector policy rail projection の検証(7固定entry・順序、review gate waiting、retry attention、write gate required、error route attention、HUD bundle 伝搬、briefing input 伝搬、sentinel 非漏洩)を追加した。
+- `ACTIVE_PLAN.md` と `FIVE_PILLAR_MVP_ROADMAP.md` を更新し、今回sliceを完了として記録し、次slice候補を Scratch snap-guidance / drag-time connection prevention に進めた。
+
+### Concept checklist classification
+
+- Classification: safe projection / MVP surface / detail-history surface / MVP briefing input。
+- Mock connector claim: policy rail は固定 mock policy の view-model projection。実 connector behavior、実API、credential は追加していない。
+- Cognitive HUD claim: policy rail は注意配分入力の safe projection であり、HUD完成ゴールへの一歩。Cognitive HUD 全体完成ではない。
+- Human Review claim: Write gate 表示は境界説明。durable approval record は未実装のまま。
+- Situation Assistant claim: 4D Text Briefing MVP へ safe summary を渡すのみ。音声/アバター/動画生成はしない。
+- Safety: raw config / prompt / payload / artifact body / credential / token / password / API key は表示・保存・copy しない。sentinel 検証済み。
+- Persistence/API: 新 localStorage key、backend/API、credential storage、dependency は追加していない。
+
+### Validation
+
+- `npm run typecheck`: pass
+- `npm run lint`: pass
+- `npm run build`: pass, with existing Vite chunk-size warning.
+- `npm run qa:direct`: pass(`fixed mock connector policy rail projection` を含む18チェック)
+- 実行環境: Node v22.20.0(デフォルト v16 では eslint/vite が動作しないため)
+
+### Browser QA
+
+- Preview: `http://localhost:5199/`(Claude Preview 経由)
+- Initial render: app title、React Flow 12ノード、接続状態HUD、command HUD を確認した。
+- Run: `Run` 実行後、Run Detail に `fixed mock connector policy rail` section が表示され、7 entry(Trigger 準備完了 / Action Review gate・gate必須 / Adapter 準備完了 / Retry 待機 / Error Route 待機 / Human Review Review gate / Rate Limit 待機)と `gate 判断待ち` を確認した。
+- HUD Feed: `N4` -> `履歴` で `Policy rail:` / `Policy gate:` / `Policy template/history hint:` 行を確認した。
+- Human Review: `D` -> `レビュー` で `Write gate` ブロック(gate 判断待ち、fixed policy、write 系 node 3 件)を確認した。文言不整合(確認待ち job と write 系 job の混同)を QA 中に検出し、`確認待ち mock job を N 件(うち write 系 M 件)` へ修正した。
+- 4D Text Briefing MVP: `4D説明` で mock briefing を生成し、How に policy gate hint が入ることを確認した。
+- Safety: Browser text に `sk-live-direct-qa-secret` / `RAW_PROMPT_SENTINEL` / `RAW_PAYLOAD_SENTINEL` / `CREDENTIAL_SENTINEL` / `PASSWORD_SENTINEL` / `BEARER_SENTINEL` は出なかった。
+- Console errors: 0。External script/link/image asset: localhost 以外 0。
+
+### Remaining gaps
+
+- policy rail は隣接する固定 mock policy の説明・投影であり、実 enforcement の拡張(例: write 系 job を gate 未通過時に実際へ止める mock run loop 接続)は今後のslice候補。
+- 認知HUD完成条件チェックリスト、Scratch統合原則の残ギャップは未達のまま(ロードマップ参照)。
+- Broad epics #31 / #34 / #37 / #46 は open のまま。
+
+---
+
+## Phase MVP Goal Correction: 認知HUD完成ゴール / Scratch統合原則の明文化
+
+- Branch: `claude/charming-sinoussi-a79c6e`
+- Date: 2026-07-07
+- Scope: ユーザーからのゴール訂正を受けた docs-only slice。`ACTIVE_PLAN.md` と `FIVE_PILLAR_MVP_ROADMAP.md` に「MVPに認知HUDを完成状態で載せる」を到達点として明文化し、認知HUD完成条件チェックリストと Scratch統合原則を追加する。product code の挙動、storage key、backend/API、credential storage、dependency、`docs/source-specs/**`、GitHub issue state は変更しない。
+
+### Implemented
+
+- `ACTIVE_PLAN.md` に「MVP Goal (2026-07-07 ゴール訂正)」セクションを追加した。
+  - 到達点は認知HUD(注意配分編集レイヤー)の完成状態。選別・圧縮・強調・通知・介入が L0〜L5 状態駆動で全画面に分散して機能する状態。
+  - safe projection / MVP surface は中間足場であり最終到達点ではない。
+  - `CONCEPT_CHECKLIST.md` の classification 慣行(未完成のものを完成と呼ばない)は維持する。
+- `ACTIVE_PLAN.md` の Current slice を完了済み slice 4 から slice 5 (Mock connector policy rail / review gate) へ繰り上げ、HUD完成ゴールへの位置づけを追記した。
+- `FIVE_PILLAR_MVP_ROADMAP.md` に「認知HUD完成条件チェックリスト」を追加した。
+  - L0〜L5 状態駆動の変換動作、PriorityScore、16表示要素(Focus Lens〜HUD History)、cross-surface orchestration、永続HUD設定の境界、完成状態でも不変の安全境界を記録した。
+- `FIVE_PILLAR_MVP_ROADMAP.md` に「Scratch統合原則」を追加した。
+  - 4原則(文法エラーレス / 即時フィードバック / low floor・high ceiling / tinkering & remix)、仕様書 §5.1 の要素対応表、認知HUDとの統合点、残ギャップ(スナップ誘導、無効接続の事前防止、部品の自己記述性、即時ステージ応答、remix完成)を記録した。
+- Phase 4 (Scratch Layer) と Phase 7 (Cognitive HUD Layer) の到達点記述を両ファイルで新セクション参照つきに強化した。
+- 補足: 次slice (Mock connector policy rail) の作業途中コードが working tree にあり、typecheck を通すため `buildHudNotificationBundle` の戻り値へ `connectorPolicyRail` を追加する最小補完のみ行った。slice 本体(UI/briefing/qa:direct 接続)は未コミットの継続作業。
+
+### Concept checklist classification
+
+- Classification: planning guardrail / goal correction / docs-only。
+- Cognitive HUD claim: 認知HUD完成を「ロードマップの到達点」として宣言した。現時点の実装が完成したという主張ではない。
+- Scratch claim: Scratch は操作原理(4原則)として組み込む方針を記録した。現実装は add/connect/select/delete の硬化まで。
+- Situation Assistant claim: 変更なし。
+- Safety: raw config / prompt / payload / artifact body / credential / token / password / API key の禁止境界は完成状態でも不変であることを明記した。
+- Persistence/API: 新 localStorage key、backend/API、credential storage、dependency は追加していない。
+
+### Validation
+
+- `npm run typecheck`: pass
+- `npm run lint`: pass
+- `npm run build`: pass, with existing Vite chunk-size warning.
+- Browser QA: docs-only のため対象外。
+
+### Remaining gaps
+
+- 認知HUD完成条件チェックリストの大部分(常時HUDバッジ、Focus Overlay、Path Dim、Approval Pending HUD、Failure Cause Card、Critical短音、HUD History、PriorityScore、永続HUD設定)は未実装であり、今後の slice で埋める。
+- Scratch統合原則の残ギャップ(スナップ誘導、無効接続の事前防止など)は今後の slice 候補。
+- Broad epics #31 / #34 / #37 / #46 は open のまま。
 
 ---
 
