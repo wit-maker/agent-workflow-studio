@@ -26,9 +26,9 @@ export function WorkflowGroupLayer({ workflow, groups }: WorkflowGroupLayerProps
         {groups.map((group) => {
           const sizedPositions = group.nodeIds
             .map((nodeId) => nodesById.get(nodeId))
-            .filter((node) => node !== undefined)
+            .filter((node): node is NonNullable<typeof node> => node !== undefined)
             .map((node) => {
-              const measured = measuredById.get(node.id)?.measured
+              const measured = measuredById?.get(node.id)?.measured
               return {
                 position: scaleNodePosition(node.position),
                 width: measured?.width ?? NODE_WIDTH,

@@ -26,7 +26,7 @@ const categoryToneMap: Record<NodeCategory, NodeVisualTone> = {
 }
 
 export function categoryToTone(category: string): NodeVisualTone {
-  return categoryToneMap[category as NodeCategory] ?? 'execute'
+  return (categoryToneMap as Record<string, NodeVisualTone>)[category] ?? 'execute'
 }
 
 export type AgentRoleTone = NodeVisualTone | 'neutral'
