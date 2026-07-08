@@ -5547,6 +5547,56 @@ body:has(.game-hud-workspace) #root {
   filter: saturate(0.58);
 }
 
+/* Scratch snap guidance — 接続ドラッグ中のみ付与される session-only class。
+   互換先は発光、非互換は減光して「嵌まる場所」を見せる。 */
+.react-flow-node.snap-source {
+  border-color: rgba(103, 232, 249, 0.72);
+  box-shadow:
+    0 0 0 1px rgba(103, 232, 249, 0.24),
+    0 18px 40px rgba(8, 47, 73, 0.32);
+}
+
+.react-flow-node.snap-compatible {
+  border-color: rgba(52, 211, 153, 0.78);
+  box-shadow:
+    0 0 0 1px rgba(52, 211, 153, 0.32),
+    0 0 22px rgba(52, 211, 153, 0.2),
+    0 18px 42px rgba(8, 47, 73, 0.34);
+}
+
+.react-flow-node.snap-incompatible {
+  opacity: 0.34;
+  filter: saturate(0.5);
+}
+
+.react-flow-port-row.snap-port-compatible {
+  border-color: rgba(52, 211, 153, 0.6);
+  background: rgba(52, 211, 153, 0.1);
+}
+
+.react-flow-port-row.snap-port-dimmed {
+  opacity: 0.45;
+}
+
+.react-flow-handle.snap-port-compatible {
+  border-color: rgba(52, 211, 153, 0.95);
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.65);
+}
+
+.react-flow-port-snap-ok {
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--green);
+  background: rgba(52, 211, 153, 0.18);
+}
+
+.canvas-status-hud .snap-guidance-cue {
+  color: rgba(52, 211, 153, 0.95);
+  font-weight: 700;
+}
+
 .react-flow-canvas-root .react-flow__edge.focus-path-edge .react-flow__edge-path,
 .react-flow-canvas-root .react-flow__edge.focus-selected-edge .react-flow__edge-path {
   filter: drop-shadow(0 0 6px rgba(103, 232, 249, 0.38));

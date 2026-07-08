@@ -5,6 +5,7 @@ import {
   type HudSignal,
   type HudSnapshot,
 } from './cognitiveHud'
+import { buildConnectorPolicyRailProjection } from './connectorPolicyRail'
 import type {
   BriefingConnectorSummary,
   BriefingHudSummary,
@@ -315,6 +316,10 @@ function summarizeConnectors(
     connectionValidation,
     connectorJobs: scopedJobs,
   })
+  const policyRail = buildConnectorPolicyRailProjection({
+    workflow,
+    connectorJobs: scopedJobs,
+  })
 
   return {
     total: scopedJobs.length,
@@ -332,6 +337,10 @@ function summarizeConnectors(
       sanitizeBriefingText(scratchFeedback.rateLimitHint) ?? 'rate limit placeholder hint なし',
     templateHistoryHint:
       sanitizeBriefingText(scratchFeedback.templateHistoryHint) ?? 'template/history hint なし',
+    policyRailSummary:
+      sanitizeBriefingText(policyRail.railSummary) ?? 'mock connector policy rail summary なし',
+    policyGateHint:
+      sanitizeBriefingText(policyRail.reviewGateHint) ?? 'policy gate hint なし',
     selectedEntries,
   }
 }

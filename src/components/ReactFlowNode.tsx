@@ -37,7 +37,20 @@ export function ReactFlowNode({
     connectionCount,
     inlinePreview,
     focusRole,
+    snapRole,
+    snapPortStates,
   } = data
+
+  const snapPortClass = (portId: string): string => {
+    if (!snapPortStates) {
+      return ''
+    }
+    const state = snapPortStates[portId]
+    if (!state) {
+      return ''
+    }
+    return state.compatible ? 'snap-port-compatible' : 'snap-port-dimmed'
+  }
 
   const badge = nodeHudBadge(node.status)
   const semanticBadge =
@@ -50,7 +63,7 @@ export function ReactFlowNode({
 
   return (
     <div
-      className={`react-flow-node node-${node.status} node-type-accent-${categoryTone} focus-${focusRole} ${selected ? 'selected' : ''}`}
+      className={`react-flow-node node-${node.status} node-type-accent-${categoryTone} focus-${focusRole} ${snapRole ? `snap-${snapRole}` : ''} ${selected ? 'selected' : ''}`}
       aria-label={`${node.title} ノード`}
     >
       {semanticBadge ? (
@@ -97,13 +110,13 @@ export function ReactFlowNode({
               return (
                 <div
                   key={port.id}
-                  className={`react-flow-port-row react-flow-port-row-input ${unconnectedRequired ? 'required-missing' : connected ? 'connected' : ''}`}
+                  className={`react-flow-port-row react-flow-port-row-input ${unconnectedRequired ? 'required-missing' : connected ? 'connected' : ''} ${snapPortClass(port.id)}`}
                 >
                   <Handle
                     id={port.id}
                     type="target"
                     position={Position.Left}
-                    className="react-flow-handle react-flow-handle-target"
+                    className={`react-flow-handle react-flow-handle-target ${snapPortClass(port.id)}`}
                   />
                   <div className="react-flow-port-copy">
                     <div className="react-flow-port-line">
@@ -123,6 +136,9 @@ export function ReactFlowNode({
                     >
                       {required ? '必須' : '任意'}
                     </span>
+                    {snapPortStates?.[port.id]?.compatible ? (
+                      <span className="react-flow-port-snap-ok">接続可</span>
+                    ) : null}
                     {unconnectedRequired ? (
                       <span className="react-flow-port-warning">未接続</span>
                     ) : connected ? (
@@ -145,7 +161,7 @@ export function ReactFlowNode({
             outputPorts.map((port) => (
               <div
                 key={port.id}
-                className={`react-flow-port-row react-flow-port-row-output ${connectedOutputPortIds.includes(port.id) ? 'connected' : ''}`}
+                className={`react-flow-port-row react-flow-port-row-output ${connectedOutputPortIds.includes(port.id) ? 'connected' : ''} ${snapPortClass(port.id)}`}
               >
                 <div className="react-flow-port-copy">
                   <div className="react-flow-port-line">
@@ -165,6 +181,9 @@ export function ReactFlowNode({
                   >
                     {port.required ? '必須' : '任意'}
                   </span>
+                  {snapPortStates?.[port.id]?.compatible ? (
+                    <span className="react-flow-port-snap-ok">接続可</span>
+                  ) : null}
                   {connectedOutputPortIds.includes(port.id) ? (
                     <span className="react-flow-port-connected">接続済み</span>
                   ) : null}
@@ -173,7 +192,7 @@ export function ReactFlowNode({
                   id={port.id}
                   type="source"
                   position={Position.Right}
-                  className="react-flow-handle react-flow-handle-source"
+                  className={`react-flow-handle react-flow-handle-source ${snapPortClass(port.id)}`}
                 />
               </div>
             ))

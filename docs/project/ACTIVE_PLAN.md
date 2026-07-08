@@ -1,6 +1,6 @@
 # Active Plan
 
-Last updated: 2026-06-05
+Last updated: 2026-07-07
 
 ## Purpose
 
@@ -30,27 +30,25 @@ GitHub currently has four open broad product epics. They are source inputs for p
 
 Runtime Audit remains a detail backlog in `docs/implementation/runtime-audit-next-phase.md`. It becomes active only when this file selects a slice that advances #37 or #46 through Runtime Audit work.
 
+## MVP Goal (2026-07-07 ゴール訂正)
+
+このロードマップの到達点は、**MVPに認知HUD(注意配分編集レイヤー)を完成状態で載せること**である。
+
+- 完成状態とは、選別・圧縮・強調・通知・介入が L0〜L5 の状態駆動で、Canvas / Inspector / Console / モーダル / 通知を含む全画面に分散して機能する状態を指す。完成条件の詳細チェックリストは `docs/implementation/FIVE_PILLAR_MVP_ROADMAP.md` の「認知HUD完成条件チェックリスト」を参照する。
+- これまでの safe projection / MVP surface は、この完成状態へ向かう中間足場であり、最終到達点ではない。
+- ただし各スライスの classification 慣行(`CONCEPT_CHECKLIST.md`)は維持する。「個々のスライスは HUD 完成を主張しない」ことと「ロードマップの到達点は HUD 完成」は両立する。
+- Scratch の設計思想(文法エラーレス操作 / 即時フィードバック / low floor・high ceiling / tinkering & remix)は操作レイヤーの設計原理として組み込み、認知HUDと表現チャネルを共有する。詳細は同 roadmap doc の「Scratch統合原則」を参照する。
+- Safety Boundary(raw config / prompt / payload / credential 等の禁止)は完成状態でも不変である。
+
 ## Current Recommended Order
 
 The selected active roadmap is **Five-Pillar MVP Roadmap**. The detail document is `docs/implementation/FIVE_PILLAR_MVP_ROADMAP.md`.
 
 Current slice:
 
-5. **Parts self-description / type badge & role color unification slice**
-   - Issue alignment: #34, #37, #46 (Phase 4: Scratch Layer).
-   - Goal: give every part its own visible category (type) and agent-role signal wherever it is shown — PartsPalette part cards, `NodeCard` (standard canvas), and `ReactFlowNode` (React Flow canvas) — using the same tone language as the existing `.node-hud-badge-*` badge convention and the `.workflow-group-*` grouping-frame colors, instead of plain unstyled text.
-   - Expected path: `categoryToTone` / `agentRoleTone` (`src/domain/nodeVisuals.ts`) -> `.node-type-badge-*` / `.node-role-chip-*` CSS -> PartsPalette part card -> NodeCard / ReactFlowNode header -> visual parity with the grouping frame the node sits inside.
-   - Constraint: display-only change; no reducer/runtime/storage behavior change, no new storage key, Japanese labels stay paired with English identifiers.
+Slice 4 (Scratch interaction hardening) / Slice 5 (Mock connector policy rail) / Slice 6 (Scratch snap-guidance) / Slice 7 (部品の自己記述性 / type badge & role color unification) are all complete and recorded in Completed Plan Slices below. No slice is selected yet as the current active one — pick the next candidate from the 残ギャップ list in `docs/implementation/FIVE_PILLAR_MVP_ROADMAP.md`'s Scratch統合原則 section (置いた瞬間のステージ応答 / Remix完成) or from another roadmap phase before starting new implementation work.
 
-Next implementation slice after this PR:
-
-6. **Mock connector policy rail / review gate slice**
-   - Issue alignment: #34, #37, #46.
-   - Goal: make fixed mock connector policy states more explicit for Trigger / Action / Adapter / Retry / Error Route / Human Review / Rate Limit placeholder while keeping write-like behavior behind Human Review Gate.
-   - Expected path: mock connector action -> review/error/retry rail -> safe runtime trace -> HUD/Run Detail/4D explanation -> template/history hint.
-   - Constraint: mock-only behavior, no real network calls, no credentials, no raw payloads, no arbitrary expression evaluation.
-
-Completed this PR (in addition to the slice above): two Game HUD display fixes — the expanded Console drawer no longer covers the canvas MiniMap, and `WorkflowGroupLayer` now sizes grouping frames from each node's measured DOM size instead of a fixed constant, so frames keep enclosing cards across zoom-mode changes.
+Completed this PR (in addition to the slice above): two Game HUD display fixes — the expanded Console drawer no longer covers the canvas MiniMap, and `WorkflowGroupLayer` now sizes grouping frames from each node's measured DOM size instead of a fixed constant, so frames keep enclosing cards across zoom-mode changes. Also fixed: the workflow grouping frame no longer renders above node cards (`z-index:-1`).
 
 Phase roadmap order:
 
@@ -59,10 +57,10 @@ Phase roadmap order:
 | 1 | Plan Selection / Guardrail | Select this roadmap, update implementation docs, apply `CONCEPT_CHECKLIST.md`, no product code required. |
 | 2 | UI Shell Recomposition | Keep Canvas First primary; demote monitor-style surfaces to detail drawers; add failure/review/validation/replay/bottleneck attention states. |
 | 3 | Five-Pillar Vertical Slice Thickening | Keep one connected mock path across parts, connector/runtime, safe audit, HUD focus, Run Detail, 4D briefing, template/history. |
-| 4 | Scratch Layer | Harden `PartsPalette` and React Flow add/connect/select/delete flows while preserving Japanese labels and English identifiers. |
+| 4 | Scratch Layer | Harden `PartsPalette` and React Flow add/connect/select/delete flows while preserving Japanese labels and English identifiers. 到達点は「Scratch統合原則」(roadmap doc) の4原則を満たす操作レイヤー。 |
 | 5 | n8n-like Mock Connector Layer | Expand fixed mock Trigger/Action/Adapter/Retry/Error Route/Human Review/Rate Limit states; write-like mock actions require Human Review Gate. |
 | 6 | Workflow Runtime Layer | Preserve Run All / Run Selected / Run From Selected / Dry Run / Validate; add Stop/Resume/Replay only as safe mock runtime events. |
-| 7 | Cognitive HUD Layer | Treat HUD as attention allocation: node/edge badges, path dimming, central cards, replay cues, bottleneck/flow pressure, session-only preferences unless planned. |
+| 7 | Cognitive HUD Layer | Treat HUD as attention allocation: node/edge badges, path dimming, central cards, replay cues, bottleneck/flow pressure. 到達点は「認知HUD完成条件チェックリスト」(roadmap doc) の達成。永続HUD設定は storage-boundary slice を本ファイルで選択してから実装する。 |
 | 8 | Situation Narration Layer | Add pure mock timeline, summary, cause, future-risk, script, and decision-prompt helpers; no audio/avatar/video generation. |
 | 9 | Observation Layer | Represent latency, cost, retry, queue, success/failure rate, and bottleneck state through safe derived metrics only. |
 | 10 | Edge Replay / Audit Layer | Continue using `traceAudit.edgeReplayRecords` and safe runtime events; add visual reconstruction candidates from safe metadata only. |
@@ -90,7 +88,9 @@ Phase roadmap order:
 | UI shell replay / flow-pressure attention | `RunTrace.runtimeEvents` now drives a safe flow-pressure projection shared by Canvas HUD chips, central HUD overlay, HUD Feed history hints, Run Detail, and 4D Text Briefing MVP without new storage or raw payload display. |
 | Scratch connection feedback / mock connector state | Shared connection validation and current mock connector jobs now drive a safe Scratch/connector rail projection for HUD signals, Canvas command chips, HUD Feed, Run Detail, and 4D Text Briefing MVP without changing reducer/runtime/storage behavior. |
 | Scratch interaction hardening / connector rail QA | PartsPalette now separates card selection from the Add node command with semantic controls and session-only operation feedback. React Flow canvas status now names the safe Scratch operation rail and shows shared invalid-connection reasons without changing reducer/runtime/storage behavior. |
-| 部品の自己記述性 / type badge & role color unification | New `src/domain/nodeVisuals.ts` exposes `categoryToTone`/`agentRoleTone` as the single source of truth for category-tone mapping (also now used by `buildWorkflowGroups`, replacing its inline table). `PartsPalette`, `NodeCard`, and `ReactFlowNode` all render a `.node-type-badge-*` category badge and `.node-role-chip-*` role color, reusing the existing `.node-hud-badge` pill styling and the `.workflow-group-*` 5-tone palette so a node's badge color matches the grouping frame it sits inside. Display-only change; no reducer/runtime/storage change. Also fixed in this PR: the expanded Console drawer no longer covers the canvas MiniMap (`.game-hud-workspace.console-open` scoped margin), and `WorkflowGroupLayer` now sizes grouping frames from each node's React Flow `measured` size instead of a fixed constant, so frames keep enclosing cards across zoom-mode changes. |
+| Mock connector policy rail / review gate | `buildConnectorPolicyRailProjection(...)` now derives the seven fixed mock policy entries (Trigger / Action / Adapter / Retry / Error Route / Human Review / Rate Limit placeholder) from safe metadata only, keeps write-like mock actions behind the Human Review Gate, and feeds the same projection to HUD Feed, Run Detail, Human Review write-gate boundary, and 4D Text Briefing MVP without new storage keys or raw payloads. |
+| Scratch snap-guidance / drag-time connection prevention | `buildConnectionSnapGuidance(...)` now derives session-only snap guidance from the shared `explainConnectionAttempt` validator during connection drags: compatible nodes/ports glow with 接続可 badges, incompatible nodes dim, and the canvas status HUD shows a live snap誘導 cue that clears when the drag ends. No reducer/runtime/storage change. |
+| 部品の自己記述性 / type badge & role color unification | New `src/domain/nodeVisuals.ts` exposes `categoryToTone`/`agentRoleTone` as the single source of truth for category-tone mapping (also now used by `buildWorkflowGroups`, replacing its inline table). `PartsPalette`, `NodeCard`, and `ReactFlowNode` all render a `.node-type-badge-*` category badge and `.node-role-chip-*` role color, reusing the existing `.node-hud-badge` pill styling and the `.workflow-group-*` 5-tone palette so a node's badge color matches the grouping frame it sits inside. Display-only change; no reducer/runtime/storage change. Also fixed in this PR: the expanded Console drawer no longer covers the canvas MiniMap (`.game-hud-workspace.console-open` scoped margin, corrected to target the MiniMap panel element directly since its className merges onto `.react-flow__panel` itself rather than a descendant), `WorkflowGroupLayer` now sizes grouping frames from each node's React Flow `measured` size instead of a fixed constant so frames keep enclosing cards across zoom-mode changes, and the grouping frame no longer paints above node cards (`z-index:-1`, since it renders via `ViewportPortal` after the node layer in DOM order). |
 
 ## Plan Document Roles
 

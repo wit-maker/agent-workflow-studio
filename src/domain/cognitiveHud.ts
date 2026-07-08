@@ -10,6 +10,10 @@
 // 既存の `RiskState` / `HudState` 語彙 (src/domain/workflow.ts) と整合する。
 
 import type { ConnectorJob } from './connectorQueue'
+import {
+  createEmptyConnectorPolicyRailProjection,
+  type ConnectorPolicyRailProjection,
+} from './connectorPolicyRail'
 import type { EvaluationResult, HumanReviewState } from './evaluation'
 import {
   connectionKindLabels,
@@ -435,6 +439,7 @@ export type HudNotificationBundleView = {
   statusLine: string
   flowPressure: FlowPressureProjection
   scratchConnectorFeedback: ScratchConnectorFeedbackProjection
+  connectorPolicyRail: ConnectorPolicyRailProjection
   notificationItems: HudNotificationItem[]
   hiddenNotificationCount: number
   unreadNotificationCount: number
@@ -1733,6 +1738,7 @@ export function buildHudNotificationBundle(options: {
   runHistoryRecords?: readonly WorkflowRunRecord[]
   flowPressure?: FlowPressureProjection | null
   scratchConnectorFeedback?: ScratchConnectorFeedbackProjection | null
+  connectorPolicyRail?: ConnectorPolicyRailProjection | null
   densityMode?: HudDensityMode
   notificationSessionState?: HudNotificationSessionState
 }): HudNotificationBundleView {
@@ -1743,12 +1749,14 @@ export function buildHudNotificationBundle(options: {
     runHistoryRecords = [],
     flowPressure = null,
     scratchConnectorFeedback = null,
+    connectorPolicyRail = null,
     densityMode = 'balanced',
     notificationSessionState = {},
   } = options
   const density = buildHudDensityView(densityMode)
   const pressure = flowPressure ?? buildFlowPressureProjection({ runTrace })
   const scratchFeedback = scratchConnectorFeedback ?? createEmptyScratchConnectorFeedbackProjection()
+  const policyRail = connectorPolicyRail ?? createEmptyConnectorPolicyRailProjection()
   const centralItem = centralHudView
     ? [{
         id: `central:${centralHudView.variant}:${centralHudView.headline}`,
@@ -1830,12 +1838,30 @@ export function buildHudNotificationBundle(options: {
         pinned: false,
         statusLabel: 'unread',
       } satisfies HudNotificationItem]
+  const policyRailItems = policyRail.priority === 'normal'
+    ? []
+    : [{
+        id: `connector-policy-rail:${policyRail.reviewGateState}:${policyRail.alertLevel}`,
+        tone: policyRail.priority,
+        alertLevel: policyRail.alertLevel,
+        title: policyRail.label,
+        detail: sanitizeHudText(policyRail.railSummary) ?? policyRail.label,
+        sourceLabel: 'Mock connector policy rail',
+        targetType: 'workflow' as HudFocusTargetType,
+        targetId: runTrace?.workflowId ?? null,
+        targetLabel: 'connector policy rail',
+        read: false,
+        acknowledged: false,
+        pinned: false,
+        statusLabel: 'unread',
+      } satisfies HudNotificationItem]
   const allNotifications = uniqueHudNotifications([
     ...centralItem,
     ...signalItems,
     ...safetyItems,
     ...flowPressureItems,
     ...scratchConnectorItems,
+    ...policyRailItems,
   ])
   const statefulNotifications = applyHudNotificationSessionState(allNotifications, notificationSessionState)
   const pinnedNotifications = statefulNotifications.filter((item) => item.pinned)
@@ -1872,6 +1898,7 @@ export function buildHudNotificationBundle(options: {
     `pin ${pinnedNotificationCount}`,
     `flow ${pressure.label}`,
     `scratch ${scratchFeedback.label}`,
+    `rail ${policyRail.reviewGateLabel}`,
     evidenceSummary,
   ].join(' / ')
 
@@ -1881,6 +1908,7 @@ export function buildHudNotificationBundle(options: {
     statusLine,
     flowPressure: pressure,
     scratchConnectorFeedback: scratchFeedback,
+    connectorPolicyRail: policyRail,
     notificationItems,
     hiddenNotificationCount: Math.max(0, statefulNotifications.length - notificationItems.length),
     unreadNotificationCount,
@@ -1899,6 +1927,7 @@ export function buildHudNotificationBundle(options: {
       `latest run: ${latestRunSummary}`,
       pressure.safeCopySummary,
       scratchFeedback.safeCopySummary,
+      policyRail.safeCopySummary,
       `notification state: unread ${unreadNotificationCount} / ack ${acknowledgedNotificationCount} / pinned ${pinnedNotificationCount}`,
       ...notificationItems.map((item) => `signal: ${item.statusLabel} / L${item.alertLevel} ${item.title} - ${item.detail}`),
       ...historyEntries.map((entry) => `history: ${entry.runId} ${entry.statusLabel} ${entry.summary}`),

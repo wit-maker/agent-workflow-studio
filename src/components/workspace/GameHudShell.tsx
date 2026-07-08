@@ -20,6 +20,10 @@ import {
   type ZoomHudView,
 } from '../../domain/cognitiveHud'
 import type { ConnectorJob } from '../../domain/connectorQueue'
+import {
+  buildConnectorPolicyRailProjection,
+  type ConnectorPolicyRailProjection,
+} from '../../domain/connectorPolicyRail'
 import type {
   EvaluationResult,
   HumanReviewState,
@@ -151,6 +155,15 @@ export function GameHudShell(props: GameHudShellProps) {
       }),
     [props.connectionValidation, props.connectorJobs, props.workflow],
   )
+  const connectorPolicyRail = useMemo<ConnectorPolicyRailProjection>(
+    () =>
+      buildConnectorPolicyRailProjection({
+        workflow: props.workflow,
+        connectorJobs: props.connectorJobs,
+        humanReview: props.humanReview,
+      }),
+    [props.connectorJobs, props.humanReview, props.workflow],
+  )
 
   const handleZoomChange = useCallback((next: ZoomHudView) => {
     setZoomHud((current) =>
@@ -260,11 +273,13 @@ export function GameHudShell(props: GameHudShellProps) {
         runHistoryRecords: props.runHistoryRecords,
         flowPressure,
         scratchConnectorFeedback,
+        connectorPolicyRail,
         densityMode: hudDensityMode,
         notificationSessionState,
       }),
     [
       centralHudView,
+      connectorPolicyRail,
       flowPressure,
       hudDensityMode,
       notificationSessionState,
