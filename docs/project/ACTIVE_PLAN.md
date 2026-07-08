@@ -36,19 +36,21 @@ The selected active roadmap is **Five-Pillar MVP Roadmap**. The detail document 
 
 Current slice:
 
-4. **Scratch interaction hardening / connector rail QA slice**
-   - Issue alignment: #34, #37, #46.
-   - Goal: harden add/connect/select/delete interactions and verify that mock Trigger / Action / Adapter / Retry / Error Route / Human Review / Rate Limit placeholder cues remain visible without becoming real connector behavior.
-   - Expected path: PartsPalette operation -> connect/delete feedback -> mock connector rail -> HUD/Run Detail verification -> 4D explanation.
-   - Constraint: no reducer replacement, no credential values, no real API calls, no new storage key, and invalid connection feedback stays in shared selector/domain logic.
+5. **Parts self-description / type badge & role color unification slice**
+   - Issue alignment: #34, #37, #46 (Phase 4: Scratch Layer).
+   - Goal: give every part its own visible category (type) and agent-role signal wherever it is shown — PartsPalette part cards, `NodeCard` (standard canvas), and `ReactFlowNode` (React Flow canvas) — using the same tone language as the existing `.node-hud-badge-*` badge convention and the `.workflow-group-*` grouping-frame colors, instead of plain unstyled text.
+   - Expected path: `categoryToTone` / `agentRoleTone` (`src/domain/nodeVisuals.ts`) -> `.node-type-badge-*` / `.node-role-chip-*` CSS -> PartsPalette part card -> NodeCard / ReactFlowNode header -> visual parity with the grouping frame the node sits inside.
+   - Constraint: display-only change; no reducer/runtime/storage behavior change, no new storage key, Japanese labels stay paired with English identifiers.
 
 Next implementation slice after this PR:
 
-5. **Mock connector policy rail / review gate slice**
+6. **Mock connector policy rail / review gate slice**
    - Issue alignment: #34, #37, #46.
    - Goal: make fixed mock connector policy states more explicit for Trigger / Action / Adapter / Retry / Error Route / Human Review / Rate Limit placeholder while keeping write-like behavior behind Human Review Gate.
    - Expected path: mock connector action -> review/error/retry rail -> safe runtime trace -> HUD/Run Detail/4D explanation -> template/history hint.
    - Constraint: mock-only behavior, no real network calls, no credentials, no raw payloads, no arbitrary expression evaluation.
+
+Completed this PR (in addition to the slice above): two Game HUD display fixes — the expanded Console drawer no longer covers the canvas MiniMap, and `WorkflowGroupLayer` now sizes grouping frames from each node's measured DOM size instead of a fixed constant, so frames keep enclosing cards across zoom-mode changes.
 
 Phase roadmap order:
 
@@ -88,6 +90,7 @@ Phase roadmap order:
 | UI shell replay / flow-pressure attention | `RunTrace.runtimeEvents` now drives a safe flow-pressure projection shared by Canvas HUD chips, central HUD overlay, HUD Feed history hints, Run Detail, and 4D Text Briefing MVP without new storage or raw payload display. |
 | Scratch connection feedback / mock connector state | Shared connection validation and current mock connector jobs now drive a safe Scratch/connector rail projection for HUD signals, Canvas command chips, HUD Feed, Run Detail, and 4D Text Briefing MVP without changing reducer/runtime/storage behavior. |
 | Scratch interaction hardening / connector rail QA | PartsPalette now separates card selection from the Add node command with semantic controls and session-only operation feedback. React Flow canvas status now names the safe Scratch operation rail and shows shared invalid-connection reasons without changing reducer/runtime/storage behavior. |
+| 部品の自己記述性 / type badge & role color unification | New `src/domain/nodeVisuals.ts` exposes `categoryToTone`/`agentRoleTone` as the single source of truth for category-tone mapping (also now used by `buildWorkflowGroups`, replacing its inline table). `PartsPalette`, `NodeCard`, and `ReactFlowNode` all render a `.node-type-badge-*` category badge and `.node-role-chip-*` role color, reusing the existing `.node-hud-badge` pill styling and the `.workflow-group-*` 5-tone palette so a node's badge color matches the grouping frame it sits inside. Display-only change; no reducer/runtime/storage change. Also fixed in this PR: the expanded Console drawer no longer covers the canvas MiniMap (`.game-hud-workspace.console-open` scoped margin), and `WorkflowGroupLayer` now sizes grouping frames from each node's React Flow `measured` size instead of a fixed constant, so frames keep enclosing cards across zoom-mode changes. |
 
 ## Plan Document Roles
 

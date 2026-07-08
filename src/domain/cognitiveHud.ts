@@ -26,6 +26,7 @@ import {
   type RunAuditEdgeReplayRecord,
 } from './runAuditEdgeReplay'
 import type { ExecutionGraph, ExecutionRouteKind, ExecutionStepStatus } from './executionGraph'
+import { categoryToTone, type NodeVisualTone } from './nodeVisuals'
 import {
   getInputPorts,
   getOutputPorts,
@@ -228,7 +229,7 @@ export type SelectedEdgeHudView = {
   safeCopySummary: string
 }
 
-export type WorkflowGroupTone = 'input' | 'transform' | 'execute' | 'check' | 'output'
+export type WorkflowGroupTone = NodeVisualTone
 
 export type WorkflowGroupView = {
   id: string
@@ -1120,27 +1121,24 @@ function formatRuntimeStepStatus(step: EdgeRuntimeStep | null): string {
   return `${executionStepStatusLabels[step.status]} / ${routeKindLabels[step.route]}`
 }
 
-export function buildWorkflowGroups(workflow: Workflow): WorkflowGroupView[] {
-  const groups: Array<{
-    id: string
-    title: string
-    tone: WorkflowGroupTone
-    categories: string[]
-  }> = [
-    { id: 'input-flow', title: 'Input / Trigger', tone: 'input', categories: ['trigger', 'input'] },
-    { id: 'shape-flow', title: 'Shape / Route', tone: 'transform', categories: ['transform', 'branch'] },
-    { id: 'execute-flow', title: 'Execution', tone: 'execute', categories: ['execute'] },
-    { id: 'verify-flow', title: 'Verify / Aggregate', tone: 'check', categories: ['check', 'aggregate', 'safety', 'hud'] },
-    { id: 'output-flow', title: 'Output / Record', tone: 'output', categories: ['output', 'record', 'template', 'observe', 'improve'] },
-  ]
+const WORKFLOW_GROUP_META: Record<WorkflowGroupTone, { id: string; title: string }> = {
+  input: { id: 'input-flow', title: 'Input / Trigger' },
+  transform: { id: 'shape-flow', title: 'Shape / Route' },
+  execute: { id: 'execute-flow', title: 'Execution' },
+  check: { id: 'verify-flow', title: 'Verify / Aggregate' },
+  output: { id: 'output-flow', title: 'Output / Record' },
+}
 
-  return groups
-    .map((group) => ({
-      id: group.id,
-      title: group.title,
-      tone: group.tone,
+export function buildWorkflowGroups(workflow: Workflow): WorkflowGroupView[] {
+  const tones: WorkflowGroupTone[] = ['input', 'transform', 'execute', 'check', 'output']
+
+  return tones
+    .map((tone) => ({
+      id: WORKFLOW_GROUP_META[tone].id,
+      title: WORKFLOW_GROUP_META[tone].title,
+      tone,
       nodeIds: workflow.nodes
-        .filter((node) => group.categories.includes(node.category))
+        .filter((node) => categoryToTone(node.category) === tone)
         .map((node) => node.id),
     }))
     .filter((group) => group.nodeIds.length > 0)

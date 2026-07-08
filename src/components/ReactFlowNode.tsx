@@ -1,5 +1,6 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { agentRoleLabels, formatDataTypeLabel, nodeCategoryLabels, statusLabels } from '../domain/displayLabels'
+import { agentRoleTone, categoryToTone } from '../domain/nodeVisuals'
 import {
   reactFlowNodeType,
   type ReactFlowWorkflowNode,
@@ -45,10 +46,11 @@ export function ReactFlowNode({
       : focusRole === 'path'
         ? 'PATH'
         : null
+  const categoryTone = categoryToTone(node.category)
 
   return (
     <div
-      className={`react-flow-node node-${node.status} react-flow-node-category-${node.category} focus-${focusRole} ${selected ? 'selected' : ''}`}
+      className={`react-flow-node node-${node.status} node-type-accent-${categoryTone} focus-${focusRole} ${selected ? 'selected' : ''}`}
       aria-label={`${node.title} ノード`}
     >
       {semanticBadge ? (
@@ -62,13 +64,17 @@ export function ReactFlowNode({
         </span>
       ) : null}
       <div className="react-flow-node-header">
-        <span className="node-category">{nodeCategoryLabels[node.category as NodeCategory] ?? node.category}</span>
+        <span className={`node-type-badge node-type-badge-${categoryTone}`}>
+          {nodeCategoryLabels[node.category as NodeCategory] ?? node.category}
+        </span>
         <span className="node-status">{statusLabels[node.status]}</span>
       </div>
       <strong>{node.title}</strong>
       <div className="react-flow-node-meta">
         <span>{node.type}</span>
-        <span>{node.agentRole ? agentRoleLabels[node.agentRole] : '未割当'}</span>
+        <span className={`node-role-chip-${agentRoleTone(node.agentRole)}`}>
+          {node.agentRole ? agentRoleLabels[node.agentRole] : '未割当'}
+        </span>
       </div>
       <section className={`react-flow-inline-preview inline-preview-${inlinePreview.kind}`}>
         <span>{inlinePreview.title}</span>

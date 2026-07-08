@@ -718,6 +718,28 @@ button:disabled {
   box-shadow: var(--shadow);
 }
 
+/* 部品の自己記述性 — カテゴリのトーンをカード左端のアクセントとして常時表示し、
+   ヘッダー内の node-type-badge / workflow-group フレームの縁取り色と揃える。 */
+.node-type-accent-input {
+  border-left: 3px solid #0f9c8f;
+}
+
+.node-type-accent-transform {
+  border-left: 3px solid var(--amber);
+}
+
+.node-type-accent-execute {
+  border-left: 3px solid var(--blue);
+}
+
+.node-type-accent-check {
+  border-left: 3px solid var(--purple);
+}
+
+.node-type-accent-output {
+  border-left: 3px solid var(--green);
+}
+
 .react-flow-node-header,
 .react-flow-node-meta,
 .react-flow-node-footer {
@@ -4493,6 +4515,73 @@ button:disabled {
   background: var(--purple-soft);
 }
 
+/* Node type badge — 部品の自己記述性: PartsPalette / NodeCard / ReactFlowNode で
+   カテゴリのトーンを揃えて表示する。node-hud-badge と同じ見た目言語(角丸ピル /
+   currentColor境界線)を使うが、絶対配置バッジ(右上/左上)と衝突しないよう
+   ヘッダー内に inline で置く。配色は .workflow-group-* の5トーンと揃える。 */
+.node-type-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  border: 1px solid currentColor;
+  background: #ffffff;
+}
+
+.node-type-badge-input {
+  color: #0f9c8f;
+  background: #e6fbf7;
+}
+
+.node-type-badge-transform {
+  color: var(--amber);
+  background: #fff8eb;
+}
+
+.node-type-badge-execute {
+  color: var(--blue);
+  background: var(--blue-soft);
+}
+
+.node-type-badge-check {
+  color: var(--purple);
+  background: var(--purple-soft);
+}
+
+.node-type-badge-output {
+  color: var(--green);
+  background: var(--green-soft);
+}
+
+/* Agent role color — 型バッジとは別に、担当ロールをテキスト色で示す軽量表現。
+   同じ5トーンのcolorのみ再利用し、ピルバッジは増やさない。 */
+.node-role-chip-neutral {
+  color: var(--muted);
+}
+
+.node-role-chip-input {
+  color: #0f9c8f;
+}
+
+.node-role-chip-transform {
+  color: var(--amber);
+}
+
+.node-role-chip-execute {
+  color: var(--blue);
+}
+
+.node-role-chip-check {
+  color: var(--purple);
+}
+
+.node-role-chip-output {
+  color: var(--green);
+}
+
 .semantic-focus-badge {
   position: absolute;
   top: -8px;
@@ -5295,8 +5384,12 @@ body:has(.game-hud-workspace) #root {
   color: var(--text);
 }
 
-.game-hud-workspace .react-flow__panel:has(.canvas-minimap-hud) {
+.game-hud-workspace .react-flow__panel.canvas-minimap-hud {
   margin: 0 18px 72px 0;
+}
+
+.game-hud-workspace.console-open .react-flow__panel.canvas-minimap-hud {
+  margin-bottom: calc(min(440px, 44vh) + 28px);
 }
 
 .canvas-minimap-hud {
@@ -5317,7 +5410,7 @@ body:has(.game-hud-workspace) #root {
 
 .workflow-group {
   position: absolute;
-  z-index: 0;
+  z-index: -1;
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 18px;
   background: rgba(30, 41, 59, 0.14);
