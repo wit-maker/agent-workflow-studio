@@ -129,7 +129,7 @@ Scratch操作の即時フィードバックは、認知HUDの表現チャネル(
 ### 残ギャップ(今後のslice候補)
 
 - ~~ドラッグ中のスナップ誘導: 互換ポートだけ発光、非互換ポートを減光。~~ 実装済み(Scratch snap-guidance slice)。ドラッグ中の非互換接続拒否は React Flow `isValidConnection` + shared validator で既に成立している。
-- 部品の自己記述性: 部品カード上の入出力型バッジ・役割色。
+- ~~部品の自己記述性: 部品カード上の入出力型バッジ・役割色。~~ 実装済み(部品の自己記述性 slice)。
 - 置いた瞬間のステージ応答: Run 前でも部品追加・接続時に軽量チェックが即反映。
 - Remix完成: 成功パターン / 失敗パターンのレシピ化(Phase 11)。
 
@@ -160,17 +160,22 @@ Boundaries:
 - Reducer/runtime behavior is unchanged.
 - Snap guidance is session-only drag feedback; validation logic itself stays in shared selector/domain code.
 
-## Next Slice Candidate
-
-After the snap-guidance slice, the preferred next implementation slice is:
+## Recently Implemented Slice (2)
 
 **部品の自己記述性 slice(Scratch統合原則 第3原則)**
 
-Goal: PartsPalette カードと React Flow ノードカード上で、部品を見れば入出力型・役割・現在状態が分かる自己記述表示(型バッジ・役割色・状態の一貫表現)を強化し、HUD バッジ表現系と一貫させる。
+Result: `src/domain/nodeVisuals.ts` の `categoryToTone` / `agentRoleTone` を単一の変換元として、`PartsPalette` カード・`NodeCard`・`ReactFlowNode` のいずれにも型バッジ(`.node-type-badge-*`)と役割色(`.node-role-chip-*`)を表示するようにした。配色は既存の `.workflow-group-*` グルーピング枠と揃え、ノードが属するグループの縁取り色とバッジ色が一致する。`buildWorkflowGroups` もこの共有マッピングを使うようリファクタし、カテゴリ→トーンの二重管理を解消した。
 
 Boundaries:
 
-- Reuse current port metadata (`portRules`) and display label conventions.
-- Preserve Japanese labels and English identifiers.
-- Do not add real telemetry, credentials, dependencies, or storage keys.
-- Do not display raw config, prompts, payloads, or credential-like values.
+- Display-only change; reducer/runtime/storage behavior is unchanged.
+- No new storage key.
+- Japanese labels stay paired with English identifiers.
+- No raw config, prompts, payloads, or credential-like values displayed.
+
+## Next Slice Candidate
+
+残ギャップのうち未着手のものは以下(優先順位は未確定。次スライス選定時に `docs/project/ACTIVE_PLAN.md` で選ぶ):
+
+- **置いた瞬間のステージ応答**: Run 前でも部品追加・接続時に軽量チェックが即反映。
+- **Remix完成**(Phase 11): 成功パターン / 失敗パターンのレシピ化。

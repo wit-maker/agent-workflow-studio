@@ -1,4 +1,5 @@
 import { agentRoleLabels, formatDataTypeLabel, nodeCategoryLabels, statusLabels } from '../domain/displayLabels'
+import { agentRoleTone, categoryToTone } from '../domain/nodeVisuals'
 import { getInputPorts, getOutputPorts } from '../domain/portRules'
 import type { NodeCategory, WorkflowNode } from '../domain/workflow'
 
@@ -41,11 +42,13 @@ export function NodeCard({ node, isSelected, onSelect }: NodeCardProps) {
         </span>
       ) : null}
       <span className="node-header">
-        <span className="node-category">{nodeCategoryLabels[node.category as NodeCategory] ?? node.category}</span>
+        <span className={`node-type-badge node-type-badge-${categoryToTone(node.category)}`}>
+          {nodeCategoryLabels[node.category as NodeCategory] ?? node.category}
+        </span>
         <span className="node-status">{statusLabels[node.status]}</span>
       </span>
       <strong>{node.title}</strong>
-      <span className="node-agent">
+      <span className={`node-agent node-role-chip-${agentRoleTone(node.agentRole)}`}>
         {node.agentRole ? agentRoleLabels[node.agentRole] : '未割当'}
       </span>
       <span className="node-ports">

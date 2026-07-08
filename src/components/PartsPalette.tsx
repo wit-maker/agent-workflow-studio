@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { agentRoleLabels, formatDataTypeLabel, nodeCategoryLabels } from '../domain/displayLabels'
+import { agentRoleTone, categoryToTone } from '../domain/nodeVisuals'
 import type { NodeCategory, WorkflowNode } from '../domain/workflow'
 
 const ALL_LABEL = 'すべて'
@@ -101,7 +102,13 @@ export function PartsPalette({
           >
             <span className="part-title">{part.title}</span>
             <span className="part-meta">
-              {getCategoryLabel(part.category)} / {part.agentRole ? agentRoleLabels[part.agentRole] : '未割当'}
+              <span className={`node-type-badge node-type-badge-${categoryToTone(part.category)}`}>
+                {getCategoryLabel(part.category)}
+              </span>{' '}
+              /{' '}
+              <span className={`node-role-chip-${agentRoleTone(part.agentRole)}`}>
+                {part.agentRole ? agentRoleLabels[part.agentRole] : '未割当'}
+              </span>
             </span>
             <span className="port-row">
               {part.inputTypes.map(formatDataTypeLabel).join(', ') || '開始'} から{' '}

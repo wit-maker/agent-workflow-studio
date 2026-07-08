@@ -46,14 +46,9 @@ The selected active roadmap is **Five-Pillar MVP Roadmap**. The detail document 
 
 Current slice:
 
-7. **部品の自己記述性 slice(Scratch統合原則 第3原則)**
-   - Issue alignment: #34, #37, #46.
-   - Goal: PartsPalette カードと React Flow ノードカード上で、部品を見れば入出力型・役割・現在状態が分かる自己記述表示を強化する(型バッジ・役割色・状態の一貫表現)。
-   - Expected path: PartsPalette / NodeCard 表示 -> 型付きポートの safe metadata -> HUD バッジ表現系との一貫化 -> Browser QA。
-   - Constraint: reducer/runtime 置き換えなし、新 storage key なし、raw config / payload / credential なし、日本語ラベルと英語 identifier を維持。
-   - MVP Goal positioning: Scratch統合原則の残ギャップを埋める一歩であり、slice 単体で Scratch層完成を主張しない。
+Slice 4 (Scratch interaction hardening) / Slice 5 (Mock connector policy rail) / Slice 6 (Scratch snap-guidance) / Slice 7 (部品の自己記述性 / type badge & role color unification) are all complete and recorded in Completed Plan Slices below. No slice is selected yet as the current active one — pick the next candidate from the 残ギャップ list in `docs/implementation/FIVE_PILLAR_MVP_ROADMAP.md`'s Scratch統合原則 section (置いた瞬間のステージ応答 / Remix完成) or from another roadmap phase before starting new implementation work.
 
-Slice 4 (Scratch interaction hardening) / Slice 5 (Mock connector policy rail) / Slice 6 (Scratch snap-guidance) は完了済みで、Completed Plan Slices に記録されている。
+Completed this PR (in addition to the slice above): two Game HUD display fixes — the expanded Console drawer no longer covers the canvas MiniMap, and `WorkflowGroupLayer` now sizes grouping frames from each node's measured DOM size instead of a fixed constant, so frames keep enclosing cards across zoom-mode changes. Also fixed: the workflow grouping frame no longer renders above node cards (`z-index:-1`).
 
 Phase roadmap order:
 
@@ -95,6 +90,7 @@ Phase roadmap order:
 | Scratch interaction hardening / connector rail QA | PartsPalette now separates card selection from the Add node command with semantic controls and session-only operation feedback. React Flow canvas status now names the safe Scratch operation rail and shows shared invalid-connection reasons without changing reducer/runtime/storage behavior. |
 | Mock connector policy rail / review gate | `buildConnectorPolicyRailProjection(...)` now derives the seven fixed mock policy entries (Trigger / Action / Adapter / Retry / Error Route / Human Review / Rate Limit placeholder) from safe metadata only, keeps write-like mock actions behind the Human Review Gate, and feeds the same projection to HUD Feed, Run Detail, Human Review write-gate boundary, and 4D Text Briefing MVP without new storage keys or raw payloads. |
 | Scratch snap-guidance / drag-time connection prevention | `buildConnectionSnapGuidance(...)` now derives session-only snap guidance from the shared `explainConnectionAttempt` validator during connection drags: compatible nodes/ports glow with 接続可 badges, incompatible nodes dim, and the canvas status HUD shows a live snap誘導 cue that clears when the drag ends. No reducer/runtime/storage change. |
+| 部品の自己記述性 / type badge & role color unification | New `src/domain/nodeVisuals.ts` exposes `categoryToTone`/`agentRoleTone` as the single source of truth for category-tone mapping (also now used by `buildWorkflowGroups`, replacing its inline table). `PartsPalette`, `NodeCard`, and `ReactFlowNode` all render a `.node-type-badge-*` category badge and `.node-role-chip-*` role color, reusing the existing `.node-hud-badge` pill styling and the `.workflow-group-*` 5-tone palette so a node's badge color matches the grouping frame it sits inside. Display-only change; no reducer/runtime/storage change. Also fixed in this PR: the expanded Console drawer no longer covers the canvas MiniMap (`.game-hud-workspace.console-open` scoped margin, corrected to target the MiniMap panel element directly since its className merges onto `.react-flow__panel` itself rather than a descendant), `WorkflowGroupLayer` now sizes grouping frames from each node's React Flow `measured` size instead of a fixed constant so frames keep enclosing cards across zoom-mode changes, and the grouping frame no longer paints above node cards (`z-index:-1`, since it renders via `ViewportPortal` after the node layer in DOM order). |
 
 ## Plan Document Roles
 

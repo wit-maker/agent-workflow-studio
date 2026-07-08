@@ -1,4 +1,4 @@
-import { ViewportPortal } from '@xyflow/react'
+import { useStore, ViewportPortal } from '@xyflow/react'
 import type { WorkflowGroupView } from '../../domain/cognitiveHud'
 import { scaleNodePosition } from '../../domain/reactFlowAdapter'
 import type { Workflow } from '../../domain/workflow'
@@ -14,24 +14,36 @@ const GROUP_PADDING = 44
 
 export function WorkflowGroupLayer({ workflow, groups }: WorkflowGroupLayerProps) {
   const nodesById = new Map(workflow.nodes.map((node) => [node.id, node]))
+  // React Flow measures each node's real rendered size (ResizeObserver-backed);
+  // zoom-mode toggles node content (overview/map vs. detail/deep), so the group
+  // frame must track the measured size instead of the fixed NODE_WIDTH/HEIGHT
+  // fallback, or an expanded card can overflow the frame.
+  const measuredById = useStore((state) => state.nodeLookup)
 
   return (
     <ViewportPortal>
       <div className="workflow-group-layer" aria-hidden="true">
         {groups.map((group) => {
-          const positions = group.nodeIds
+          const sizedPositions = group.nodeIds
             .map((nodeId) => nodesById.get(nodeId))
-            .filter((node) => node !== undefined)
-            .map((node) => scaleNodePosition(node.position))
+            .filter((node): node is NonNullable<typeof node> => node !== undefined)
+            .map((node) => {
+              const measured = measuredById?.get(node.id)?.measured
+              return {
+                position: scaleNodePosition(node.position),
+                width: measured?.width ?? NODE_WIDTH,
+                height: measured?.height ?? NODE_HEIGHT,
+              }
+            })
 
-          if (positions.length === 0) {
+          if (sizedPositions.length === 0) {
             return null
           }
 
-          const minX = Math.min(...positions.map((position) => position.x))
-          const minY = Math.min(...positions.map((position) => position.y))
-          const maxX = Math.max(...positions.map((position) => position.x + NODE_WIDTH))
-          const maxY = Math.max(...positions.map((position) => position.y + NODE_HEIGHT))
+          const minX = Math.min(...sizedPositions.map(({ position }) => position.x))
+          const minY = Math.min(...sizedPositions.map(({ position }) => position.y))
+          const maxX = Math.max(...sizedPositions.map(({ position, width }) => position.x + width))
+          const maxY = Math.max(...sizedPositions.map(({ position, height }) => position.y + height))
 
           return (
             <section
