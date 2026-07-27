@@ -1,0 +1,4 @@
+interface:
+  display_name: "Fable5 Harness"
+  short_description: "Evidence-first Codex lane orchestration"
+  default_prompt: "Use $fable5-harness to coordinate this task through an isolated lane, evidence, and independent review."

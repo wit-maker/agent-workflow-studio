@@ -57,18 +57,32 @@ UI変更時は Browser QA または headless QA を行う。できない場合�
 
 ## Model Policy
 
-通常実装:
+Fable5 Harness の責務分離を使う。正本は `harness/HARNESS.md`。
 
-- `gpt-5.5`
-- reasoning: `high`
+- `gpt-5.6-sol` / high: 上流の製品方針・architecture・受け入れ条件のみ
+- `gpt-5.6-terra` / high: PM、task分割・割当、PRレビュー、修正循環、merge、base validation
+- `gpt-5.6-luna` / high: 専用worktreeでの実装・test・commit・push・PR作成
 
-docs / Markdown / PR本文 / 小さなCSS / 文言修正:
-
-- `gpt-5.4-mini`
-- reasoning: `medium`
+実装laneは1 task = 1新規Luna session = 1 worktree = 1 branch / PR。
+Lunaは自分のPRをmergeしない。Terraがexact commitをreviewし、修正ありなら
+同じLuna laneへ戻し、承認後にmergeしてから次の新規Luna sessionを作る。
 
 `xhigh` はユーザーが `ALLOW_XHIGH` と明示した場合のみ使用する。
 現在モデルが不明、または作業リスクに対して不足している場合のみ停止する。
+
+## Fable5 Harness
+
+プロジェクト管理・handoff・evidence・review・lane監査では
+`.agents/skills/fable5-harness/SKILL.md` を使用する。
+
+- 開始: `python tools/fable5_harness.py doctor`
+- 整合性: `python tools/fable5_harness.py validate`
+- 現況再生成: `python tools/fable5_harness.py state`
+- 検証記録:
+  `python tools/fable5_harness.py evidence run --task <ID> --actor luna -- <command>`
+
+raw prompt、credential、provider payload、artifact本文、environment dumpを
+Evidenceのcommand・note・logへ渡さない。
 
 ## Stop Conditions
 
