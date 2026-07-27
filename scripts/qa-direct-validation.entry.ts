@@ -27,6 +27,7 @@ import {
 import { buildReviewDecisionAuditBoundaryView } from '../src/domain/reviewDecisionAudit'
 import { createWorkflowRunRecord, normalizeRunHistory } from '../src/domain/runHistory'
 import { buildRunTrace } from '../src/domain/runTrace'
+import { buildSafeEvidenceProjection } from '../src/domain/safeEvidenceProjection'
 import { STORAGE_KEYS } from '../src/storage/storageKeys'
 import type { ExecutionGraph } from '../src/domain/executionGraph'
 import type { RunTraceAuditSummary } from '../src/domain/runAudit'
@@ -375,6 +376,27 @@ export async function runDirectQaValidation(): Promise<DirectQaValidationResult>
   )
   assertNoForbiddenSentinels(flowPressure, 'flow pressure projection')
   checked.push('safe flow-pressure projection')
+
+  const safeEvidenceProjection = buildSafeEvidenceProjection({
+    ...currentTrace,
+    runEvidence: [
+      ...currentTrace.runEvidence,
+      {
+        id: 'unsafe-fixture',
+        runId: currentTrace.runId,
+        kind: 'log_entry',
+        safetyLevel: 'safe_summary',
+        severity: 'info',
+        title: 'RAW_PROMPT_SENTINEL',
+        summary: 'RAW_PAYLOAD_SENTINEL CREDENTIAL_SENTINEL',
+      },
+    ],
+  })
+  assert(safeEvidenceProjection.state === 'attention', 'safe evidence projection should surface failed-run attention')
+  assert(safeEvidenceProjection.coveredStepCount > 0, 'safe evidence projection should report covered steps')
+  assert(safeEvidenceProjection.nextAction.length > 0, 'safe evidence projection should provide a next action')
+  assertNoForbiddenSentinels(safeEvidenceProjection, 'safe evidence projection')
+  checked.push('safe evidence projection and raw-field exclusion')
 
   const revivedTimelineView = buildRunDetailRuntimeTimelineView({
     trace: replayView.selectedTrace,
