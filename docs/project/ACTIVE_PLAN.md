@@ -34,7 +34,7 @@ The v2 MVP gate is:
 - reconstruct the same safe run state from the event sequence after restart;
 - promote a successful run to an immutable, traceable recipe revision.
 
-V2-00 records this product reset and architecture decision only. V2-01 and later work will be selected sequentially by Terra PM after V2-00 merges. Contract work, runtime, storage migration, real connectors, credential storage, and UI changes are out of scope for V2-00.
+V2-00 records this product reset and architecture decision and is complete at the current base. V2-01 is now the current docs-only contract slice selected after that merge. Runtime, storage migration, real connectors, credential storage, and UI changes remain outside the V2-01 slice.
 
 ## Open Issue Priority Roadmap
 
@@ -61,13 +61,15 @@ Runtime Audit remains a detail backlog in `docs/implementation/runtime-audit-nex
 
 ## Selected Active Plan and Current Slice
 
-The **Evidence-first v2 architecture** is the sole selected active plan. Its detail document is `docs/architecture/v2-evidence-first-adr.md`.
+The **Evidence-first v2 architecture** is the sole selected active plan. Its decision record is `docs/architecture/v2-evidence-first-adr.md`, and its current contract detail is `docs/architecture/v2-01-contract-specification.md`.
 
-The current slice is **V2-00 Product reset / ADR**. This docs-only slice records the product reset and execution spine; it does not implement the V2-01 contracts or runtime.
+The current slice is **V2-01 Contract Specification**. This docs-only slice defines stable V2 names, public boundaries, lifecycle/invariants, safe projections, approval semantics, future Tauri commands, and read-only legacy compatibility. It does not implement the contracts or runtime.
+
+The V2-01 task record is `docs/tasks/Codex_Task_V2_01_Contract_Specification.md`. V2-00 remains preserved in `PROJECT_STATE.md` and its ADR history; it is not replaced or reclassified as a competing plan.
 
 The Five-Pillar MVP roadmap remains preserved as design history and a subordinate implementation reference in `docs/implementation/FIVE_PILLAR_MVP_ROADMAP.md`. Its completed slices, requirements, and remaining gaps remain valid, but it is not the selected active plan and does not define the current slice.
 
-V2-01 and later slices will be selected sequentially by Terra PM only after V2-00 is merged and the required G0/G1 gates for the next slice are complete.
+V2-02 and later slices will be selected sequentially by Terra PM only after V2-01 contract review and the required gates are complete. G2/G3/G4/G5 are not approved or crossed by this slice.
 
 Historical completion note retained from prior PRs: two Game HUD display fixes — the expanded Console drawer no longer covers the canvas MiniMap, and `WorkflowGroupLayer` now sizes grouping frames from each node's measured DOM size instead of a fixed constant, so frames keep enclosing cards across zoom-mode changes. Also fixed: the workflow grouping frame no longer renders above node cards (`z-index:-1`).
 
