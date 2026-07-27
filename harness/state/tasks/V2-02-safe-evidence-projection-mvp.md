@@ -2,7 +2,7 @@
 id: V2-02
 schema_version: 1
 title: Safe Evidence Projection MVP
-status: review
+status: doing
 role: implementation
 actor: luna
 branch: codex/v2-02-safe-evidence-projection-mvp
@@ -11,10 +11,10 @@ verified_commit: d3e52ef
 depends: []
 task_shape: isolated-lane
 required_evidence: [diff-boundary, unit, typecheck, lint, build, browser-qa]
-allowed_paths: [src, docs/project/ACTIVE_PLAN.md, PROJECT_STATE.md, docs/tasks, harness/state/tasks, harness/state/STATE.md]
+allowed_paths: [src, docs/project/ACTIVE_PLAN.md, PROJECT_STATE.md, docs/tasks, harness/state/tasks, harness/state/STATE.md, harness/state/evidence]
 forbidden_paths: [docs/source-specs, package.json, package-lock.json, src-tauri, .env]
 created: 2026-07-27T19:28:11+00:00
-updated: 2026-07-27T19:37:54+00:00
+updated: 2026-07-27T19:47:07+00:00
 implementation_session_id: 019fa50d-b049-70e0-941d-f65b0c16e73f
 ---
 
