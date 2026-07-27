@@ -52,6 +52,12 @@ During work:
 4. Architecture changes return to Sol. Dependency, backend, API, credential,
    storage-key, paid, destructive, or external-write gates return to the owner.
 
+On Windows, read repository text with explicit UTF-8
+(`Get-Content -Raw -Encoding utf8 -LiteralPath <path>`). Never copy garbled
+terminal text back into a file, and never write repository text with the
+PowerShell 5.1 defaults of `Set-Content`, `Out-File`, `>`, or `>>`; use
+`apply_patch` for edits.
+
 At completion:
 
 1. Luna pushes the exact validated commit and opens or updates the PR.
