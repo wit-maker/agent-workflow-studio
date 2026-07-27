@@ -1,6 +1,6 @@
 # Project Goal
 
-Last updated: 2026-05-25
+Last updated: 2026-07-28
 
 ## North Star
 
@@ -26,6 +26,32 @@ reusable after success
 ```
 
 If a change does not move the product closer to safe, visible, reusable AI agent operation, it should be deferred.
+## Evidence-first v2 Product Wedge
+
+Version 2 makes **Evidence-first Local Agent Operations OS** the primary product wedge. The product is not only a workflow editor or an execution HUD: it helps a human understand what was planned, what actually happened, what requires attention, and which successful or failed patterns can be reused.
+
+The durable product loop is:
+
+```text
+compile → execute → observe → approve → replay → compare → promote to recipe
+```
+
+The execution spine is defined in `docs/architecture/v2-evidence-first-adr.md`:
+
+```text
+WorkflowDocumentV2
+→ immutable ExecutionPlan
+→ Capability / Policy / Approval Gate
+→ Executor
+→ append-only RunEventEnvelope
+→ RunSnapshot / RunRecord
+→ Attention / Briefing / Comparison projections
+→ immutable RecipeRevision / FailurePattern
+```
+
+`RunEventEnvelope` is the single source of truth for execution facts. HUD, Run Detail, briefing, and comparison are pure, safe projections reconstructed from run events; they are not independent runtime authorities. This architecture preserves the existing safe / visible / reusable values while giving v2 a durable evidence model.
+
+The v2 MVP gate is a version-frozen workflow that can produce a durable run, reconstruct the same state from its `RunEventEnvelope` sequence after restart, and promote a successful run into an immutable, traceable recipe revision. This is a product direction and acceptance gate; it does not authorize real external execution, credential storage, Tauri, SQLite, or v1 removal.
 
 ## Goal / Plan / Task / Prompt
 
