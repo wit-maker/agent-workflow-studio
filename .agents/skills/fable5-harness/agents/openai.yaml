@@ -1,4 +1,4 @@
 interface:
   display_name: "Fable5 Harness"
-  short_description: "Evidence-first Codex lane orchestration"
-  default_prompt: "Use $fable5-harness to coordinate this task through an isolated lane, evidence, and independent review."
+  short_description: "Task-shaped Codex and GPT-5.6 operations"
+  default_prompt: "Use $fable5-harness to select a safe task shape, record acceptance-linked evidence, and complete separate-session review."

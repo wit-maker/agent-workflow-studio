@@ -1,6 +1,6 @@
 ---
 name: fable5-harness
-description: Coordinate Agent Workflow Studio work with isolated Codex lanes, GPT-5.6 Sol/Terra/Luna role routing, durable handoffs, validation evidence, and independent PR review. Use when planning or assigning project tasks, opening an implementation lane, handing work between sessions, reviewing a Luna PR, deciding whether to merge, or auditing completion claims.
+description: Coordinate Agent Workflow Studio work with task-shaped Codex execution, GPT-5.6 Sol/Terra/Luna role routing, durable handoffs, acceptance-linked evidence, and separate-session review records.
 ---
 
 # Fable5 Harness
@@ -21,20 +21,23 @@ management, implementation, and review in separate responsibility layers.
 - Route project management, dependency ordering, lane creation, PR review,
   correction routing, merge, and base validation to Terra.
 - Route bounded implementation, tests, commit, push, and PR creation to Luna.
-- Create a fresh Luna task and isolated worktree for each implementation lane.
+- Use a subagent for read-only work, a bounded serialized Luna writer for small
+  changes, and an isolated Luna worktree for parallel, long-lived, or PR-scoped
+  changes.
 - Never let Luna merge its own PR or silently change an upstream contract.
 - Never use concurrent write agents in one checkout.
 
-Use the project custom agents in `.codex/agents/` when spawning a bounded
-subagent is appropriate. Use a new Codex task/worktree when the work changes
-files or must survive beyond the parent turn.
+Use the project custom agents in `.codex/agents/`. A shared-checkout writer is
+allowed only when no other writer is active, scope is bounded, Terra owns final
+diff/validation, and independent PR provenance is unnecessary.
 
 ## Record evidence
 
 Run validations through:
 
 ```text
-python tools/fable5_harness.py evidence run --task <TASK-ID> --actor luna -- <command>
+python tools/fable5_harness.py evidence run --task <TASK-ID> --actor luna \
+  --acceptance-id <ID> --summary "<sanitized result>" -- <command>
 ```
 
 Do not pass prompts, credentials, tokens, environment dumps, or provider payloads
@@ -46,9 +49,10 @@ full sanitized logs under an ignored directory, but masking is a last defense.
 Terra reviews the exact Luna commit. If changes are required, keep the task
 `doing`, send concrete findings back to the same Luna lane, and require new
 evidence plus a new review. If approved, record the review, merge, validate the
-base branch, regenerate state, then create the next fresh Luna lane.
+base branch, regenerate state, then select the next task shape.
 
-Before reporting completion, run `python tools/fable5_harness.py validate` and
-the repository-required validation commands. A PR, passing status check, or
-`exit_code: 0` alone is not proof that the user-visible acceptance criteria
-were met.
+Before reporting completion, run `validate schema` and
+`validate task --task <TASK-ID>` (or `validate program --manifest <JSON>`) plus
+the repository-required commands. Session IDs are operational audit metadata,
+not cryptographic model identity. A PR, status check, or `exit_code: 0` alone
+does not prove acceptance.

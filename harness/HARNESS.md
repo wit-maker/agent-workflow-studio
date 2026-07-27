@@ -5,7 +5,7 @@ version: 2.0.0-codex
 upstream_commit: 62f4882dcea83c24522db92959b17a5b46b90486
 ---
 
-# Fable5 Harness — Codex / GPT-5.6 control plane
+# Fable5 Harness — Codex / GPT-5.6 operational control plane
 
 This directory is the canonical operating contract for agent-driven repository
 work. `AGENTS.md`, `.codex/agents/`, and `.agents/skills/` are thin executable
@@ -13,9 +13,11 @@ entrypoints into this contract.
 
 ## Outcome
 
-Every material change must be traceable from an approved product outcome to an
-isolated task, immutable commit, validation evidence, independent review, merge,
-and post-merge validation. Conversation history is never the source of truth.
+Every material change must be traceable from an approved product outcome to a
+versioned task record, Git-anchored validation evidence, a separate-session
+review record, merge, and post-merge validation. The harness detects ordinary
+workflow mistakes and inconsistent claims. It does not cryptographically prove
+model identity or resist a malicious local administrator.
 
 ## Responsibility stack
 
@@ -25,9 +27,9 @@ and post-merge validation. Conversation history is never the source of truth.
 | Middle | GPT-5.6 Terra | task graph, dependency order, assignments, PR review, correction loop, merge, base validation | implementation coding, self-approval |
 | Downstream | GPT-5.6 Luna | one bounded implementation lane, tests, commit, push, PR | architecture redesign, task management, merge |
 
-The model family is selected by workload role, not by a blind model-name
-replacement. Reasoning is pinned per project agent and must be changed only
-after representative evaluation.
+The model family is selected by workload role and task shape, not by a blind
+model-name replacement. `medium` is the default for bounded work; use `high`
+for architecture, concurrency, security boundaries, or measured quality gains.
 
 ## Session protocol
 
@@ -43,10 +45,10 @@ At session start:
 During work:
 
 1. Terra is the only role that creates or reorders tasks.
-2. Each writing task gets one fresh Luna session, one worktree, one
-   `codex/<task-id>-<slug>` branch, and one PR.
-3. Luna records relevant tests through `evidence run`; UI work also records
-   Browser or headless QA evidence.
+2. Terra selects `read-only`, `shared-single-writer`, or `isolated-lane` from
+   the task-shape policy. Concurrent writers never share a checkout.
+3. Luna records each required acceptance ID through `evidence run`; UI work
+   also records Browser or headless QA evidence.
 4. Architecture changes return to Sol. Dependency, backend, API, credential,
    storage-key, paid, destructive, or external-write gates return to the owner.
 
@@ -56,19 +58,23 @@ At completion:
 2. Terra reviews that commit. `changes_requested` returns to the same Luna lane.
 3. `approved` permits Terra to merge only after required checks pass.
 4. Terra validates the updated base branch, regenerates `STATE.md`, and then
-   creates the next fresh Luna lane.
+   selects the next task's execution shape.
 
 ## Evidence rules
 
-- Record command, exit code, start/end time, commit, branch, dirty state, and a
-  SHA-256 hash of the sanitized log.
+- Do not retain raw command arguments. Record the acceptance ID, sanitized
+  summary, exit code, start/end time, commit, branch, dirty state, task
+  specification hash, and a SHA-256 hash of the sanitized log.
 - Keep full sanitized logs in `harness/state/evidence/logs/`; git ignores them.
 - Never include raw prompts, provider payloads, artifact bodies, credentials,
   tokens, environment dumps, or personal home paths in tracked evidence.
-- Passing commands prove only those commands. User-visible behavior needs the
-  acceptance-specific QA named in the task.
-- A done implementation task requires successful evidence for the exact
-  verified commit and Terra approval of that same Luna commit.
+- `validate schema` checks document integrity and may pass with no tasks.
+- `validate task --task <ID>` is the completion gate for one declared task.
+- `validate program --manifest <JSON>` is the completion gate for a declared
+  non-empty task set.
+- A done implementation task requires coverage of every `required_evidence`
+  ID, unchanged task-spec hashes, base/allowed-path checks, and a separate
+  Terra review record for the exact verified commit.
 
 ## Canonical references
 

@@ -3,16 +3,18 @@
 Use the GPT-5.6 family by responsibility and measured workload.
 
 - `gpt-5.6-sol`, high: upstream architecture and high-consequence acceptance
-  decisions. Sol produces the program brief and does not run the project.
-- `gpt-5.6-terra`, high: project management, read-heavy integration work,
-  independent review, correction routing, merge, and base validation.
-- `gpt-5.6-luna`, high: bounded implementation in an isolated lane. Escalate
-  architecture ambiguity instead of silently expanding scope.
+  decisions.
+- `gpt-5.6-terra`, medium by default: project management, read-heavy integration work,
+  separate-session review, correction routing, merge, and base validation.
+- `gpt-5.6-luna`, medium by default: bounded implementation in a serialized or
+  isolated lane. Use `high` for runtime, concurrency, security boundaries, or
+  a measured quality gain. Escalate architecture ambiguity instead of silently
+  expanding scope.
 
 Keep prompts lean and outcome-oriented. State each durable rule once. Every
 assignment must include the outcome, base SHA, branch, worktree, allowed paths,
-dependencies, acceptance criteria, required validation, authority boundaries,
-and stop rules.
+task shape, dependencies, acceptance IDs, required validation, authority
+boundaries, and stop rules.
 
 Do not enable Pro mode, persisted reasoning, API multi-agent beta, explicit
 prompt caching, or programmatic tool calling merely because GPT-5.6 supports
