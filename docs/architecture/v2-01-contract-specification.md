@@ -500,10 +500,12 @@ V2-01 does not approve or cross G2, G3, G4, or G5. All four remain **not approve
 
 | Gate | Boundary tracked here | Status |
 |---|---|---|
-| G2 | Contract acceptance and implementation authorization | Not approved / not crossed |
-| G3 | Trusted runtime, append/replay, and durable storage implementation | Not approved / not crossed |
-| G4 | Legacy migration, compatibility execution, and controlled artifact boundary | Not approved / not crossed |
-| G5 | Cutover, real capabilities/connectors, and credential-bearing operation | Not approved / not crossed |
+| G2 | Dependency, Tauri, Rust, SQLite, and type binding | Not approved / not crossed |
+| G3 | Actual Codex CLI/process execution | Not approved / not crossed |
+| G4 | Cutover | Not approved / not crossed |
+| G5 | Legacy removal | Not approved / not crossed |
+
+These gate labels retain their exact approval meanings: G2 covers dependency, Tauri, Rust, SQLite, and type binding; G3 covers actual Codex CLI/process execution; G4 covers cutover; and G5 covers legacy removal. V2-01 requests and authorizes none of these actions.
 
 The V2 MVP gate from the ADR also remains a future acceptance target. This document provides enough contract precision for later gated work but claims no runtime, artifact, replay, comparison, evaluation, or recipe-promotion result.
 
