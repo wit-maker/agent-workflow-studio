@@ -20,6 +20,7 @@ import {
   buildRunDetailRuntimeTimelineView,
   summarizeRunDetail,
 } from '../domain/runDetail'
+import { buildSafeEvidenceProjection, type SafeEvidenceProjection } from '../domain/safeEvidenceProjection'
 import type { WorkflowRunRecord } from '../domain/runHistory'
 import type { EvidenceSeverity } from '../domain/runStepEvidence'
 import type { RunTrace } from '../domain/runTrace'
@@ -120,6 +121,10 @@ export function RunDetailPanel({
   const summary = useMemo(
     () => summarizeRunDetail(replay.selectedTrace, mode),
     [mode, replay.selectedTrace],
+  )
+  const safeEvidenceProjection = useMemo(
+    () => buildSafeEvidenceProjection(replay.selectedTrace),
+    [replay.selectedTrace],
   )
   const runtimeTimeline = useMemo(
     () =>
@@ -233,6 +238,8 @@ export function RunDetailPanel({
         onSelectConnection={onSelectConnection}
       />
 
+      <SafeEvidenceProjectionPanel projection={safeEvidenceProjection} />
+
       <RuntimeTimelinePanel timeline={runtimeTimeline} />
       <FlowPressurePanel projection={flowPressure} />
       <ScratchConnectorFeedbackPanel projection={scratchConnectorFeedback} />
@@ -296,6 +303,26 @@ export function RunDetailPanel({
           ))}
         </div>
       )}
+    </section>
+  )
+}
+
+function SafeEvidenceProjectionPanel({ projection }: { projection: SafeEvidenceProjection }) {
+  return (
+    <section className={`run-detail-safe-evidence run-detail-safe-evidence-${projection.state}`} aria-label="Safe evidence projection">
+      <div className="run-detail-step-diff-heading">
+        <div>
+          <span className="run-detail-comparison-kicker">safe evidence projection · MVP</span>
+          <strong>{projection.coverageLabel}</strong>
+        </div>
+        <span>{projection.coveragePercent}% coverage / {projection.evidenceCount} evidence</span>
+      </div>
+      <div className="run-detail-safe-evidence-meter" aria-label={`Safe evidence coverage ${projection.coveragePercent}%`}>
+        <span style={{ width: `${projection.coveragePercent}%` }} />
+      </div>
+      <p>{projection.cue}</p>
+      <p className="muted">Next: {projection.nextAction}</p>
+      <p className="muted">{projection.safetyNote} / excluded {projection.excludedEvidenceCount}</p>
     </section>
   )
 }

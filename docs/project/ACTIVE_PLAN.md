@@ -34,7 +34,7 @@ The v2 MVP gate is:
 - reconstruct the same safe run state from the event sequence after restart;
 - promote a successful run to an immutable, traceable recipe revision.
 
-V2-00 records this product reset and architecture decision and is complete at the current base. V2-01 is now the current docs-only contract slice selected after that merge. Runtime, storage migration, real connectors, credential storage, and UI changes remain outside the V2-01 slice.
+V2-00 records this product reset and architecture decision and is complete at the current base. V2-01 established the docs-only contract, and V2-02 is the current bounded mock-safe projection slice. Durable runtime, storage migration, real connectors, credential storage, and process execution remain outside V2-02.
 
 ## Open Issue Priority Roadmap
 
@@ -63,13 +63,13 @@ Runtime Audit remains a detail backlog in `docs/implementation/runtime-audit-nex
 
 The **Evidence-first v2 architecture** is the sole selected active plan. Its decision record is `docs/architecture/v2-evidence-first-adr.md`, and its current contract detail is `docs/architecture/v2-01-contract-specification.md`.
 
-The current slice is **V2-01 Contract Specification**. This docs-only slice defines stable V2 names, public boundaries, lifecycle/invariants, safe projections, approval semantics, future Tauri commands, and read-only legacy compatibility. It does not implement the contracts or runtime.
+The current slice is **V2-02 Safe Evidence Projection MVP**. This slice derives a compact, deterministic Run Detail projection from existing mock-safe `RunTrace` metadata, showing coverage and actionable attention cues without raw inputs or durable V2 runtime infrastructure.
 
-The V2-01 task record is `docs/tasks/Codex_Task_V2_01_Contract_Specification.md`. V2-00 remains preserved in `PROJECT_STATE.md` and its ADR history; it is not replaced or reclassified as a competing plan.
+The V2-01 task record is `docs/tasks/Codex_Task_V2_01_Contract_Specification.md`, and the operational V2-02 record is `harness/state/tasks/V2-02-safe-evidence-projection-mvp.md`. V2-00 remains preserved in `PROJECT_STATE.md` and its ADR history; it is not replaced or reclassified as a competing plan.
 
 The Five-Pillar MVP roadmap remains preserved as design history and a subordinate implementation reference in `docs/implementation/FIVE_PILLAR_MVP_ROADMAP.md`. Its completed slices, requirements, and remaining gaps remain valid, but it is not the selected active plan and does not define the current slice.
 
-V2-02 and later slices will be selected sequentially by Terra PM only after V2-01 contract review and the required gates are complete. G2/G3/G4/G5 are not approved or crossed by this slice.
+V2-03 and later slices will be selected sequentially by Terra PM only after V2-02 review and the required gates are complete. G2/G3/G4/G5 are not approved or crossed by this slice.
 
 Historical completion note retained from prior PRs: two Game HUD display fixes — the expanded Console drawer no longer covers the canvas MiniMap, and `WorkflowGroupLayer` now sizes grouping frames from each node's measured DOM size instead of a fixed constant, so frames keep enclosing cards across zoom-mode changes. Also fixed: the workflow grouping frame no longer renders above node cards (`z-index:-1`).
 
@@ -95,6 +95,7 @@ Phase roadmap order:
 | Slice | Result |
 |---|---|
 | Concept checklist | `docs/project/CONCEPT_CHECKLIST.md` now defines the final layer / MVP surface / safe projection / detail-history / out-of-scope classification gate. |
+| V2-02 safe evidence projection MVP | Run Detail now shows deterministic safe-evidence coverage and fixed attention/next-action cues derived from existing mock `RunTrace` metadata only; focused QA proves raw-field exclusion and no V2 runtime cutover. |
 | Edge route metadata diff | `RunDetailPanel` focused edge comparison now includes safe route-event metadata rows and recent safe route-event summaries. |
 | Validation-warning HUD behavior | Validation focus now creates a compact state cue in the central HUD and highlights the `Val` command in the always-on HUD. |
 | Review-required HUD behavior | Approval semantic focus now creates a compact review-required state cue and highlights Detail / Run Detail entry points from the always-on HUD. |

@@ -3144,6 +3144,7 @@ button:disabled {
 }
 
 .run-detail-step-diff,
+.run-detail-safe-evidence,
 .run-detail-scoped-diff,
 .run-detail-route-metadata-diff,
 .run-detail-edge-replay-evidence,
@@ -3159,6 +3160,7 @@ button:disabled {
 }
 
 .game-hud-workspace .run-detail-step-diff,
+.game-hud-workspace .run-detail-safe-evidence,
 .game-hud-workspace .run-detail-scoped-diff,
 .game-hud-workspace .run-detail-route-metadata-diff,
 .game-hud-workspace .run-detail-edge-replay-evidence,
@@ -3167,6 +3169,37 @@ button:disabled {
 .game-hud-workspace .run-detail-runtime-timeline {
   border-color: rgba(34, 211, 238, 0.18);
   background: rgba(2, 6, 23, 0.44);
+}
+
+.run-detail-safe-evidence {
+  gap: 8px;
+}
+
+.run-detail-safe-evidence-attention {
+  border-color: color-mix(in srgb, var(--color-warning, #d99a32) 70%, var(--border));
+}
+
+.run-detail-safe-evidence-no-trace {
+  opacity: 0.82;
+}
+
+.run-detail-safe-evidence-meter {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+.run-detail-safe-evidence-meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-success, #25a56a);
+  transition: width 160ms ease;
+}
+
+.run-detail-safe-evidence-attention .run-detail-safe-evidence-meter span {
+  background: var(--color-warning, #d99a32);
 }
 
 .run-detail-step-diff-heading {

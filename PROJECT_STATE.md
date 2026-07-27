@@ -4,6 +4,18 @@ Last updated: 2026-07-28
 
 ---
 
+## Phase V2-02 Safe Evidence Projection MVP
+
+- Task: V2-02
+- Branch: `codex/v2-02-safe-evidence-projection-mvp`
+- Base: `38e98f6efadb37c08ec5a93939e7a5befa7d586f`
+- Scope: added a pure `RunTrace`-based safe evidence projection to the existing Run Detail surface. It reports coverage, evidence count, attention cue, and next action using aggregate/status metadata only.
+- Safety boundary: projection output never copies evidence title/summary or raw input/payload/provider/artifact content. No RunEventEnvelope persistence, executor, process launch, connector, dependency, backend/API, credential, localStorage, Tauri/Rust/SQLite, or G2-G5 gate change.
+- Concept boundary: this is a compact MVP projection, not the final Cognitive HUD, Situation Narration Layer, Situation Assistant, or durable V2 runtime.
+- Validation: focused `qa:direct` assertion, typecheck, lint, build, and Browser QA evidence are recorded in the V2-02 harness task.
+
+---
+
 ## Phase V2-01 Contract Specification
 
 - Task: V2-01
