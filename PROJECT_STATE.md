@@ -4,6 +4,22 @@ Last updated: 2026-07-28
 
 ---
 
+## Phase V2-01 Contract Specification
+
+- Task: V2-01
+- Branch: `codex/v2-01-contract-specification`
+- Base: `origin/main` `d9b7ab75ac2db796e97b13006e3e971fcf321bff`
+- Date: 2026-07-28
+- Model gate: `gpt-5.6-LUNA`, reasoning high, with no `ALLOW_XHIGH`; xhigh was not used.
+- Scope: docs-only contract specification. `docs/architecture/v2-01-contract-specification.md` is the canonical linked contract for `WorkflowDocumentV2`, `ExecutionPlan`, `Capability`, `Policy`, `ApprovalGate`, `RunEventEnvelope`, `RunSnapshot`, `RunRecord`, safe Attention/Briefing/Comparison projections, `RecipeRevision`, `FailurePattern`, future Tauri commands, and the v1 compatibility table.
+- Plan state: Evidence-first remains the sole selected active plan; V2-01 is the current slice in `docs/project/ACTIVE_PLAN.md`. V2-00 history remains preserved.
+- Safety boundary: no raw prompt, raw payload, provider body, artifact body, credential, token, password, or API key is added to docs, examples, logs, fixtures, or projections. No product code, source spec, dependency, backend/API, Tauri, Rust, SQLite, localStorage key, connector, credential storage, real process execution, or artifact-body change is included.
+- Contract boundary: append-only/replay invariants, safe projection rules, scoped Human Review approval semantics, draft-vs-future implementation boundaries, and read-only legacy migration behavior are specified. G2/G3/G4/G5 remain not approved and not crossed.
+- Validation: `git diff --check` pass; `npm run typecheck` pass; `npm run lint` pass; `npm run build` pass with the existing Vite chunk-size warning. `npm ci` used the existing lockfile and did not change tracked dependency files; npm audit reported 4 existing dependency vulnerabilities (1 low, 3 high), and no audit fix was run.
+- Browser QA: not applicable; this slice changes no UI or runtime behavior. Static diff and build validation are the alternative evidence.
+
+---
+
 ## Phase V2-00 Evidence-first Product Reset / ADR
 
 - Task: V2-00
