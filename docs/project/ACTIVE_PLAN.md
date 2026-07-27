@@ -16,7 +16,7 @@ Use this file to decide the next implementation slice. Other plan-like files are
 - Keep `PROJECT_STATE.md` as chronological implementation history, not the primary plan selector.
 - Keep old task prompts under `docs/tasks/**` as historical task records unless this file explicitly marks one as the active task.
 - Use small, user-visible vertical slices. Do not close broad design epics with a thin slice.
-- The selected v2 planning spine is the Evidence-first architecture in `docs/architecture/v2-evidence-first-adr.md`. Existing Five-Pillar, Canvas First, Cognitive HUD, Situation Narration, and Situation Assistant records remain valid as implementation history and subordinate detail unless a later task explicitly supersedes them.
+- The Evidence-first architecture in `docs/architecture/v2-evidence-first-adr.md` is the **唯一のselected active plan** for v2. Existing Five-Pillar, Canvas First, Cognitive HUD, Situation Narration, and Situation Assistant records remain valid as design history and subordinate detail; they do not select a competing active plan or current slice.
 
 ## Evidence-first v2 Selection
 
@@ -34,7 +34,7 @@ The v2 MVP gate is:
 - reconstruct the same safe run state from the event sequence after restart;
 - promote a successful run to an immutable, traceable recipe revision.
 
-V2-00 records this product reset and architecture decision only. V2-01 contract work, runtime, storage migration, real connectors, credential storage, and UI changes are out of scope.
+V2-00 records this product reset and architecture decision only. V2-01 and later work will be selected sequentially by Terra PM after V2-00 merges. Contract work, runtime, storage migration, real connectors, credential storage, and UI changes are out of scope for V2-00.
 
 ## Open Issue Priority Roadmap
 
@@ -59,15 +59,17 @@ Runtime Audit remains a detail backlog in `docs/implementation/runtime-audit-nex
 - Scratch の設計思想(文法エラーレス操作 / 即時フィードバック / low floor・high ceiling / tinkering & remix)は操作レイヤーの設計原理として組み込み、認知HUDと表現チャネルを共有する。詳細は同 roadmap doc の「Scratch統合原則」を参照する。
 - Safety Boundary(raw config / prompt / payload / credential 等の禁止)は完成状態でも不変である。
 
-## Current Recommended Order
+## Selected Active Plan and Current Slice
 
-The selected active roadmap is **Five-Pillar MVP Roadmap**. The detail document is `docs/implementation/FIVE_PILLAR_MVP_ROADMAP.md`.
+The **Evidence-first v2 architecture** is the sole selected active plan. Its detail document is `docs/architecture/v2-evidence-first-adr.md`.
 
-Current slice:
+The current slice is **V2-00 Product reset / ADR**. This docs-only slice records the product reset and execution spine; it does not implement the V2-01 contracts or runtime.
 
-Slice 4 (Scratch interaction hardening) / Slice 5 (Mock connector policy rail) / Slice 6 (Scratch snap-guidance) / Slice 7 (部品の自己記述性 / type badge & role color unification) are all complete and recorded in Completed Plan Slices below. No slice is selected yet as the current active one — pick the next candidate from the 残ギャップ list in `docs/implementation/FIVE_PILLAR_MVP_ROADMAP.md`'s Scratch統合原則 section (置いた瞬間のステージ応答 / Remix完成) or from another roadmap phase before starting new implementation work.
+The Five-Pillar MVP roadmap remains preserved as design history and a subordinate implementation reference in `docs/implementation/FIVE_PILLAR_MVP_ROADMAP.md`. Its completed slices, requirements, and remaining gaps remain valid, but it is not the selected active plan and does not define the current slice.
 
-Completed this PR (in addition to the slice above): two Game HUD display fixes — the expanded Console drawer no longer covers the canvas MiniMap, and `WorkflowGroupLayer` now sizes grouping frames from each node's measured DOM size instead of a fixed constant, so frames keep enclosing cards across zoom-mode changes. Also fixed: the workflow grouping frame no longer renders above node cards (`z-index:-1`).
+V2-01 and later slices will be selected sequentially by Terra PM only after V2-00 is merged and the required G0/G1 gates for the next slice are complete.
+
+Historical completion note retained from prior PRs: two Game HUD display fixes — the expanded Console drawer no longer covers the canvas MiniMap, and `WorkflowGroupLayer` now sizes grouping frames from each node's measured DOM size instead of a fixed constant, so frames keep enclosing cards across zoom-mode changes. Also fixed: the workflow grouping frame no longer renders above node cards (`z-index:-1`).
 
 Phase roadmap order:
 
@@ -104,7 +106,7 @@ Phase roadmap order:
 | HUD notification read/ack/pin session behavior | `HudNotificationBundle` now supports session-only read, acknowledge, and pin state. Acknowledged unpinned notifications leave the active list; pinned notifications stay visible without creating storage. |
 | Concept naming cleanup | User-facing labels now describe the current text explanation surface as `4D Text Briefing MVP` / `4D説明`, reducing the chance that the MVP panel is mistaken for the full Situation Assistant. |
 | Edge-level durable replay record | `traceAudit.edgeReplayRecords` now stores safe edge-level replay summaries derived from safe runtime events inside existing run history records. `RunDetailPanel`, `SelectedEdgeHud`, and React Flow edge runtime classes can surface selected-edge replay evidence without raw payloads or new storage keys. |
-| Five-pillar roadmap selection | `docs/implementation/FIVE_PILLAR_MVP_ROADMAP.md` now makes the all-phase roadmap the selected planning spine while preserving small vertical-slice delivery and the existing safety boundaries. |
+| Five-pillar roadmap history | `docs/implementation/FIVE_PILLAR_MVP_ROADMAP.md` remains the preserved design-history and subordinate implementation reference for the all-phase roadmap, while the v2 Evidence-first architecture is the sole selected active plan. |
 | UI shell replay / flow-pressure attention | `RunTrace.runtimeEvents` now drives a safe flow-pressure projection shared by Canvas HUD chips, central HUD overlay, HUD Feed history hints, Run Detail, and 4D Text Briefing MVP without new storage or raw payload display. |
 | Scratch connection feedback / mock connector state | Shared connection validation and current mock connector jobs now drive a safe Scratch/connector rail projection for HUD signals, Canvas command chips, HUD Feed, Run Detail, and 4D Text Briefing MVP without changing reducer/runtime/storage behavior. |
 | Scratch interaction hardening / connector rail QA | PartsPalette now separates card selection from the Add node command with semantic controls and session-only operation feedback. React Flow canvas status now names the safe Scratch operation rail and shows shared invalid-connection reasons without changing reducer/runtime/storage behavior. |
@@ -128,7 +130,7 @@ Phase roadmap order:
 | `docs/audit/technical-debt.md` | Known implementation and naming debt. |
 | `docs/implementation/runtime-audit-next-phase.md` | Runtime Audit detail backlog; subordinate to this file and only active when #37 or #46 selects a runtime-audit slice. |
 | `docs/implementation/runtime-audit-integration-plan.md` | Historical worktree integration plan for the landed Runtime Audit phase. |
-| `docs/implementation/FIVE_PILLAR_MVP_ROADMAP.md` | Selected five-pillar delivery roadmap; subordinate to this file for current slice order and guardrails. |
+| `docs/implementation/FIVE_PILLAR_MVP_ROADMAP.md` | Five-pillar delivery roadmap retained as design history and subordinate implementation reference; this file remains the sole active plan selector. |
 | `docs/tasks/**` | Historical task prompts and completed or partial slice records. |
 
 ## Safety Boundary
