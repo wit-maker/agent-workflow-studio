@@ -40,7 +40,10 @@ SECRET_RE = re.compile(
     """
 )
 CLI_SECRET_RE = re.compile(
-    r"(?ix)(--?(?:token|secret|password|api[-_]?key|credential|authorization|bearer)(?:=|\s+))([\"']?)([^\s\"';&]+)\2"
+    r"""(?ix)
+    (--?(?:token|secret|password|api[-_]?key|credential|authorization|bearer)(?:=|\s+))
+    (?:"[^"]*"|'[^']*'|[^\s"';&]+)
+    """
 )
 URL_CREDENTIAL_RE = re.compile(r"(?i)(https?://)([^\s/@:]+):([^\s/@]+)@")
 URL_SECRET_PARAM_RE = re.compile(
@@ -48,7 +51,7 @@ URL_SECRET_PARAM_RE = re.compile(
 )
 OPENAI_KEY_RE = re.compile(r"(?i)\bsk-[a-z0-9_-]+\b")
 JWT_RE = re.compile(
-    r"(?<![A-Za-z0-9_-])(?:[A-Za-z0-9_-]{8,}\.){2}[A-Za-z0-9_-]{8,}(?![A-Za-z0-9_-])"
+    r"(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{2,}\.[A-Za-z0-9_-]{8,}(?![A-Za-z0-9_-])"
 )
 SESSION_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
 AUTH_RE = re.compile(r"(?i)(authorization\s*:\s*)([^\r\n]+)")

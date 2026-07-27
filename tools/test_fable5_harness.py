@@ -112,9 +112,15 @@ class HarnessTestCase(unittest.TestCase):
         run(self.root, "git", "switch", "-c", "codex/v2-01-contract")
 
     def test_sanitize_masks_secrets_and_home(self) -> None:
-        value = r"api_key=abc123 Authorization: Bearer hidden C:\Users\alice\repo"
+        value = (
+            r'api_key=abc123 --password "two words" '
+            r"eyJhbGciOiJIUzI1NiJ9.demo.signature "
+            r"Authorization: Bearer hidden C:\Users\alice\repo"
+        )
         sanitized = harness.sanitize(value)
         self.assertNotIn("abc123", sanitized)
+        self.assertNotIn("two words", sanitized)
+        self.assertNotIn("eyJhbGciOiJIUzI1NiJ9.demo.signature", sanitized)
         self.assertNotIn("Bearer hidden", sanitized)
         self.assertNotIn("alice", sanitized)
 
@@ -227,7 +233,7 @@ class HarnessTestCase(unittest.TestCase):
                     (
                         "print('--token demo-value --password demo-value "
                         "sk-proj-demo-value "
-                        "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjMifQ.signature "
+                        "eyJhbGciOiJIUzI1NiJ9.demo.signature "
                         "https://user:demo-value@example.invalid/"
                         "?credential=demo-value safe-output')"
                     ),
@@ -244,7 +250,7 @@ class HarnessTestCase(unittest.TestCase):
             "--token demo-value",
             "--password demo-value",
             "sk-proj-demo-value",
-            "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjMifQ.signature",
+            "eyJhbGciOiJIUzI1NiJ9.demo.signature",
             "https://user:demo-value@example.invalid/?credential=demo-value",
         )
         for raw_secret in raw_secrets:
