@@ -51,24 +51,42 @@ UI変更時は Browser QA または headless QA を行う。できない場合�
 - 予期しない dirty worktree なら停止
 - `git add .` 禁止
 - 変更ファイルだけ明示して add
-- 1 lane = 1 thread = 1 worktree = 1 branch / PR
+- isolated laneを選んだ場合は1 lane = 1 thread = 1 worktree = 1 branch / PR
 - 同じ checkout を複数 thread で編集しない
 - main へ直接作業しない
 
 ## Model Policy
 
-通常実装:
+Fable5 Harness の責務分離を使う。正本は `harness/HARNESS.md`。
 
-- `gpt-5.5`
-- reasoning: `high`
+- `gpt-5.6-sol` / high: architectureと高影響の受け入れ判断の最終責任
+- `gpt-5.6-terra` / medium既定: PM、task分割・割当、PRレビュー、修正循環、merge、base validation
+- `gpt-5.6-luna` / medium既定: boundedな実装・test・commit・push・PR作成。runtime・並行処理・security境界はhigh
 
-docs / Markdown / PR本文 / 小さなCSS / 文言修正:
-
-- `gpt-5.4-mini`
-- reasoning: `medium`
+read-only調査はsubagent、小規模で直列化できる単一writer修正はLuna subagent、
+長時間・広範囲・並列・独立PRが必要な実装は1 task = 1新規Luna session =
+1 worktree = 1 branch / PRとする。同じcheckoutの同時writerは禁止する。
+Lunaは自分のPRをmergeしない。Terraがexact commitをreviewし、修正ありなら
+同じLuna laneへ戻し、承認後にmergeしてから次taskの実行形状を選ぶ。
 
 `xhigh` はユーザーが `ALLOW_XHIGH` と明示した場合のみ使用する。
 現在モデルが不明、または作業リスクに対して不足している場合のみ停止する。
+
+## Fable5 Harness
+
+プロジェクト管理・handoff・evidence・review・lane監査では
+`.agents/skills/fable5-harness/SKILL.md` を使用する。
+
+- 開始: `python tools/fable5_harness.py doctor`
+- schema整合性: `python tools/fable5_harness.py validate schema`
+- task完了: `python tools/fable5_harness.py validate task --task <ID>`
+- program完了: `python tools/fable5_harness.py validate program --manifest <JSON>`
+- 現況再生成: `python tools/fable5_harness.py state`
+- 検証記録:
+  `python tools/fable5_harness.py evidence run --task <ID> --actor luna --acceptance-id <ID> --summary "<safe summary>" -- <command>`
+
+raw prompt、credential、provider payload、artifact本文、environment dumpを
+Evidenceのcommand・note・logへ渡さない。
 
 ## Stop Conditions
 

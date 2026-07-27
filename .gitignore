@@ -18,6 +18,9 @@ dist/
 *.local
 runs/
 artifacts/
+harness/state/evidence/logs/
+__pycache__/
+*.py[cod]
 
 # Editor directories and files
 .vscode/*
