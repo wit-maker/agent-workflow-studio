@@ -1,6 +1,6 @@
 # Active Plan
 
-Last updated: 2026-07-07
+Last updated: 2026-07-28
 
 ## Purpose
 
@@ -16,6 +16,25 @@ Use this file to decide the next implementation slice. Other plan-like files are
 - Keep `PROJECT_STATE.md` as chronological implementation history, not the primary plan selector.
 - Keep old task prompts under `docs/tasks/**` as historical task records unless this file explicitly marks one as the active task.
 - Use small, user-visible vertical slices. Do not close broad design epics with a thin slice.
+- The selected v2 planning spine is the Evidence-first architecture in `docs/architecture/v2-evidence-first-adr.md`. Existing Five-Pillar, Canvas First, Cognitive HUD, Situation Narration, and Situation Assistant records remain valid as implementation history and subordinate detail unless a later task explicitly supersedes them.
+
+## Evidence-first v2 Selection
+
+Agent Workflow Studio v2 is selected as an **Evidence-first Local Agent Operations OS**. Its primary product loop is:
+
+```text
+compile → execute → observe → approve → replay → compare → promote to recipe
+```
+
+The execution source of truth is the append-only `RunEventEnvelope` sequence. The complete boundary and ownership decision is recorded in `docs/architecture/v2-evidence-first-adr.md`.
+
+The v2 MVP gate is:
+
+- create a durable run from a version-frozen workflow;
+- reconstruct the same safe run state from the event sequence after restart;
+- promote a successful run to an immutable, traceable recipe revision.
+
+V2-00 records this product reset and architecture decision only. V2-01 contract work, runtime, storage migration, real connectors, credential storage, and UI changes are out of scope.
 
 ## Open Issue Priority Roadmap
 
@@ -54,7 +73,8 @@ Phase roadmap order:
 
 | Phase | Focus | Implementation boundary |
 |---|---|---|
-| 1 | Plan Selection / Guardrail | Select this roadmap, update implementation docs, apply `CONCEPT_CHECKLIST.md`, no product code required. |
+| 0 | Evidence-first v2 Product Reset / ADR | Select the evidence-first product wedge and execution spine; update goal/plan/architecture docs and state only. No product code required. |
+| 1 | Plan Selection / Guardrail | Preserve the existing Five-Pillar roadmap as subordinate implementation history and apply `CONCEPT_CHECKLIST.md` to subsequent slices. |
 | 2 | UI Shell Recomposition | Keep Canvas First primary; demote monitor-style surfaces to detail drawers; add failure/review/validation/replay/bottleneck attention states. |
 | 3 | Five-Pillar Vertical Slice Thickening | Keep one connected mock path across parts, connector/runtime, safe audit, HUD focus, Run Detail, 4D briefing, template/history. |
 | 4 | Scratch Layer | Harden `PartsPalette` and React Flow add/connect/select/delete flows while preserving Japanese labels and English identifiers. 到達点は「Scratch統合原則」(roadmap doc) の4原則を満たす操作レイヤー。 |

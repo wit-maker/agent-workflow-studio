@@ -1,6 +1,22 @@
 # Project State
 
-Last updated: 2026-07-07
+Last updated: 2026-07-28
+
+---
+
+## Phase V2-00 Evidence-first Product Reset / ADR
+
+- Task: V2-00
+- Branch: `codex/v2-00-product-reset-adr`
+- Date: 2026-07-28
+- Model gate: `gpt-5.6-LUNA`, reasoning high, with no `ALLOW_XHIGH`; xhigh was not used.
+- Scope: docs-only product architecture decision. Evidence-first Local Agent Operations OS is selected as the v2 primary wedge, with `RunEventEnvelope` as the execution source of truth and the durable execution spine recorded in `docs/architecture/v2-evidence-first-adr.md`.
+- Concept classification: architecture decision / planning layer. Cognitive HUD, Situation Narration, Situation Assistant, Five-Pillar MVP, and Canvas First remain distinct concepts and are not claimed complete by this reset.
+- Safety boundary: no raw prompt, raw payload, provider body, artifact body, credential, token, password, or API key is added to docs, logs, fixtures, or projections. No dependency, backend/API, Tauri, Rust, SQLite, localStorage key, UI, source spec, or v1 removal is included.
+- V2 MVP gate recorded for future work: durable run from a version-frozen workflow, restart reconstruction from the same event sequence, safe replay/compare, and immutable traceable recipe promotion. This gate is not claimed as implemented by V2-00.
+- Validation: `git diff --check` pass; `docs/source-specs/**` unchanged; package files unchanged; `npm run typecheck` pass; `npm run lint` pass; `npm run build` pass with the existing Vite chunk-size warning. `npm ci` used the existing lockfile and did not change tracked dependency files.
+- Browser QA: not required; no UI or runtime behavior changed.
+- Next dependency: Terra PM must select and approve the V2-01 contract slice and its G0/G1 gates before implementation work begins.
 
 ---
 
